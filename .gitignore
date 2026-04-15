@@ -1,0 +1,52 @@
+# =========================
+# Node.js & Dependencies
+# =========================
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.pnpm-debug.log
+
+# =========================
+# Environment Variables
+# =========================
+.env
+
+# =========================
+# Build & Compiled Files
+# =========================
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# =========================
+# Logs & Databases
+# =========================
+logs/
+*.log
+*.sqlite
+*.db
+
+# =========================
+# OS Generated Files
+# =========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# =========================
+# IDEs & Editors
+# =========================
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
