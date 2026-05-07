@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import './src/models/User.js';
+import './src/models/user.js';
 
 import cors from 'cors';
 import express from 'express';
@@ -56,8 +56,10 @@ const port = Number(process.env.PORT) || 3001;
 async function startServer() {
   try {
     await verifyConnection();
-    await sequelize.sync();
+    const shouldAlter = process.env.DB_SYNC_ALTER === 'true';
+    await sequelize.sync(shouldAlter ? { alter: true } : undefined);
     console.log('DB connected');
+    console.log(`DB sync ${shouldAlter ? 'altered' : 'completed'}`);
   } catch (error) {
     console.error('DB connection failed:', error.message);
     return;

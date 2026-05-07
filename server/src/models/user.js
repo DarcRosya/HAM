@@ -2,7 +2,7 @@ import { DataTypes } from 'sequelize';
 
 import { sequelize } from '../config/db.js';
 
-const User = sequelize.define(
+export const User = sequelize.define(
   'User',
   {
     id: {
@@ -10,10 +10,25 @@ const User = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+    displayedName: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: 'displayed_name',
+    },
     username: {
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
+    },
+    email: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
+    },
+    avatar: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: '/assets/default-avatar.svg',
     },
     passwordHash: {
       type: DataTypes.STRING(255),
