@@ -24,7 +24,8 @@ This repository is split into a React client and an Express server.
 - src/
   - config/ - env, DB pool, and constants.
   - controllers/ - HTTP handlers.
-  - repositories/ - raw SQL (mysql2/promise).
+  - models/ - Sequelize models.
+  - repositories/ - data access via Sequelize models.
   - middlewares/ - auth, validation, error handling.
   - game/ - core game rules and state.
 

@@ -9,9 +9,7 @@ export default function HomePage() {
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>HAM Card Game</h1>
-          <p className={styles.subtitle}>
-            Minimal layout with core UI components.
-          </p>
+          <p className={styles.subtitle}>Minimal layout with core UI components.</p>
         </div>
         <div className={styles.meta}>
           <span className={styles.badge}>Lobby 001</span>
