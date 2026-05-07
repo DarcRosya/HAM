@@ -1,14 +1,15 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import './src/models/User.js';
+
+import cors from 'cors';
 import express from 'express';
 import http from 'http';
-import cors from 'cors';
 import { Server } from 'socket.io';
-import { sequelize, verifyConnection } from './src/config/db.js';
-import './src/models/User.js';
-import { socketAuth } from './src/middlewares/socketAuth.js';
 
+import { sequelize, verifyConnection } from './src/config/db.js';
+import { socketAuth } from './src/middlewares/socketAuth.js';
 import authRoutes from './src/routes/authRoutes.js';
 
 const app = express();
