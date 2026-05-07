@@ -1,0 +1,18 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: ham-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ham
+      MYSQL_USER: ham_user
+      MYSQL_PASSWORD: ham_password
+    ports:
+      - '3306:3306'
+    volumes:
+      - ham-mysql-data:/var/lib/mysql
+      - ./server/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  ham-mysql-data:
