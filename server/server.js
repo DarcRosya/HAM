@@ -12,6 +12,8 @@ import { sequelize, verifyConnection } from './src/config/db.js';
 import { socketAuth } from './src/middlewares/socketAuth.js';
 import authRoutes from './src/routes/authRoutes.js';
 
+import { handleFindMatch, removeFromQueue } from './src/game/matchmaker.js';
+
 const app = express();
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
@@ -46,8 +48,16 @@ io.use(socketAuth);
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}. User: ${socket.user.username}`);
 
+  socket.on('find_match', () => {
+    handleFindMatch(socket, io);
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}. User: ${socket.user.username}`);
+
+    removeFromQueue(socket.id);
+
+    // TODO: COUNT +lose to statisic if player left the game
   });
 });
 
