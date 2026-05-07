@@ -5,7 +5,8 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import { Server } from 'socket.io';
-import { pool, verifyConnection } from './src/config/db';
+import { sequelize, verifyConnection } from './src/config/db.js';
+import './src/models/User.js';
 
 import authRoutes from './src/routes/authRoutes.js';
 
@@ -23,7 +24,7 @@ app.get('/health', (req, res) => {
 
 app.get('/health/db', async (req, res) => {
   try {
-    await pool.query('SELECT 1');
+    await sequelize.authenticate();
     res.json({ status: 'ok' });
   } catch (error) {
     res.status(500).json({ status: 'error' });
@@ -51,9 +52,11 @@ const port = Number(process.env.PORT) || 3001;
 async function startServer() {
   try {
     await verifyConnection();
+    await sequelize.sync();
     console.log('DB connected');
   } catch (error) {
     console.error('DB connection failed:', error.message);
+    return;
   }
 
   httpServer.listen(port, () => {
