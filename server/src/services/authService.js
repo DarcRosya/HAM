@@ -1,9 +1,22 @@
-import { createUser, findByUsername } from '../repositories/userRepository.js';
+import {
+  createUser,
+  findByEmail,
+  findByUsername,
+} from '../repositories/userRepository.js';
 import { hashPassword, verifyPassword } from '../utils/hash.js';
 import { generateToken } from '../utils/jwt.js';
 
-export async function registerUser({ username, password }) {
-  const existingUser = await findByUsername(username);
+export async function registerUser({
+  username,
+  email,
+  password,
+  displayedName,
+  avatar,
+}) {
+  const [existingUser, existingEmail] = await Promise.all([
+    findByUsername(username),
+    findByEmail(email),
+  ]);
 
   if (existingUser) {
     const error = new Error('Username already exists');
@@ -11,10 +24,28 @@ export async function registerUser({ username, password }) {
     throw error;
   }
 
-  const passwordHash = await hashPassword(password);
-  const user = await createUser({ username, passwordHash });
+  if (existingEmail) {
+    const error = new Error('Email already exists');
+    error.status = 409;
+    throw error;
+  }
 
-  return { id: user.id, username: user.username };
+  const passwordHash = await hashPassword(password);
+  const user = await createUser({
+    username,
+    email,
+    passwordHash,
+    displayedName,
+    avatar,
+  });
+
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    displayedName: user.displayedName,
+    avatar: user.avatar,
+  };
 }
 
 export async function loginUser({ username, password }) {
@@ -41,6 +72,9 @@ export async function loginUser({ username, password }) {
     user: {
       id: user.id,
       username: user.username,
+      email: user.email,
+      displayedName: user.displayedName,
+      avatar: user.avatar,
     },
   };
 }

@@ -1,14 +1,23 @@
-import { registerUser, loginUser } from '../services/authService.js';
+import { loginUser, registerUser } from '../services/authService.js';
 
 export async function register(req, res) {
-  const { username, password } = req.body;
+  const { username, email, password, displayedName, displayed_name, avatar } = req.body;
+  const normalizedDisplayName = displayedName ?? displayed_name ?? null;
 
-  if (!username || !password) {
-    return res.status(400).json({ message: 'Username and password are required' });
+  if (!username || !email || !password) {
+    return res
+      .status(400)
+      .json({ message: 'Username, email, and password are required' });
   }
 
   try {
-    await registerUser({ username, password });
+    await registerUser({
+      username,
+      email,
+      password,
+      displayedName: normalizedDisplayName,
+      avatar,
+    });
     return res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     const status = error.status || 500;

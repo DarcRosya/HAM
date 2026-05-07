@@ -1,5 +1,5 @@
-import styles from './Hand.module.css';
 import Card from './Card.jsx';
+import styles from './Hand.module.css';
 
 const starterCards = ['AS', '10H', '3D', 'KC', '7S'];
 

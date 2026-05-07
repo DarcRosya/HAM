@@ -20,7 +20,6 @@ This repository is split into a React client and an Express server.
 ## /server
 
 - server.js - Express + Socket.io entry.
-- sql/ - database init scripts (Docker).
 - src/
   - config/ - env, DB pool, and constants.
   - controllers/ - HTTP handlers.
@@ -38,4 +37,5 @@ This repository is split into a React client and an Express server.
 - DB_USER
 - DB_PASSWORD
 - DB_NAME
+- DB_SYNC_ALTER
 - JWT_SECRET

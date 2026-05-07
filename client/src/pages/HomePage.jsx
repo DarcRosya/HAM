@@ -1,7 +1,7 @@
-import styles from './HomePage.module.css';
-import Table from '../components/Table.jsx';
-import Hand from '../components/Hand.jsx';
 import Avatar from '../components/Avatar.jsx';
+import Hand from '../components/Hand.jsx';
+import Table from '../components/Table.jsx';
+import styles from './HomePage.module.css';
 
 export default function HomePage() {
   return (

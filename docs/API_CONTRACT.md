@@ -24,6 +24,9 @@ Creates a new user account.
 ```json
 {
   "username": "player1",
+  "email": "player1@example.com",
+  "displayedName": "Player One",
+  "avatar": "/assets/default-avatar.svg",
   "password": "securepassword"
 }
 ```
@@ -56,7 +59,10 @@ Authenticates a user and returns a JWT token.
   "token": "eyJhbGciOiJIUzI1NiIsIn...",
   "user": {
     "id": 1,
-    "username": "player1"
+    "username": "player1",
+    "email": "player1@example.com",
+    "displayedName": "Player One",
+    "avatar": "/assets/default-avatar.svg"
   }
 }
 ```

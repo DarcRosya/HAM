@@ -1,11 +1,12 @@
+import HomePage from './pages/HomePage.jsx';
 import styles from './styles/App.module.css';
 import HomePage from './pages/HomePage.jsx';
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Lobby from "./pages/Lobby";
-import Battle from "./pages/Battle";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Lobby from './pages/Lobby';
+import Battle from './pages/Battle';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
