@@ -1,16 +1,21 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-const http = require('http');
-const express = require('express');
-const cors = require('cors');
-const { Server } = require('socket.io');
-const { pool, verifyConnection } = require('./src/config/db');
+import express from 'express';
+import http from 'http';
+import cors from 'cors';
+import { Server } from 'socket.io';
+import { pool, verifyConnection } from './src/config/db';
+
+import authRoutes from './src/routes/authRoutes.js';
 
 const app = express();
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
 app.use(cors({ origin: clientOrigin, credentials: true }));
 app.use(express.json());
+
+app.use('/api/auth', authRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
