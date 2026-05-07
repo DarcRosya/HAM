@@ -7,6 +7,7 @@ import cors from 'cors';
 import { Server } from 'socket.io';
 import { sequelize, verifyConnection } from './src/config/db.js';
 import './src/models/User.js';
+import { socketAuth } from './src/middlewares/socketAuth.js';
 
 import authRoutes from './src/routes/authRoutes.js';
 
@@ -39,11 +40,13 @@ const io = new Server(httpServer, {
   },
 });
 
+io.use(socketAuth);
+
 io.on('connection', (socket) => {
-  console.log('socket connected:', socket.id);
+  console.log(`Socket connected: ${socket.id}. User: ${socket.user.username}`);
 
   socket.on('disconnect', () => {
-    console.log('socket disconnected:', socket.id);
+    console.log(`Socket disconnected: ${socket.id}. User: ${socket.user.username}`);
   });
 });
 
