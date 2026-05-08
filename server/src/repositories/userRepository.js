@@ -1,11 +1,36 @@
-import User from '../models/user.js';
+import { pool } from '../config/db.js';
+
+const mapUserRow = (row) => {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    displayedName: row.displayed_name ?? null,
+    username: row.username,
+    email: row.email,
+    avatar: row.avatar,
+    passwordHash: row.password_hash,
+    createdAt: row.created_at,
+  };
+};
 
 export async function findByUsername(username) {
-  return User.findOne({ where: { username } });
+  const [rows] = await pool.query(
+    'SELECT * FROM users WHERE username = ? LIMIT 1',
+    [username]
+  );
+
+  return mapUserRow(rows[0]);
 }
 
 export async function findByEmail(email) {
-  return User.findOne({ where: { email } });
+  const [rows] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [
+    email,
+  ]);
+
+  return mapUserRow(rows[0]);
 }
 
 export async function createUser({
@@ -15,11 +40,19 @@ export async function createUser({
   displayedName,
   avatar,
 }) {
-  return User.create({
+  const normalizedDisplayedName = displayedName ?? null;
+  const normalizedAvatar = avatar ?? '/assets/default-avatar.svg';
+
+  const [result] = await pool.query(
+    'INSERT INTO users (username, email, password_hash, displayed_name, avatar) VALUES (?, ?, ?, ?, ?)',
+    [username, email, passwordHash, normalizedDisplayedName, normalizedAvatar]
+  );
+
+  return {
+    id: result.insertId,
     username,
     email,
-    passwordHash,
-    displayedName: displayedName || null,
-    avatar: avatar || undefined,
-  });
+    displayedName: normalizedDisplayedName,
+    avatar: normalizedAvatar,
+  };
 }

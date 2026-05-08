@@ -1,0 +1,12 @@
+CREATE DATABASE IF NOT EXISTS ham;
+USE ham;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  displayed_name VARCHAR(50),
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  avatar VARCHAR(255) DEFAULT '/assets/default-avatar.svg',
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

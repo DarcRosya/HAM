@@ -20,11 +20,11 @@ This repository is split into a React client and an Express server.
 ## /server
 
 - server.js - Express + Socket.io entry.
+- init.sql - schema bootstrap for MySQL.
 - src/
   - config/ - env, DB pool, and constants.
   - controllers/ - HTTP handlers.
-  - models/ - Sequelize models.
-  - repositories/ - data access via Sequelize models.
+  - repositories/ - data access via mysql2 pool queries.
   - middlewares/ - auth, validation, error handling.
   - game/ - core game rules and state.
 
@@ -37,5 +37,4 @@ This repository is split into a React client and an Express server.
 - DB_USER
 - DB_PASSWORD
 - DB_NAME
-- DB_SYNC_ALTER
 - JWT_SECRET
