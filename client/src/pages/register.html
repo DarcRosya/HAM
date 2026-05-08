@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAM Card Game</title>
+</head>
+
+<body>
+    <div class="register-page">
+        <h2>Register</h2>
+
+        <form id="registerForm">
+            <div>
+                <label for="nickname">Displayed name</label><br/>
+                <input id="nickname" type="text" required>
+            </div>
+            <br/>
+            <div>
+                <label for="username">Username</label><br/>
+                <input id="username" type="text" required>
+            </div>
+            <br/>
+            <div>
+                <label for="email">Email</label><br/>
+                <input id="email" type="email" required>
+            </div>
+            <br/>
+            <div>
+                <label for="password">Password</label><br/>
+                <input id="password" type="password" required>
+            </div>
+            <br/>
+            <div>
+                <label for="confirmPassword">Confirm password</label><br/>
+                <input id="confirmPassword" type="password" required>
+            </div>
+            <br/>
+            <button type="submit" id="registerBtn">Register</button>
+        </form>
+
+        <p>
+            Already have an account? <a href="#login">Login</a>
+        </p>
+    </div>
+
+    <script type="module" src="../scripts/register.js"></script>
+</body>
+
+</html>
