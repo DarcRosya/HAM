@@ -50,6 +50,28 @@ io.on('connection', (socket) => {
     handleFindMatch(socket, io);
   });
 
+  socket.on('end_turn', () => {
+    let currentRoom = null;
+    let currentRoomId = null;
+
+    for (const [roomId, game] of activeGames.entries()) {
+      if (game.players[socket.user.id]) {
+        currentRoom = game;
+        currentRoomId = roomId;
+        break;
+      }
+    }
+
+    if (!currentRoom) return;
+
+    currentRoom.handleEndTurn(socket.user.id);
+
+    if (currentRoom.status === 'finished') {
+      activeGames.delete(currentRoomId);
+      console.log(`Room ${currentRoomId} deleted from memory.`);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}. User: ${socket.user.username}`);
 
