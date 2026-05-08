@@ -1,14 +1,12 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import './src/models/user.js';
-
 import cors from 'cors';
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 
-import { sequelize, verifyConnection } from './src/config/db.js';
+import { pool, verifyConnection } from './src/config/db.js';
 import { socketAuth } from './src/middlewares/socketAuth.js';
 import authRoutes from './src/routes/authRoutes.js';
 
@@ -28,7 +26,7 @@ app.get('/health', (req, res) => {
 
 app.get('/health/db', async (req, res) => {
   try {
-    await sequelize.authenticate();
+    await pool.query('SELECT 1');
     res.json({ status: 'ok' });
   } catch (error) {
     res.status(500).json({ status: 'error' });
@@ -66,8 +64,6 @@ const port = Number(process.env.PORT) || 3001;
 async function startServer() {
   try {
     await verifyConnection();
-    const shouldAlter = process.env.DB_SYNC_ALTER === 'true';
-    await sequelize.sync(shouldAlter ? { alter: true } : undefined);
     console.log('DB connected');
     console.log(`DB sync ${shouldAlter ? 'altered' : 'completed'}`);
   } catch (error) {

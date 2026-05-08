@@ -1,11 +1,11 @@
-# Database and ORM
+# Database
 
-The project uses Sequelize (ORM) with MySQL. Tables are created automatically on server start.
+The project uses MySQL with `mysql2` (no ORM). Tables are created from `server/init.sql` when the MySQL container starts for the first time.
 
 ## How tables are created
 
-- The server runs `sequelize.sync()` on startup.
-- To apply schema changes during development, set `DB_SYNC_ALTER=true` and restart the server.
+- The MySQL container runs `server/init.sql` on first initialization.
+- To apply schema changes during development, update `server/init.sql` and recreate the volume.
 - For a clean rebuild, stop containers and remove the volume:
 
 ```bash
