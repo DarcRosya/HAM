@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAM Card Game</title>
+</head>
+
+<body>
+    <div class="battle-container">
+        <h2>Battlefield</h2>
+
+        <div id="opponent-section">
+            <h4>Opponent HP: <span id="opp-hp"></span></h4>
+            <p>Opponent field cards: <span id="opp-field-count"></span></p>
+        </div>
+
+        <hr/>
+
+        <div id="player-section">
+            <h4>Your HP: <span id="player-hp"></span></h4>
+
+            <div>
+                <p>Your cards on field: <span id="player-field-count"></span></p>
+            </div>
+
+            <div>
+                <p>Your cards in hand: <span id="player-hand-count"></span></p>
+            </div>
+
+            <hr/>
+
+            <div id="game-info">
+                <p>Turn: <span id="info-turn"></span></p>
+                <p>Time: <span id="info-timer"></span>s</p>
+                <p>Round: <span id="info-round"></span></p>
+            </div>
+
+            <hr/>
+
+            <h4>Your cards in hand</h4>
+            <div id="hand-display">
+                </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="../scripts/battle.js"></script>
+</body>
+
+</html>
