@@ -1,21 +1,21 @@
 .avatar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-  
+
 .circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #2f3a56;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #2f3a56;
 }
-  
+
 .name {
-    font-weight: 600;
+  font-weight: 600;
 }
-  
+
 .status {
-    font-size: 12px;
-    color: #5a5a5a;
+  font-size: 12px;
+  color: #5a5a5a;
 }
