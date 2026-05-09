@@ -37,4 +37,5 @@ This repository is split into a React client and an Express server.
 - DB_USER
 - DB_PASSWORD
 - DB_NAME
+- DB_SYNC_ALTER
 - JWT_SECRET

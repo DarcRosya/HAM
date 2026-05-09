@@ -50,12 +50,73 @@ io.on('connection', (socket) => {
     handleFindMatch(socket, io);
   });
 
+  socket.on('end_turn', () => {
+    let currentRoom = null;
+    let currentRoomId = null;
+
+    for (const [roomId, game] of activeGames.entries()) {
+      if (game.players[socket.user.id]) {
+        currentRoom = game;
+        currentRoomId = roomId;
+        break;
+      }
+    }
+
+    if (!currentRoom) return;
+
+    currentRoom.handleEndTurn(socket.user.id);
+
+    if (currentRoom.status === 'finished') {
+      activeGames.delete(currentRoomId);
+      console.log(`Room ${currentRoomId} deleted from memory.`);
+    }
+  });
+
+  socket.on('play_card', ({ roomId, cardInstanceId }) => {
+    const game = activeGames.get(roomId);
+    if (game) {
+      game.playCard(socket.user.id, cardInstanceId);
+    }
+  });
+
+  socket.on('attack_target', ({ roomId, attackerInstanceId, targetId, targetType }) => {
+    const game = activeGames.get(roomId);
+    if (game) {
+      game.attackTarget(socket.user.id, attackerInstanceId, targetId, targetType);
+
+      if (game.status === 'finished') {
+        activeGames.delete(roomId);
+        console.log(`Room ${roomId} deleted after final blow.`);
+      }
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}. User: ${socket.user.username}`);
 
     removeFromQueue(socket.id);
 
-    // TODO: COUNT +lose to statisic if player left the game
+    let currentRoomId = null;
+    let currentRoom = null;
+
+    for (const [roomId, game] of activeGames.entries()) {
+      if (game.players[socket.user.id]) {
+        currentRoom = game;
+        currentRoomId = roomId;
+        break;
+      }
+    }
+
+    if (currentRoom) {
+      const winnerId = Object.keys(currentRoom.players).find(
+        (id) => String(id) !== String(socket.user.id)
+      );
+
+      currentRoom.endGame(winnerId);
+
+      activeGames.delete(currentRoomId);
+      console.log(`Room ${currentRoomId} deleted because player left the game.`);
+    }
   });
 });
 

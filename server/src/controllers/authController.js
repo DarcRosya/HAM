@@ -66,9 +66,7 @@ export async function register(req, res) {
   const normalizedDisplayName = displayedName ?? displayed_name ?? null;
 
   if (!username || !email || !password) {
-    return res
-      .status(400)
-      .json({ message: 'Username, email, and password are required' });
+    return res.status(400).json({ message: 'Username, email, and password are required' });
   }
 
   const usernameError = validateUsername(username);

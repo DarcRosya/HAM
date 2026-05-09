@@ -17,29 +17,18 @@ const mapUserRow = (row) => {
 };
 
 export async function findByUsername(username) {
-  const [rows] = await pool.query(
-    'SELECT * FROM users WHERE username = ? LIMIT 1',
-    [username]
-  );
+  const [rows] = await pool.query('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
 
   return mapUserRow(rows[0]);
 }
 
 export async function findByEmail(email) {
-  const [rows] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [
-    email,
-  ]);
+  const [rows] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
 
   return mapUserRow(rows[0]);
 }
 
-export async function createUser({
-  username,
-  email,
-  passwordHash,
-  displayedName,
-  avatar,
-}) {
+export async function createUser({ username, email, passwordHash, displayedName, avatar }) {
   const normalizedDisplayedName = displayedName ?? null;
   const normalizedAvatar = avatar ?? '/assets/default-avatar.svg';
 
