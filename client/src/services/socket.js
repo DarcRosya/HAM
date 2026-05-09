@@ -1,7 +1,15 @@
-import { io } from "socket.io-client";
+import { io } from "https://cdn.socket.io/4.7.2/socket.io.esm.min.js";
 
-const SOCKET_URL = "http://localhost:3001"; 
+let socket = null;
 
-export const socket = io(SOCKET_URL, {
-  autoConnect: false,
-});
+export const socketService = {
+    connect() {
+        const token = localStorage.getItem('token');
+        if (!socket) {
+            socket = io('http://localhost:3001', {
+                auth: { token }
+            });
+        }
+        return socket;
+    }
+};
