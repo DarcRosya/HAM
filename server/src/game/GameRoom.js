@@ -1,5 +1,7 @@
 import { CARDS } from './cards.js';
 
+const STARTING_CARDS_COUNT = 4;
+
 const shuffleArray = (array) => {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -53,7 +55,10 @@ export class GameRoom {
       maxMana: 3,
       hand: [],
       table: [],
-      deck: shuffleArray(CARDS),
+      deck: shuffleArray(CARDS).map((card) => ({
+        ...card,
+        instanceId: `card-${card.id}-${Math.random().toString(36).substring(2, 9)}`,
+      })),
       fatigue: 0,
     };
   }
@@ -67,8 +72,6 @@ export class GameRoom {
   }
 
   initGame() {
-    const STARTING_CARDS_COUNT = 4;
-
     for (const playerId in this.players) {
       const player = this.players[playerId];
       player.hand = player.deck.splice(0, STARTING_CARDS_COUNT);
