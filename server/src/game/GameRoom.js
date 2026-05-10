@@ -223,6 +223,14 @@ export class GameRoom {
     this.broadcastState();
   }
 
+  surrender(playerId) {
+    if (this.status !== 'playing') return;
+
+    const winnerId = Object.keys(this.players).find((id) => String(id) !== String(playerId));
+
+    this.endGame(winnerId);
+  }
+
   handleEndTurn(requestingUserId) {
     if (this.status !== 'playing') return;
 

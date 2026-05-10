@@ -10,7 +10,7 @@ import { pool, verifyConnection } from './src/config/db.js';
 import { socketAuth } from './src/middlewares/socketAuth.js';
 import authRoutes from './src/routes/authRoutes.js';
 
-import { handleFindMatch, removeFromQueue } from './src/game/matchmaker.js';
+import { handleFindMatch, removeFromQueue, activeGames } from './src/game/matchmaker.js';
 
 const app = express();
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -88,6 +88,16 @@ io.on('connection', (socket) => {
         activeGames.delete(roomId);
         console.log(`Room ${roomId} deleted after final blow.`);
       }
+    }
+  });
+
+  socket.on('surrender', ({ roomId }) => {
+    const game = activeGames.get(roomId);
+    if (game && game.players[socket.user.id]) {
+      game.surrender(socket.user.id);
+
+      activeGames.delete(roomId);
+      console.log(`Room ${roomId} deleted because a player surrendered.`);
     }
   });
 
