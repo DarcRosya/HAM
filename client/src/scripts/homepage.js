@@ -8,6 +8,8 @@ export function initHomepage() {
     return;
   }
 
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
   const tableRoot = document.getElementById('table-root');
   const avatarRoot = document.getElementById('avatar-root');
   const handRoot = document.getElementById('hand-root');
@@ -19,11 +21,25 @@ export function initHomepage() {
 
   if (avatarRoot) {
     avatarRoot.innerHTML = '';
-    avatarRoot.appendChild(renderAvatar({ name: 'Player 1', status: 'Ready' }));
+    avatarRoot.appendChild(
+      renderAvatar({
+        name: user.displayedName || user.username,
+        status: 'Ready',
+      })
+    );
   }
 
   if (handRoot) {
     handRoot.innerHTML = '';
     handRoot.appendChild(renderHand());
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.hash = '#login';
+    });
   }
 }
