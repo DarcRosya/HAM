@@ -106,11 +106,6 @@ export async function login(req, res) {
     return res.status(400).json({ message: 'Username and password are required' });
   }
 
-  const usernameError = validateUsername(username);
-  if (usernameError) {
-    return res.status(400).json({ message: usernameError });
-  }
-
   // const passwordError = validatePassword(password);
   // if (passwordError) {
   //   return res.status(400).json({ message: passwordError });
