@@ -108,24 +108,34 @@ io.on('connection', (socket) => {
 
     let currentRoomId = null;
     let currentRoom = null;
+    let disconnectingPlayerId = socket.user?.id ?? null;
 
     for (const [roomId, game] of activeGames.entries()) {
-      if (game.players[socket.user.id]) {
+      if (disconnectingPlayerId && game.players[disconnectingPlayerId]) {
+        currentRoom = game;
+        currentRoomId = roomId;
+        break;
+      }
+
+      const socketEntry = Object.entries(game.sockets).find(
+        ([, playerSocket]) => playerSocket.id === socket.id
+      );
+
+      if (socketEntry) {
+        disconnectingPlayerId = socketEntry[0];
         currentRoom = game;
         currentRoomId = roomId;
         break;
       }
     }
 
-    if (currentRoom) {
-      const winnerId = Object.keys(currentRoom.players).find(
-        (id) => String(id) !== String(socket.user.id)
-      );
+    if (currentRoom && disconnectingPlayerId) {
+      currentRoom.surrender(disconnectingPlayerId);
 
-      currentRoom.endGame(winnerId);
-
-      activeGames.delete(currentRoomId);
-      console.log(`Room ${currentRoomId} deleted because player left the game.`);
+      if (currentRoom.status === 'finished') {
+        activeGames.delete(currentRoomId);
+        console.log(`Room ${currentRoomId} deleted because player left the game.`);
+      }
     }
   });
 });
