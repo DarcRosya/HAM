@@ -29,21 +29,23 @@ export class GameRoom {
       [player2.user.id]: this.createPlayerState(player2),
     };
 
-    this.intervalId = setInterval(() => {
-      this.turnTimer -= 1;
+    setTimeout(() => {
+      if (this.status === 'playing') {
+        this.intervalId = setInterval(() => {
+          this.turnTimer -= 1;
 
-      if (this.turnTimer <= 0) {
-        this.nextTurn();
+          if (this.turnTimer <= 0) {
+            this.nextTurn();
+          }
+
+          for (const playerId in this.sockets) {
+            const playerSocket = this.sockets[playerId];
+            const personalState = this.getGameState(playerId);
+            playerSocket.emit('game_state', personalState);
+          }
+        }, 1000);
       }
-
-      for (const playerId in this.sockets) {
-        const playerSocket = this.sockets[playerId];
-
-        const personalState = this.getGameState(playerId);
-
-        playerSocket.emit('game_state', personalState);
-      }
-    }, 1000);
+    }, 7500);
   }
 
   createPlayerState(socket) {
@@ -85,6 +87,7 @@ export class GameRoom {
       const isMe = String(id) === String(requestingUserId);
 
       sanitizedPlayers[id] = {
+        socketId: player.socketId,
         username: player.username,
         hp: player.hp,
         mana: player.mana,
@@ -243,6 +246,10 @@ export class GameRoom {
   }
 
   endGame(winnerId) {
+    if (this.status === 'finished') {
+      return;
+    }
+
     this.status = 'finished';
 
     clearInterval(this.intervalId);

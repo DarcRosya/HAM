@@ -6,8 +6,7 @@
     "db:down": "docker compose down",
     "server": "npm --prefix server run dev",
     "client": "npx serve ./client -p 5173",
-    "dev": "concurrently -k -n db,server,client -c \"blue,green,magenta\" \"npm run db\" \"npm run server\" \"npm run client\"",
-    "format": "prettier --write \"**/*.{js,css,html,json}\"",
+    "dev": "npm run db && concurrently -k -n server,client -c \"green,magenta\" \"npm run server\" \"npm run client\"",
     "setup": "npm install && npm --prefix server install"
   },
   "devDependencies": {
