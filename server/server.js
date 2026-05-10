@@ -91,6 +91,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('surrender', ({ roomId }) => {
+    const game = activeGames.get(roomId);
+    if (game && game.players[socket.user.id]) {
+      game.surrender(socket.user.id);
+
+      activeGames.delete(roomId);
+      console.log(`Room ${roomId} deleted because a player surrendered.`);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}. User: ${socket.user.username}`);
 
