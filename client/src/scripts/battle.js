@@ -34,6 +34,16 @@ export function initBattle() {
     }
   });
 
+  const surrenderBtn = document.getElementById('surrender-btn');
+  surrenderBtn.addEventListener('click', () => {
+    if (!latestState) {
+      return;
+    }
+    socket.emit('surrender', {
+      roomId: latestState.roomId,
+    });
+  });
+
   window.addEventListener('mouseup', (e) => {
     if (!draggingAttackId || !latestState) {
       return;
