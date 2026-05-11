@@ -1,15 +1,13 @@
 {
-  "name": "ham",
+  "name": "ham-root",
   "private": true,
   "scripts": {
-    "dev": "concurrently -k -n server,client \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
-    "dev:full": "npm run db && npm run dev",
-    "dev:server": "npm --prefix server run dev",
-    "dev:client": "npm --prefix client run dev",
-    "db": "docker compose up -d --build",
+    "db": "docker compose up -d",
     "db:down": "docker compose down",
-    "format": "prettier --write \"**/*.{js,jsx,css,md,json,yml,yaml}\"",
-    "setup": "npm install && npm --prefix client install && npm --prefix server install"
+    "server": "npm --prefix server run dev",
+    "client": "npx serve ./client -p 5173",
+    "dev": "npm run db && concurrently -k -n server,client -c \"green,magenta\" \"npm run server\" \"npm run client\"",
+    "setup": "npm install && npm --prefix server install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

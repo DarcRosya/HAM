@@ -1,18 +1,8 @@
-import {
-  createUser,
-  findByEmail,
-  findByUsername,
-} from '../repositories/userRepository.js';
+import { createUser, findByEmail, findByUsername } from '../repositories/userRepository.js';
 import { hashPassword, verifyPassword } from '../utils/hash.js';
 import { generateToken } from '../utils/jwt.js';
 
-export async function registerUser({
-  username,
-  email,
-  password,
-  displayedName,
-  avatar,
-}) {
+export async function registerUser({ username, email, password, displayedName, avatar }) {
   const [existingUser, existingEmail] = await Promise.all([
     findByUsername(username),
     findByEmail(email),
@@ -49,7 +39,9 @@ export async function registerUser({
 }
 
 export async function loginUser({ username, password }) {
-  const user = await findByUsername(username);
+  const isEmail = username.includes('@');
+
+  const user = isEmail ? await findByEmail(username) : await findByUsername(username);
 
   if (!user) {
     const error = new Error('Invalid credentials');

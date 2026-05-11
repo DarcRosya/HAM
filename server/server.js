@@ -10,7 +10,7 @@ import { pool, verifyConnection } from './src/config/db.js';
 import { socketAuth } from './src/middlewares/socketAuth.js';
 import authRoutes from './src/routes/authRoutes.js';
 
-import { handleFindMatch, removeFromQueue } from './src/game/matchmaker.js';
+import { handleFindMatch, removeFromQueue, activeGames } from './src/game/matchmaker.js';
 
 const app = express();
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -91,6 +91,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('surrender', ({ roomId }) => {
+    const game = activeGames.get(roomId);
+    if (game && game.players[socket.user.id]) {
+      game.surrender(socket.user.id);
+
+      activeGames.delete(roomId);
+      console.log(`Room ${roomId} deleted because a player surrendered.`);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}. User: ${socket.user.username}`);
 
@@ -98,24 +108,34 @@ io.on('connection', (socket) => {
 
     let currentRoomId = null;
     let currentRoom = null;
+    let disconnectingPlayerId = socket.user?.id ?? null;
 
     for (const [roomId, game] of activeGames.entries()) {
-      if (game.players[socket.user.id]) {
+      if (disconnectingPlayerId && game.players[disconnectingPlayerId]) {
+        currentRoom = game;
+        currentRoomId = roomId;
+        break;
+      }
+
+      const socketEntry = Object.entries(game.sockets).find(
+        ([, playerSocket]) => playerSocket.id === socket.id
+      );
+
+      if (socketEntry) {
+        disconnectingPlayerId = socketEntry[0];
         currentRoom = game;
         currentRoomId = roomId;
         break;
       }
     }
 
-    if (currentRoom) {
-      const winnerId = Object.keys(currentRoom.players).find(
-        (id) => String(id) !== String(socket.user.id)
-      );
+    if (currentRoom && disconnectingPlayerId) {
+      currentRoom.surrender(disconnectingPlayerId);
 
-      currentRoom.endGame(winnerId);
-
-      activeGames.delete(currentRoomId);
-      console.log(`Room ${currentRoomId} deleted because player left the game.`);
+      if (currentRoom.status === 'finished') {
+        activeGames.delete(currentRoomId);
+        console.log(`Room ${currentRoomId} deleted because player left the game.`);
+      }
     }
   });
 });
