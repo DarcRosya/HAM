@@ -7,6 +7,8 @@ import http from 'http';
 
 import { pool, verifyConnection } from './src/config/db.js';
 import authRoutes from './src/routes/authRoutes.js';
+import gameRoutes from './src/routes/gameRoutes.js';
+import userRoutes from './src/routes/userRoutes.js';
 import { initSocketManager } from './src/socket/socketManager.js';
 
 const app = express();
@@ -16,6 +18,8 @@ app.use(cors({ origin: clientOrigin, credentials: true }));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api', gameRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/health/db', async (req, res) => {
