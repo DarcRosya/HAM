@@ -26,10 +26,10 @@ The default avatar path stored in the DB is:
 /assets/default-avatar.svg
 ```
 
-Place the placeholder file in the client public assets folder:
+Place the placeholder file in the client assets folder:
 
 ```
-client/public/assets/default-avatar.svg
+client/assets/default-avatar.svg
 ```
 
 When rendering, the frontend can use `user.avatar || '/assets/default-avatar.svg'`.

@@ -1,4 +1,6 @@
 import { CARDS } from './cards.js';
+import { updateRating, findById } from '../repositories/userRepository.js';
+import { saveMatchResult } from '../repositories/matchRepository.js';
 
 const STARTING_CARDS_COUNT = 4;
 
@@ -15,9 +17,11 @@ export class GameRoom {
   constructor(roomId, player1, player2) {
     this.roomId = roomId;
     this.status = 'playing';
+    this.startedAt = new Date();
 
     this.activeTurn = Math.random() > 0.5 ? player1.user.id : player2.user.id;
-    this.turnTimer = 30;
+    this.turnDuration = 30000; // 30 seconds in ms
+    this.turnStartTime = Date.now();
 
     this.sockets = {
       [player1.user.id]: player1,
@@ -29,27 +33,37 @@ export class GameRoom {
       [player2.user.id]: this.createPlayerState(player2),
     };
 
-    this.intervalId = setInterval(() => {
-      this.turnTimer -= 1;
+    setTimeout(() => {
+      if (this.status === 'playing') {
+        this.startTurnTimer();
+      }
+    }, 7500);
+  }
 
-      if (this.turnTimer <= 0) {
+  startTurnTimer() {
+    this.clearTurnTimer();
+    this.turnStartTime = Date.now();
+    this.intervalId = setTimeout(() => {
+      if (this.status === 'playing') {
         this.nextTurn();
+        this.broadcastState();
       }
+    }, this.turnDuration);
+  }
 
-      for (const playerId in this.sockets) {
-        const playerSocket = this.sockets[playerId];
-
-        const personalState = this.getGameState(playerId);
-
-        playerSocket.emit('game_state', personalState);
-      }
-    }, 1000);
+  clearTurnTimer() {
+    if (this.intervalId) {
+      clearTimeout(this.intervalId);
+      this.intervalId = null;
+    }
   }
 
   createPlayerState(socket) {
     return {
       socketId: socket.id,
       username: socket.user.username,
+      avatar: socket.user.avatar,
+      displayedName: socket.user.displayedName,
       hp: 20,
       mana: 3,
       maxMana: 3,
@@ -85,21 +99,28 @@ export class GameRoom {
       const isMe = String(id) === String(requestingUserId);
 
       sanitizedPlayers[id] = {
+        socketId: player.socketId,
         username: player.username,
+        avatar: player.avatar,
+        displayedName: player.displayedName,
         hp: player.hp,
         mana: player.mana,
         maxMana: player.maxMana,
         table: player.table,
         handCount: player.hand.length,
         hand: isMe ? player.hand : [],
-        fatigue: 0,
+        fatigue: player.fatigue,
+        deckCount: player.deck.length,
       };
     }
+
+    const elapsed = Date.now() - this.turnStartTime;
+    const turnTimerSeconds = Math.max(0, Math.ceil((this.turnDuration - elapsed) / 1000));
 
     return {
       roomId: this.roomId,
       activeTurn: this.activeTurn,
-      turnTimer: this.turnTimer,
+      turnTimer: turnTimerSeconds,
       players: sanitizedPlayers,
     };
   }
@@ -135,10 +156,11 @@ export class GameRoom {
 
     currentPlayer.table.forEach((card) => (card.canAttack = true));
 
-    this.turnTimer = 30;
+    this.startTurnTimer();
   }
 
   playCard(playerId, cardInstanceId) {
+    if (this.status !== 'playing') return;
     if (String(this.activeTurn) !== String(playerId)) {
       this.sockets[playerId].emit('error', { message: 'It is not your turn!' });
       return;
@@ -173,6 +195,7 @@ export class GameRoom {
   }
 
   attackTarget(playerId, attackerInstanceId, targetId, targetType) {
+    if (this.status !== 'playing') return;
     if (String(this.activeTurn) !== String(playerId)) return;
 
     const attackerPlayer = this.players[playerId];
@@ -242,10 +265,43 @@ export class GameRoom {
     this.broadcastState();
   }
 
-  endGame(winnerId) {
-    this.status = 'finished';
+  async endGame(winnerId) {
+    if (this.status === 'finished') {
+      return;
+    }
 
-    clearInterval(this.intervalId);
+    this.status = 'finished';
+    this.clearTurnTimer();
+
+    const playerIds = Object.keys(this.sockets);
+    const p1Id = parseInt(playerIds[0]);
+    const p2Id = parseInt(playerIds[1]);
+    const winId = winnerId ? parseInt(winnerId) : null;
+
+    try {
+      const [p1, p2] = await Promise.all([findById(p1Id), findById(p2Id)]);
+
+      if (p1 && p2 && winId) {
+        const expectedP1 = 1 / (1 + Math.pow(10, (p2.rating - p1.rating) / 400));
+        const expectedP2 = 1 / (1 + Math.pow(10, (p1.rating - p2.rating) / 400));
+
+        const actualP1 = winId === p1.id ? 1 : 0;
+        const actualP2 = winId === p2.id ? 1 : 0;
+
+        const kValue = 32;
+        const newRatingP1 = Math.round(p1.rating + kValue * (actualP1 - expectedP1));
+        const newRatingP2 = Math.round(p2.rating + kValue * (actualP2 - expectedP2));
+
+        await Promise.all([updateRating(p1.id, newRatingP1), updateRating(p2.id, newRatingP2)]);
+
+        this.players[p1.id].rating = newRatingP1;
+        this.players[p2.id].rating = newRatingP2;
+      }
+
+      await saveMatchResult(p1Id, p2Id, winId, this.startedAt, new Date());
+    } catch (e) {
+      console.error('Failed to save match history or update rating:', e);
+    }
 
     for (const playerId in this.sockets) {
       const playerSocket = this.sockets[playerId];

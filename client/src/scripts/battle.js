@@ -3,48 +3,187 @@ import { renderCard } from '../components/Card.js';
 
 let draggingAttackId = null;
 let latestState = null;
+let battleSocket = null;
+let battleHandlers = null;
+let battleNodes = null;
+let gameActive = false;
+const COIN_TOSS_DURATION_MS = 7500;
+
+const resolvePlayers = (state, socket) => {
+  const entries = Object.entries(state?.players ?? {});
+  if (entries.length === 0) {
+    return { myPlayerId: null, me: null, opponentId: null, opponent: null };
+  }
+
+  const myEntry =
+    entries.find(([, player]) => player.socketId === socket.id) ||
+    entries.find(([id]) => String(id) === String(socket.id));
+
+  if (!myEntry) {
+    return { myPlayerId: null, me: null, opponentId: null, opponent: null };
+  }
+
+  const [myPlayerId, me] = myEntry;
+  const opponentEntry = entries.find(([id]) => String(id) !== String(myPlayerId));
+  const [opponentId, opponent] = opponentEntry ?? [];
+
+  return { myPlayerId, me, opponentId, opponent };
+};
+
+const resetCoinOverlay = () => {
+  if (!battleNodes?.coinOverlay || !battleNodes?.coin) {
+    return;
+  }
+
+  battleNodes.coinOverlay.classList.remove('is-active');
+  battleNodes.coinOverlay.setAttribute('aria-hidden', 'true');
+
+  setTimeout(() => {
+    if (battleNodes?.coin) {
+      battleNodes.coin.classList.remove('coin--you', 'coin--opp');
+    }
+  }, 300);
+};
+
+const detachBattleListeners = () => {
+  if (!battleSocket || !battleHandlers) {
+    return;
+  }
+
+  const {
+    handleMatchFound,
+    handleGameState,
+    handleGameOver,
+    handleError,
+    handleMouseUp,
+    handleMouseMove,
+    handleHashChange,
+    handleEndTurnClick,
+    handleSurrenderClick,
+  } = battleHandlers;
+
+  battleSocket.off('match_found', handleMatchFound);
+  battleSocket.off('game_state', handleGameState);
+  battleSocket.off('game_over', handleGameOver);
+  battleSocket.off('error', handleError);
+
+  window.removeEventListener('mouseup', handleMouseUp);
+  window.removeEventListener('mousemove', handleMouseMove);
+  window.removeEventListener('hashchange', handleHashChange);
+
+  if (battleNodes?.endTurnBtn && handleEndTurnClick) {
+    battleNodes.endTurnBtn.removeEventListener('click', handleEndTurnClick);
+  }
+
+  if (battleNodes?.surrenderBtn && handleSurrenderClick) {
+    battleNodes.surrenderBtn.removeEventListener('click', handleSurrenderClick);
+  }
+
+  battleHandlers = null;
+};
+
+const teardownBattle = ({ emitSurrender = false } = {}) => {
+  if (emitSurrender && gameActive && latestState?.roomId && battleSocket) {
+    battleSocket.emit('surrender', { roomId: latestState.roomId });
+  }
+
+  gameActive = false;
+  draggingAttackId = null;
+  resetCoinOverlay();
+  detachBattleListeners();
+  latestState = null;
+};
 
 export function initBattle() {
+  detachBattleListeners();
+
   const socket = socketService.connect();
-  
-  socket.on('error', (data) => {
+  battleSocket = socket;
+  const coinOverlay = document.getElementById('coin-toss-overlay');
+  const coin = coinOverlay?.querySelector('.coin');
+  const endTurnBtn = document.getElementById('end-turn-btn');
+  const surrenderBtn = document.getElementById('surrender-btn');
+
+  battleNodes = {
+    coinOverlay,
+    coin,
+    endTurnBtn,
+    surrenderBtn,
+  };
+
+  socket.off('match_found');
+  socket.off('game_state');
+  socket.off('game_over');
+  socket.off('error');
+
+  const handleError = (data) => {
     alert(data.message);
     console.log('Socket error:', data);
-  });
+  };
 
-  const handleUpdate = (state) => {
+  const handleGameState = (state) => {
     latestState = state;
+    gameActive = true;
     console.log('Update received:', state);
     updateBattleUI(state, socket);
   };
 
-  socket.on('match_found', handleUpdate);
-  socket.on('game_state', handleUpdate);
+  const handleMatchFound = async (state) => {
+    latestState = state;
+    gameActive = true;
+    console.log('Match found:', state);
 
-  const endTurnBtn = document.getElementById('end-turn-btn');
-  endTurnBtn.addEventListener('click', () => {
+    if (!coinOverlay || !coin) {
+      updateBattleUI(state, socket);
+      return;
+    }
+
+    const { myPlayerId, me, opponent } = resolvePlayers(state, socket);
+    if (!myPlayerId || !me || !opponent) {
+      updateBattleUI(state, socket);
+      return;
+    }
+
+    const isMyTurn = String(state.activeTurn) === String(myPlayerId);
+
+    coinOverlay.classList.add('is-active');
+    coinOverlay.setAttribute('aria-hidden', 'false');
+
+    coin.classList.remove('coin--you', 'coin--opp');
+    void coin.offsetWidth;
+    coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
+
+    await new Promise((resolve) => setTimeout(resolve, COIN_TOSS_DURATION_MS));
+
+    resetCoinOverlay();
+    updateBattleUI(state, socket);
+  };
+
+  const handleEndTurnClick = () => {
     if (!latestState) {
       return;
     }
 
-    if (latestState.activeTurn === socket.id) {
+    const { myPlayerId } = resolvePlayers(latestState, socket);
+    const myId = myPlayerId ?? socket.id;
+
+    if (String(latestState.activeTurn) === String(myId)) {
       socket.emit('end_turn');
     } else {
       alert('Not your turn!');
     }
-  });
+  };
 
-  const surrenderBtn = document.getElementById('surrender-btn');
-  surrenderBtn.addEventListener('click', () => {
+  const handleSurrenderClick = () => {
     if (!latestState) {
       return;
     }
     socket.emit('surrender', {
       roomId: latestState.roomId,
     });
-  });
+  };
 
-  window.addEventListener('mouseup', (e) => {
+  const handleMouseUp = (e) => {
     if (!draggingAttackId || !latestState) {
       return;
     }
@@ -56,64 +195,114 @@ export function initBattle() {
     if (cardTarget) {
       const targetId = cardTarget.dataset.instanceId;
       console.log(`Attacking card: ${targetId}`);
-      
+
       socket.emit('attack_target', {
         roomId: latestState.roomId,
         attackerInstanceId: draggingAttackId,
         targetId: targetId,
-        targetType: 'card'
+        targetType: 'card',
       });
-    } 
-    else if (avatarTarget) {
+    } else if (avatarTarget) {
       console.log('Attacking enemy avatar!');
-      
+
       socket.emit('attack_target', {
         roomId: latestState.roomId,
         attackerInstanceId: draggingAttackId,
         targetId: null,
-        targetType: 'avatar'
+        targetType: 'avatar',
       });
     }
 
     draggingAttackId = null;
-  });
+  };
 
-  window.addEventListener('mousemove', (e) => {
+  const handleMouseMove = (e) => {
     if (draggingAttackId) {
       //dragging
     }
-  });
+  };
 
-  socket.on('game_over', ({ winnerId }) => {
+  const handleGameOver = ({ winnerId }) => {
     console.log('Game over. Winner:', winnerId);
     document.body.style.pointerEvents = 'none';
-    const myId = socket.id;
-    const message = winnerId === myId ? 'You won!' : 'You lost!';
+    gameActive = false;
+
+    const { myPlayerId } = resolvePlayers(latestState, socket);
+    const myId = myPlayerId ?? socket.id;
+    const message = String(winnerId) === String(myId) ? 'You won!' : 'You lost!';
 
     alert(message);
 
+    teardownBattle({ emitSurrender: false });
+
     setTimeout(() => {
-      window.location.hash = '#homepage';
+      window.location.replace('#homepage');
     }, 8000);
-  });
+  };
+
+  const handleHashChange = () => {
+    if (window.location.hash !== '#battle') {
+      teardownBattle({ emitSurrender: true });
+    }
+  };
+
+  battleHandlers = {
+    handleMatchFound,
+    handleGameState,
+    handleGameOver,
+    handleError,
+    handleMouseUp,
+    handleMouseMove,
+    handleHashChange,
+    handleEndTurnClick,
+    handleSurrenderClick,
+  };
+
+  socket.on('error', handleError);
+  socket.on('match_found', handleMatchFound);
+  socket.on('game_state', handleGameState);
+  socket.on('game_over', handleGameOver);
+
+  if (endTurnBtn) {
+    endTurnBtn.addEventListener('click', handleEndTurnClick);
+  }
+
+  if (surrenderBtn) {
+    surrenderBtn.addEventListener('click', handleSurrenderClick);
+  }
+
+  window.addEventListener('mouseup', handleMouseUp);
+  window.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('hashchange', handleHashChange);
+
+  const pendingStateStr = sessionStorage.getItem('pendingMatchState');
+  if (pendingStateStr) {
+    sessionStorage.removeItem('pendingMatchState');
+    const state = JSON.parse(pendingStateStr);
+
+    if (socket.connected) {
+      handleMatchFound(state);
+    } else {
+      socket.on('connect', () => {
+        handleMatchFound(state);
+      });
+    }
+  }
 }
 
 function updateBattleUI(state, socket) {
-  const myId = socket.id;
-  const playerIds = Object.keys(state.players);
+  const { myPlayerId, me, opponent } = resolvePlayers(state, socket);
 
-  const me = state.players[myId];
-  const opponentId = playerIds.find((id) => id !== myId);
-  const opponent = state.players[opponentId];
-
-  if (!me || !opponent) {
+  if (!myPlayerId || !me || !opponent) {
     return;
   }
-   
+
+  const isMyTurn = String(state.activeTurn) === String(myPlayerId);
+
   const turn = document.getElementById('info-turn');
 
-  if (state.activeTurn === myId) {
-    turn.textContent = "YOUR TURN";
+  if (isMyTurn) {
+    turn.textContent = 'YOUR TURN';
   } else {
     turn.textContent = "OPPONENT'S TURN";
   }
@@ -133,7 +322,7 @@ function updateBattleUI(state, socket) {
     div.className = 'card-slot';
     div.textContent = `${card.name} | attack ${card.attack} | defense ${card.defense} | cost ${card.cost}`;
 
-    if (card.canAttack && state.activeTurn === myId) {
+    if (card.canAttack && isMyTurn) {
       div.addEventListener('mousedown', (e) => {
         e.preventDefault();
         draggingAttackId = card.instanceId;
@@ -168,7 +357,7 @@ function updateBattleUI(state, socket) {
     const cardUI = renderCard({ label: card.name });
 
     cardUI.addEventListener('click', () => {
-      if (state.activeTurn === myId) {
+      if (isMyTurn) {
         socket.emit('play_card', {
           roomId: state.roomId,
           cardInstanceId: card.instanceId,

@@ -57,7 +57,7 @@ export async function loginUser({ username, password }) {
     throw error;
   }
 
-  const token = generateToken(user.id, user.username);
+  const token = generateToken(user.id, user.username, user.displayedName, user.avatar);
 
   return {
     token,
