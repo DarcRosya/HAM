@@ -11,6 +11,7 @@ const mapUserRow = (row) => {
     username: row.username,
     email: row.email,
     avatar: row.avatar,
+    rating: row.rating ?? 500,
     passwordHash: row.password_hash,
     createdAt: row.created_at,
   };
@@ -43,5 +44,15 @@ export async function createUser({ username, email, passwordHash, displayedName,
     email,
     displayedName: normalizedDisplayedName,
     avatar: normalizedAvatar,
+    rating: 500,
   };
+}
+
+export async function findById(id) {
+  const [rows] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [id]);
+  return mapUserRow(rows[0]);
+}
+
+export async function updateRating(userId, newRating) {
+  await pool.query('UPDATE users SET rating = ? WHERE id = ?', [newRating, userId]);
 }
