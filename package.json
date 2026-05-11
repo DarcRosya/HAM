@@ -14,5 +14,10 @@
     "eslint": "^9.39.4",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "prettier": "^3.3.3"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "nodemailer": "^8.0.7"
   }
 }
