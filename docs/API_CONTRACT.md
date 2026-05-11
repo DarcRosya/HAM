@@ -1,37 +1,45 @@
-# API and WebSockets Contract
+# API Contract
 
-This document outlines the required routes, API endpoints, and WebSocket events for the Great Battle (Marvel) card game. Do not modify these names or structures without consulting the Team Lead.
+This document reflects the current REST endpoints and Socket.IO events used by the backend.
 
-## 1. Client Routes (React Router)
+## Base URL and Auth
 
-The frontend application must implement the following paths:
+- REST base URL: `http://localhost:3001` (or `$VITE_API_URL`).
+- Protected REST endpoints require `Authorization: Bearer <JWT>`.
+- Socket.IO auth uses `auth: { token: "<JWT>" }` in the handshake.
 
-- `/` or `/login` - User login page.
-- `/register` - User registration page.
-- `/lobby` - Matchmaking screen (accessible only with a valid JWT).
-- `/battle` - Main game board (accessible only with a valid JWT and active match).
+## JWT Payload
 
-## 2. REST API (Authentication)
+```json
+{
+  "id": 1,
+  "username": "player1",
+  "displayedName": "Player One",
+  "avatar": "/assets/avatars/finn.png"
+}
+```
 
-Base URL: `http://localhost:3001` (or `$VITE_API_URL`).
+## REST API
 
-### POST `/api/auth/register`
+### Auth
+
+#### POST `/api/auth/register`
 
 Creates a new user account.
 
-- Request Body:
+Request Body:
 
 ```json
 {
   "username": "player1",
   "email": "player1@example.com",
   "displayedName": "Player One",
-  "avatar": "/assets/default-avatar.svg",
+  "avatar": "/assets/avatars/finn.png",
   "password": "securepassword"
 }
 ```
 
-- Success Response (201):
+Success Response (201):
 
 ```json
 {
@@ -39,11 +47,11 @@ Creates a new user account.
 }
 ```
 
-### POST `/api/auth/login`
+#### POST `/api/auth/login`
 
 Authenticates a user and returns a JWT token.
 
-- Request Body:
+Request Body:
 
 ```json
 {
@@ -52,7 +60,7 @@ Authenticates a user and returns a JWT token.
 }
 ```
 
-- Success Response (200):
+Success Response (200):
 
 ```json
 {
@@ -62,84 +70,254 @@ Authenticates a user and returns a JWT token.
     "username": "player1",
     "email": "player1@example.com",
     "displayedName": "Player One",
-    "avatar": "/assets/default-avatar.svg"
+    "avatar": "/assets/avatars/finn.png"
   }
 }
 ```
 
-## 3. Socket.io Events (Game Engine)
+#### POST `/api/auth/forgot-password`
 
-WebSockets are used strictly for real-time matchmaking and gameplay.
+Request Body:
 
-### Emits (Client -> Server)
+```json
+{
+  "email": "player1@example.com"
+}
+```
 
-Events triggered by the React frontend.
+Success Response (200):
+
+```json
+{
+  "message": "Check your email for reset link"
+}
+```
+
+#### POST `/api/auth/reset-password`
+
+Request Body:
+
+```json
+{
+  "token": "reset-token",
+  "newPassword": "newpassword"
+}
+```
+
+Success Response (200):
+
+```json
+{
+  "message": "Password reset successful"
+}
+```
+
+### Users
+
+#### GET `/api/users/leaderboard`
+
+Returns top players by rating.
+
+Success Response (200):
+
+```json
+[
+  {
+    "id": 1,
+    "username": "player1",
+    "displayedName": "Player One",
+    "avatar": "/assets/avatars/finn.png",
+    "rating": 540
+  }
+]
+```
+
+#### GET `/api/users/avatars`
+
+Returns available avatar paths.
+
+Success Response (200):
+
+```json
+["/assets/avatars/finn.png", "/assets/avatars/jake.jpg"]
+```
+
+#### PATCH `/api/users/profile`
+
+Updates profile fields. Only provided fields are updated.
+
+Headers:
+
+```
+Authorization: Bearer <JWT>
+```
+
+Request Body (any subset):
+
+```json
+{
+  "username": "newname",
+  "email": "newmail@example.com",
+  "displayedName": "New Display",
+  "avatar": "/assets/avatars/finn.png"
+}
+```
+
+Success Response (200):
+
+```json
+{
+  "message": "Profile updated",
+  "token": "eyJhbGciOiJIUzI1NiIsIn...",
+  "user": {
+    "id": 1,
+    "username": "newname",
+    "email": "newmail@example.com",
+    "displayedName": "New Display",
+    "avatar": "/assets/avatars/finn.png"
+  }
+}
+```
+
+#### PATCH `/api/users/password`
+
+Updates the user password.
+
+Headers:
+
+```
+Authorization: Bearer <JWT>
+```
+
+Request Body:
+
+```json
+{
+  "oldPassword": "oldpassword",
+  "newPassword": "newpassword"
+}
+```
+
+Success Response (200):
+
+```json
+{
+  "message": "Password updated"
+}
+```
+
+### Game
+
+#### GET `/api/cards`
+
+Returns the full card catalog.
+
+Success Response (200):
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Card Name",
+    "attack": 3,
+    "defense": 2,
+    "cost": 2,
+    "traits": []
+  }
+]
+```
+
+## WebSockets (Socket.IO)
+
+### Connect
+
+```js
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3001', {
+  auth: { token: '<JWT>' },
+});
+```
+
+### Client -> Server Events
 
 #### `find_match`
 
-- Description: User clicks "Search Game" in the lobby.
-- Payload: None (Server identifies the user via socket connection/token).
+Start matchmaking. Payload: none.
 
 #### `play_card`
 
-- Description: User attempts to place a card on the battlefield.
-- Payload:
+```json
+{ "roomId": "room-id", "cardInstanceId": "card-1-abc123" }
+```
+
+#### `attack_target`
 
 ```json
-{ "cardId": 4 }
+{
+  "roomId": "room-id",
+  "attackerInstanceId": "card-1-abc123",
+  "targetId": "card-2-def456",
+  "targetType": "card"
+}
 ```
 
 #### `end_turn`
 
-- Description: User manually ends their turn before the 30-second timer expires.
-- Payload: None.
+End current turn. Payload: none.
 
-### Listens (Server -> Client)
+#### `surrender`
 
-Events the React frontend must listen for and update the state accordingly.
+```json
+{ "roomId": "room-id" }
+```
+
+### Server -> Client Events
+
+#### `waiting_for_opponent`
+
+Emitted after joining the queue. Payload: none.
 
 #### `match_found`
 
-- Description: The server has paired two players. Triggers the redirect to `/battle`.
-- Payload:
-
-```json
-{ "opponentName": "Thanos99", "firstTurn": true }
-```
-
-Note: `firstTurn` determines who wins the coin toss.
+Emitted when a match starts. Payload: same shape as `game_state`.
 
 #### `game_state`
 
-- Description: A complete snapshot of the current match. Dispatched every time an action occurs or a turn changes.
-- Payload:
+Full snapshot for the requesting player.
 
 ```json
 {
-  "turnTimer": 30,
-  "isMyTurn": true,
-  "player": {
-    "hp": 20,
-    "mana": 5,
-    "hand": [{ "id": 1, "name": "Iron Man", "attack": 5, "defense": 4, "cost": 3 }],
-    "activeCards": []
-  },
-  "opponent": {
-    "hp": 20,
-    "mana": 5,
-    "handCount": 4,
-    "activeCards": []
+  "roomId": "room-id",
+  "activeTurn": 1,
+  "turnTimer": 27,
+  "players": {
+    "1": {
+      "socketId": "socket-id",
+      "username": "player1",
+      "displayedName": "Player One",
+      "avatar": "/assets/avatars/finn.png",
+      "hp": 20,
+      "mana": 3,
+      "maxMana": 3,
+      "table": [],
+      "handCount": 4,
+      "hand": [],
+      "fatigue": 0,
+      "deckCount": 20
+    }
   }
 }
 ```
 
-Note: `opponent.hand` is hidden. The client only receives `handCount` to render the correct number of card backs.
-
 #### `game_over`
 
-- Description: The match has ended (Health reached 0).
-- Payload:
+```json
+{ "winnerId": 1 }
+```
+
+#### `error`
 
 ```json
-{ "winner": "player1", "reason": "Opponent Health depleted" }
+{ "message": "An internal error occurred" }
 ```
