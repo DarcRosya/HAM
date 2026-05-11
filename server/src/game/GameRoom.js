@@ -62,6 +62,8 @@ export class GameRoom {
     return {
       socketId: socket.id,
       username: socket.user.username,
+      avatar: socket.user.avatar,
+      displayedName: socket.user.displayedName,
       hp: 20,
       mana: 3,
       maxMana: 3,
@@ -99,6 +101,8 @@ export class GameRoom {
       sanitizedPlayers[id] = {
         socketId: player.socketId,
         username: player.username,
+        avatar: player.avatar,
+        displayedName: player.displayedName,
         hp: player.hp,
         mana: player.mana,
         maxMana: player.maxMana,
