@@ -106,6 +106,7 @@ export class GameRoom {
         handCount: player.hand.length,
         hand: isMe ? player.hand : [],
         fatigue: player.fatigue,
+        deckCount: player.deck.length,
       };
     }
 
