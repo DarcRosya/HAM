@@ -44,6 +44,20 @@ export function registerMatchmakingHandlers(io, socket) {
       socket.emit('error', { message: 'An internal error occurred' });
     }
   });
+
+  socket.on('cancel_matchmaking', () => {
+    try {
+      const user = socket.user;
+
+      removeFromQueue(socket.id);
+      console.log(`User ${user.username} canceled matchmaking`);
+
+      socket.emit('matchmaking_canceled');
+    } catch (e) {
+      console.error('Error in cancel_matchmaking:', e);
+      socket.emit('error', { message: 'An internal error occurred' });
+    }
+  });
 }
 
 export function removeFromQueue(socketId) {

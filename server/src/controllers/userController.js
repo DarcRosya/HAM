@@ -10,6 +10,7 @@ import {
 import { getUserMatchHistory } from '../repositories/matchRepository.js';
 import { generateToken } from '../utils/jwt.js';
 import { hashPassword, verifyPassword } from '../utils/hash.js';
+import { validatePassword } from '../utils/validators.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,11 @@ export const updatePassword = async (req, res) => {
 
     const isValid = await verifyPassword(oldPassword, user.passwordHash);
     if (!isValid) return res.status(401).json({ message: 'Incorrect old password' });
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
 
     const newHash = await hashPassword(newPassword);
     await updatePasswordHash(userId, newHash);

@@ -1,8 +1,8 @@
-const API_URL = 'http://localhost:3001';
+export const API_BASE_URL = 'http://localhost:3001';
 
 export async function getHealth() {
   try {
-    const response = await fetch(`${API_URL}/health`);
+    const response = await fetch(`${API_BASE_URL}/health`);
 
     if (!response.ok) {
       throw new Error('API unavailable');
@@ -18,7 +18,7 @@ export async function getHealth() {
 export async function authenticatedFetch(endpoint) {
   const token = localStorage.getItem('token');
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',

@@ -1,5 +1,11 @@
 import { authService } from '../services/auth.js';
 
+const showBmoError = (message) => {
+  if (typeof window !== 'undefined' && typeof window.showBmoError === 'function') {
+    window.showBmoError(message);
+  }
+};
+
 export function initRegister() {
   const registerForm = document.getElementById('registerForm');
 
@@ -49,23 +55,34 @@ export function initRegister() {
     const confirmPassword = document.getElementById('confirmPassword').value;
 
     if (displayedName.length < 3 || displayedName.length > 20) {
-      return alert('Displayed name must contain 3-20 characters');
+      showBmoError('Displayed name must contain 3-20 characters');
+      return;
     }
 
     if (!/^[a-zA-Z0-9_()\-]+(?: [a-zA-Z0-9_()\-]+)*$/.test(displayedName)) {
-      return alert('Displayed name contains invalid characters');
+      showBmoError('Displayed name contains invalid characters');
+      return;
     }
 
     if (username.length < 4 || username.length > 16) {
-      return alert('Username must contain 4-16 characters');
+      showBmoError('Username must contain 4-16 characters');
+      return;
     }
 
     if (!/^[a-z0-9_-]+$/.test(username)) {
-      return alert('Username can contain only letters, numbers, _ and -');
+      showBmoError('Username can contain only letters, numbers, _ and -');
+      return;
+    }
+
+    const digitMatches = password.match(/\d/g) || [];
+    if (password.length < 5 || digitMatches.length < 3) {
+      showBmoError('Password must be at least 5 characters and include at least 3 digits');
+      return;
     }
 
     if (password !== confirmPassword) {
-      return alert('Passwords do not match');
+      showBmoError('Passwords do not match');
+      return;
     }
 
     const userData = {
@@ -79,8 +96,7 @@ export function initRegister() {
       await authService.register(userData);
       window.location.hash = '#login';
     } catch (err) {
-      console.error(err);
-      alert('Server error: ' + err.message);
+      showBmoError(err.message || 'Server error');
     }
   });
 }

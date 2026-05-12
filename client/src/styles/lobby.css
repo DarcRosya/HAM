@@ -240,6 +240,29 @@ body {
   font-size: 20px;
   display: flex;
   justify-content: center;
+    text-align: center;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+#history-list.is-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 90px;
+    padding: 16px;
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.draw {
+    background: linear-gradient(90deg, #9aa5b1, #c8d0d9);
+}
+
+.draw .result-status {
+    color: #2f3b4c;
+    font-weight: 300;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .hidden {
