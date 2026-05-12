@@ -278,6 +278,8 @@ export class GameRoom {
     const p2Id = parseInt(playerIds[1]);
     const winId = winnerId ? parseInt(winnerId) : null;
 
+    let ratingChange = 0;
+
     try {
       const [p1, p2] = await Promise.all([findById(p1Id), findById(p2Id)]);
 
@@ -292,13 +294,17 @@ export class GameRoom {
         const newRatingP1 = Math.round(p1.rating + kValue * (actualP1 - expectedP1));
         const newRatingP2 = Math.round(p2.rating + kValue * (actualP2 - expectedP2));
 
+        const ratingChangeP1 = newRatingP1 - p1.rating;
+        const ratingChangeP2 = newRatingP2 - p2.rating;
+        ratingChange = Math.abs(winId === p1.id ? ratingChangeP1 : ratingChangeP2);
+
         await Promise.all([updateRating(p1.id, newRatingP1), updateRating(p2.id, newRatingP2)]);
 
         this.players[p1.id].rating = newRatingP1;
         this.players[p2.id].rating = newRatingP2;
       }
 
-      await saveMatchResult(p1Id, p2Id, winId, this.startedAt, new Date());
+      await saveMatchResult(p1Id, p2Id, winId, this.startedAt, new Date(), ratingChange);
     } catch (e) {
       console.error('Failed to save match history or update rating:', e);
     }

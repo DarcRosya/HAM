@@ -4,10 +4,10 @@ import { fileURLToPath } from 'url';
 import {
   findById,
   findConflictingUser,
-  getTopUsers,
   updatePasswordHash,
   updateProfileData,
 } from '../repositories/userRepository.js';
+import { getUserMatchHistory } from '../repositories/matchRepository.js';
 import { generateToken } from '../utils/jwt.js';
 import { hashPassword, verifyPassword } from '../utils/hash.js';
 
@@ -77,12 +77,13 @@ export const updatePassword = async (req, res) => {
   }
 };
 
-export const getLeaderboard = async (req, res) => {
+export const getMatchHistory = async (req, res) => {
   try {
-    const users = await getTopUsers(10);
-    res.status(200).json(users);
+    const userId = req.user.id;
+    const history = await getUserMatchHistory(userId);
+    res.status(200).json(history);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
