@@ -9,9 +9,10 @@ import { checkAuth } from '../services/authGuard.js';
 const mainContainer = document.getElementById('main-container');
 
 const routes = {
+  '': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#menu': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
-  '#login': { path: 'src/pages/login.html', init: initLogin, private: false },
-  '#register': { path: 'src/pages/register.html', init: initRegister, private: false },
+  '#login': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
+  '#register': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#battle': { path: 'src/pages/battle.html', init: initBattle, private: true },
   '#homepage': { path: 'src/pages/homepage.html', init: initHomepage, private: true },
   '#lobby': { path: 'src/pages/lobby.html', init: initLobby, private: true },

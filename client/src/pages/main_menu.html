@@ -1,93 +1,93 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0 maximum-scale=1.0, user-scalable=no" />
     <title>HAM Card Game</title>
-    <link rel="stylesheet" href="../styles/main_menu.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Londrina+Solid:wght@100;300;400;900&display=swap" rel="stylesheet">
-  </head>
+</head>
 
-  <body>
+<body>
     <div class="main-menu-container">
-      <div class="game-menu">
-         <img src="src/assets/images/logo.png" alt="Adventure Time" class="menu-logo"> 
+        <div class="game-menu">
+            <img src="src/assets/images/logo.png" alt="Adventure Time" class="menu-logo">
 
-        <div class="menu-buttons">
-            <button class="menu-btn small-btn">
-                <span>CARDS</span>
-            </button>
-            
-            <button id="start-game-btn" class="menu-btn large-btn">
-                <span>START</span>
-            </button>
-            
-            <button class="menu-btn small-btn">
-                <span>CREDITS</span>
-            </button>
-        </div>
-      </div>
+            <div class="menu-buttons">
+                <button class="menu-btn small-btn">
+                    <span>CARDS</span>
+                </button>
 
-      <div id="auth-modal" class="modal-overlay hidden">
-    
-    <div class="modal-frame">
-        <button id="close-modal" class="close-btn"></button>
+                <button id="start-game-btn" class="menu-btn large-btn">
+                    <span>START</span>
+                </button>
 
-        <div class="modal-header">LOG IN OR SIGN UP</div>
-
-        <div class="wooden-board">
-            
-            <div id="login-view" class="form-view">
-                <div class="input-group">
-                    <span class="icon finn-icon"></span>
-                    <input type="text" placeholder="EMAIL / USERNAME">
-                </div>
-                <div class="input-group">
-                    <span class="icon lock-icon"></span>
-                    <input type="password" placeholder="PASSWORD">
-                </div>
-                <button class="action-btn">LOG IN</button>
-                <button class="forgot-password">FORGOT PASSWORD?</button>
-            </div>
-
-            <div id="signup-view" class="form-view hidden">
-                <div class="input-group">
-                    <span class="icon swords-icon"></span>
-                    <input type="text" placeholder="NAME">
-                </div>
-                <div class="input-group">
-                    <span class="icon finn-icon"></span>
-                    <input type="text" placeholder="USERNAME">
-                </div>
-                <div class="input-group">
-                    <span class="icon mail-icon"></span>
-                    <input type="email" placeholder="EMAIL">
-                </div>
-                <div class="input-group">
-                    <span class="icon lock-icon"></span>
-                    <input type="password" placeholder="PASSWORD">
-                </div>
-                <div class="input-group">
-                    <span class="icon shield-icon"></span>
-                    <input type="password" placeholder="CONFIRM PASSWORD">
-                </div>
-                <button class="action-btn">SIGN UP</button>
-            </div>
-            
-        </div>
-
-        <div class="bmo-container">
-            <button id="bmo-toggle" class="bmo-btn"></button>
-            <div id="bmo-speech" class="speech-bubble">
-                No account yet?<br><span class="green-text">Click on me</span> to sign up!
+                <button class="menu-btn small-btn">
+                    <span>CREDITS</span>
+                </button>
             </div>
         </div>
-        
+
+        <div id="auth-modal" class="modal-overlay hidden">
+
+            <div class="modal-frame">
+                <button id="close-modal" class="close-btn"></button>
+
+                <div class="modal-header">LOG IN OR SIGN UP</div>
+
+                <div class="wooden-board">
+
+                    <div id="login-view" class="form-view">
+                        <div class="input-group">
+                            <span class="icon finn-icon"></span>
+                            <input type="text" id="login-username" placeholder="EMAIL / USERNAME">
+                        </div>
+                        <div class="input-group">
+                            <span class="icon lock-icon"></span>
+                            <input type="password" id="login-password" placeholder="PASSWORD">
+                        </div>
+                        <button id="login-btn" class="action-btn">LOG IN</button>
+                        <button class="forgot-password">FORGOT PASSWORD?</button>
+                    </div>
+
+                    <form id="registerForm">
+                        <div id="signup-view" class="form-view hidden">
+                            <div class="input-group">
+                                <span class="icon swords-icon"></span>
+                                <input type="text" id="nickname" placeholder="NAME">
+                            </div>
+                            <div class="input-group">
+                                <span class="icon finn-icon"></span>
+                                <input type="text" id="username" placeholder="USERNAME">
+                            </div>
+                            <div class="input-group">
+                                <span class="icon mail-icon"></span>
+                                <input type="email" id="email" placeholder="EMAIL">
+                            </div>
+                            <div class="input-group">
+                                <span class="icon lock-icon"></span>
+                                <input type="password" id="password" placeholder="PASSWORD">
+                            </div>
+                            <div class="input-group">
+                                <span class="icon shield-icon"></span>
+                                <input type="password" id="confirmPassword" placeholder="CONFIRM PASSWORD">
+                            </div>
+                            <button id="register-btn" class="action-btn">SIGN UP</button>
+                        </div>
+                    </form>
+
+                </div>
+
+                <div class="bmo-container">
+                    <button id="bmo-toggle" class="bmo-btn"></button>
+                    <div id="bmo-speech" class="speech-bubble">
+                        No account yet?<br><span class="green-text">Click on me</span> to sign up!
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
-</div>
-    </div>
 
-  </body>
+</body>
+
 </html>
