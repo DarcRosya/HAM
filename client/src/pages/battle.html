@@ -2,97 +2,123 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HAM Card Game</title>
-        </head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HAM Card Game</title>
+</head>
 
 <body>
-        
 
-    <div id="coin-toss-overlay" aria-hidden="true">
-        <div class="coin-toss-stage">
-            <div class="coin">
-                <div class="coin-face coin-front">
-                    <span id="coin-front-text" class="coin-label">YOU</span>
-                </div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-layer"></div>
-                <div class="coin-face coin-back">
-                    <span id="coin-back-text" class="coin-label">OPPONENT</span>
-                </div>
-            </div>
-            <div class="coin-toss-caption">Deciding first turn</div>
+
+  <div id="coin-toss-overlay" aria-hidden="true">
+    <div class="coin-toss-stage">
+      <div class="coin">
+        <div class="coin-face coin-front">
+          <span id="coin-front-text" class="coin-label">YOU</span>
         </div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-layer"></div>
+        <div class="coin-face coin-back">
+          <span id="coin-back-text" class="coin-label">OPPONENT</span>
+        </div>
+      </div>
+      <div class="coin-toss-caption">Deciding first turn</div>
+    </div>
+  </div>
+
+  <div class="battle-container">
+    <h2>Battlefield</h2>
+
+    <div id="opponent-section">
+      <h4 id="opp-avatar">Opponent HP: <span id="opp-hp"></span></h4>
+      <p>Mana: <span id="opp-mana"></span></p>
+
+      <div class="deck-column">
+        <h4>Opponent deck</h4>
+        <div id="opp-deck"></div>
+      </div>
+
+      <p>Opponent field cards: <span id="opp-field-count"></span></p>
+
+      <h3>Opponent Table</h3>
+      <div id="opp-table"></div>
+
+      <h3>Opponent Hand</h3>
+      <div id="opp-hand"></div>
     </div>
 
-    <div class="battle-container">
-        <h2>Battlefield</h2>
+    <hr />
 
-        <div id="opponent-section">
-            <h4 id="opp-avatar">Opponent HP: <span id="opp-hp"></span></h4>
-            <p>Opponent field cards: <span id="opp-field-count"></span></p>
+    <div id="player-section">
+      <h4>Your HP: <span id="player-hp"></span></h4>
+      <p>Mana: <span id="player-mana"></span></p>
 
-            <h3>Opponent Table</h3>
-            <div id="opp-table"></div>
+      <div class="deck-column">
+        <h4>Your deck</h4>
+        <div id="player-deck"></div>
+      </div>
 
-            <h3>Opponent Hand</h3>
-            <div id="opp-hand"></div>
-        </div>
+      <div>
+        <p>Your cards on field: <span id="player-field-count"></span></p>
+      </div>
 
-        <hr />
+      <div>
+        <p>Your cards in hand: <span id="player-hand-count"></span></p>
+      </div>
 
-        <div id="player-section">
-            <h4>Your HP: <span id="player-hp"></span></h4>
+      <hr />
 
-            <div>
-                <p>Your cards on field: <span id="player-field-count"></span></p>
-            </div>
+      <div id="game-info">
+        <p>Turn: <span id="info-turn"></span></p>
+        <button id="end-turn-btn">End turn</button>
+        <button id="surrender-btn" style="background: red; color: white;">Surrender</button>
+        <div id="battle-message" class="battle-message hidden"></div>
+        <p>Time: <span id="info-timer"></span>s</p>
+        <p>Round: <span id="info-round"></span></p>
+        <p id="fatigue-info" class="hidden">Fatigue damage: <span id="fatigue-value"></span></p>
+      </div>
 
-            <div>
-                <p>Your cards in hand: <span id="player-hand-count"></span></p>
-            </div>
+      <hr />
 
-            <hr />
+      <h4>Your cards in hand</h4>
+      <div id="hand-display"></div>
 
-            <div id="game-info">
-                <p>Turn: <span id="info-turn"></span></p>
-                <button id="end-turn-btn">End turn</button>
-                <button id="surrender-btn" style="background: red; color: white;">Surrender</button>
-                <p>Time: <span id="info-timer"></span>s</p>
-                <p>Round: <span id="info-round"></span></p>
-            </div>
-
-            <hr />
-
-            <h4>Your cards in hand</h4>
-            <div id="hand-display"></div>
-
-            <h3>Your Table</h3>
-            <div id="my-table"></div>
-        </div>
+      <h3>Your Table</h3>
+      <div id="my-table"></div>
     </div>
+  </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="../scripts/battle.js"></script>
+  <div id="game-result-overlay" class="hidden">
+    <div class="game-result-box">
+      <h1 id="result-text"></h1>
+
+      <button id="return-lobby-btn" disabled>
+        Return to Lobby
+      </button>
+    </div>
+  </div>
+
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="../scripts/battle.js"></script>
 </body>
 
 </html>

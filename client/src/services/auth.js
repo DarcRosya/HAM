@@ -16,7 +16,6 @@ export const authService = {
     if (!response.ok) {
       throw new Error(data?.message || `Registration failed: ${response.status}`);
     }
-    window.location.hash = '#login';
     return data;
   },
 
@@ -46,6 +45,7 @@ export const authService = {
 
   logout: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     window.location.hash = '#menu';
   },
 };

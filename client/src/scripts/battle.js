@@ -6,6 +6,7 @@ let latestState = null;
 let battleSocket = null;
 let battleHandlers = null;
 let battleNodes = null;
+let turnInterval = null;
 let gameActive = false;
 const COIN_TOSS_DURATION_MS = 7500;
 
@@ -28,6 +29,27 @@ const resolvePlayers = (state, socket) => {
   const [opponentId, opponent] = opponentEntry ?? [];
 
   return { myPlayerId, me, opponentId, opponent };
+};
+
+const startLocalTimer = (seconds) => {
+  if (turnInterval) {
+    clearInterval(turnInterval);
+    turnInterval = null;
+  }
+  let remaining = seconds;
+  const timerDisplay = document.getElementById('info-timer');
+  if (!timerDisplay) {
+    return;
+  }
+  timerDisplay.textContent = remaining;
+  turnInterval = setInterval(() => {
+    remaining--;
+    timerDisplay.textContent = Math.max(0, remaining);
+    if (remaining <= 0) {
+      clearInterval(turnInterval);
+      turnInterval = null;
+    }
+  }, 1000);
 };
 
 const resetCoinOverlay = () => {
@@ -87,11 +109,28 @@ const teardownBattle = ({ emitSurrender = false } = {}) => {
     battleSocket.emit('surrender', { roomId: latestState.roomId });
   }
 
+  if (turnInterval) {
+    clearInterval(turnInterval);
+    turnInterval = null;
+  }
+
   gameActive = false;
   draggingAttackId = null;
   resetCoinOverlay();
   detachBattleListeners();
   latestState = null;
+};
+
+const showBattleMessage = (text) => {
+  const msg = document.getElementById('battle-message');
+  if (!msg) return;
+
+  msg.textContent = text;
+  msg.classList.remove('hidden');
+
+  setTimeout(() => {
+    msg.classList.add('hidden');
+  }, 2000);
 };
 
 export function initBattle() {
@@ -117,14 +156,16 @@ export function initBattle() {
   socket.off('error');
 
   const handleError = (data) => {
-    alert(data.message);
+    showBattleMessage(data.message);
     console.log('Socket error:', data);
   };
 
   const handleGameState = (state) => {
     latestState = state;
     gameActive = true;
-    console.log('Update received:', state);
+    if (state.turnTimer !== undefined) {
+      startLocalTimer(state.turnTimer);
+    }
     updateBattleUI(state, socket);
   };
 
@@ -134,6 +175,7 @@ export function initBattle() {
     console.log('Match found:', state);
 
     if (!coinOverlay || !coin) {
+      startLocalTimer(state.turnTimer);
       updateBattleUI(state, socket);
       return;
     }
@@ -156,6 +198,7 @@ export function initBattle() {
     await new Promise((resolve) => setTimeout(resolve, COIN_TOSS_DURATION_MS));
 
     resetCoinOverlay();
+    startLocalTimer(state.turnTimer);
     updateBattleUI(state, socket);
   };
 
@@ -170,7 +213,7 @@ export function initBattle() {
     if (String(latestState.activeTurn) === String(myId)) {
       socket.emit('end_turn');
     } else {
-      alert('Not your turn!');
+      showBattleMessage('Not your turn!');
     }
   };
 
@@ -224,20 +267,27 @@ export function initBattle() {
 
   const handleGameOver = ({ winnerId }) => {
     console.log('Game over. Winner:', winnerId);
-    document.body.style.pointerEvents = 'none';
     gameActive = false;
 
     const { myPlayerId } = resolvePlayers(latestState, socket);
     const myId = myPlayerId ?? socket.id;
     const message = String(winnerId) === String(myId) ? 'You won!' : 'You lost!';
 
-    alert(message);
-
-    teardownBattle({ emitSurrender: false });
-
-    setTimeout(() => {
+    const overlay = document.getElementById('game-result-overlay');
+    const text = document.getElementById('result-text');
+    const btn = document.getElementById('return-lobby-btn');
+    overlay.classList.remove('hidden');
+    text.textContent = message;
+    btn.disabled = false;
+    const redirectTimeout = setTimeout(() => {
       window.location.replace('#homepage');
     }, 8000);
+
+    btn.onclick = () => {
+      clearTimeout(redirectTimeout);
+      window.location.replace('#homepage');
+    };
+    teardownBattle({ emitSurrender: false });
   };
 
   const handleHashChange = () => {
@@ -300,6 +350,7 @@ function updateBattleUI(state, socket) {
   const isMyTurn = String(state.activeTurn) === String(myPlayerId);
 
   const turn = document.getElementById('info-turn');
+  document.getElementById('info-round').textContent = state.round ?? 1;
 
   if (isMyTurn) {
     turn.textContent = 'YOUR TURN';
@@ -309,7 +360,36 @@ function updateBattleUI(state, socket) {
 
   document.getElementById('opp-hp').textContent = opponent.hp;
   document.getElementById('player-hp').textContent = me.hp;
-  document.getElementById('info-timer').textContent = state.turnTimer;
+  document.getElementById('opp-mana').textContent = `${opponent.mana} / ${opponent.maxMana}`;
+  document.getElementById('player-mana').textContent = `${me.mana} / ${me.maxMana}`;
+
+  document.getElementById('opp-field-count').textContent = opponent.table.length;
+  document.getElementById('player-field-count').textContent = me.table.length;
+  document.getElementById('player-hand-count').textContent = me.hand.length;
+
+  const playerDeck = document.getElementById('player-deck');
+  const oppDeck = document.getElementById('opp-deck');
+
+  playerDeck.textContent = me.deckCount;
+  oppDeck.textContent = opponent.deckCount;
+
+  const fatigueInfo = document.getElementById('fatigue-info');
+  const fatigueValue = document.getElementById('fatigue-value');
+
+  if (me.fatigue > 0) {
+    fatigueInfo.classList.remove('hidden');
+    fatigueValue.textContent = me.fatigue;
+    playerDeck.classList.add('deck-fatigue');
+  } else {
+    fatigueInfo.classList.add('hidden');
+    playerDeck.classList.remove('deck-fatigue');
+  }
+
+  if (opponent.fatigue > 0) {
+    oppDeck.classList.add('deck-fatigue');
+  } else {
+    oppDeck.classList.remove('deck-fatigue');
+  }
 
   const myTable = document.getElementById('my-table');
   const oppTable = document.getElementById('opp-table');
@@ -363,7 +443,7 @@ function updateBattleUI(state, socket) {
           cardInstanceId: card.instanceId,
         });
       } else {
-        alert('Wait for your turn!');
+        showBattleMessage('Wait for your turn!');
       }
     });
 
