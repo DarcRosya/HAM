@@ -293,3 +293,41 @@
                 font-size: 12px;
             }
         }
+
+        
+        #game-result-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+          
+        #game-result-overlay.hidden {
+            display: none;
+        }
+          
+        .game-result-box {
+            text-align: center;
+            color: white;
+            background: #1e1e1e;
+            padding: 30px 40px;
+            border-radius: 12px;
+            min-width: 300px;
+        }
+          
+        #result-text {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+          
+        #return-lobby-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
