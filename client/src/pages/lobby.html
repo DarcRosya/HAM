@@ -5,11 +5,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>HAM Card Game</title>
-  <link rel="stylesheet" href="../styles/lobby.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Londrina+Solid:wght@100;300;400;900&display=swap"
-    rel="stylesheet">
 </head>
 
 <body>
@@ -20,8 +15,8 @@
       <div class="player-info">
         <img id="avatar" src="avatar.png" alt="Avatar" class="avatar">
         <div class="names">
-          <h2 class="display-name">displayed name</h2>
-          <p class="username">username</p>
+          <h2 class="display-name"></h2>
+          <p class="username"></p>
         </div>
       </div>
       <button class="edit-btn">EDIT</button>
@@ -33,50 +28,24 @@
 
     <section class="match-history">
       <h3 class="history-title">Match history</h3>
-
-      <div class="match-card victory">
-        <div class="vs-block">
-          <img id="avatar" src="avatar.png" class="mini-avatar">
-          <span class="vs-text">VS</span>
-          <img id="his-avatar" src="enemy1.png" class="mini-avatar">
-          <span class="enemy-username">enemy_user1</span>
-        </div>
-        <div class="result-status">Victory</div>
-        <div class="stats">
-          <div class="mmr">+223</div>
-          <div class="date-time">12.05.2026 dur:13:21</div>
-        </div>
-      </div>
-
-      <div class="match-card defeat">
-        <div class="vs-block">
-          <img id="avatar" src="avatar.png" class="mini-avatar">
-          <span class="vs-text">VS</span>
-          <img id="his-avatar" src="enemy2.png" class="mini-avatar">
-          <span class="enemy-username">enemy_user2</span>
-        </div>
-        <div class="result-status">Defeat</div>
-        <div class="stats">
-          <div class="mmr">-223</div>
-          <div class="date-time">12.05.2026 dur:13:21</div>
-        </div>
-      </div>
-
-      <div class="match-card victory">
-        <div class="vs-block">
-          <img id="avatar" src="avatar.png" class="mini-avatar">
-          <span class="vs-text">VS</span>
-          <img id="his-avatar" src="enemy3.png" class="mini-avatar">
-          <span class="enemy-username">enemy_user3</span>
-        </div>
-        <div class="result-status">Victory</div>
-        <div class="stats">
-          <div class="mmr">+223</div>
-          <div class="date-time">12.05.2026 dur:13:21</div>
-        </div>
-      </div>
-
+      <div id="history-list"></div>
     </section>
+  </div>
+
+  <div id="search-overlay" class="search-overlay hidden">
+    <div class="search-content">
+
+      <div class="animation-zone">
+        <div class="spinner"></div>
+        <img src="assets/images/ham-logo.png" class="spinning-logo" alt="Searching">
+      </div>
+
+      <div class="text-zone">
+        <p id="search-tips"></p>
+      </div>
+
+      <button id="cancel-search-btn" class="cancel-btn">CANCEL</button>
+    </div>
   </div>
 
   <script type="module" src="../scripts/lobby.js"></script>
