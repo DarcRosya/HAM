@@ -1,8 +1,5 @@
 import { initMainMenu } from './main_menu.js';
-import { initLogin } from './login.js';
-import { initRegister } from './register.js';
 import { initBattle } from './battle.js';
-import { initHomepage } from './homepage.js';
 import { initLobby } from './lobby.js';
 import { checkAuth } from '../services/authGuard.js';
 
@@ -13,8 +10,8 @@ const routes = {
   '#menu': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#login': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#register': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
+  '#reset-password': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#battle': { path: 'src/pages/battle.html', init: initBattle, private: true },
-  '#homepage': { path: 'src/pages/homepage.html', init: initHomepage, private: true },
   '#lobby': { path: 'src/pages/lobby.html', init: initLobby, private: true },
 };
 

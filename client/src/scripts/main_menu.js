@@ -15,6 +15,12 @@ export function initMainMenu() {
   const bmoSpeech = document.getElementById('bmo-speech');
   const bmoContainer = document.querySelector('.bmo-container');
   const woodenBoard = document.querySelector('.wooden-board');
+  const resetView = document.getElementById('reset-view');
+  const forgotView = document.getElementById('forgot-view');
+
+  const fullHash = window.location.hash;
+  const cleanHash = fullHash.split('?')[0];
+
   const loginSpeechHtml =
     'No account yet?<br><span class="green-text">Click on me</span> to sign up!';
   const registerSpeechHtml =
@@ -37,7 +43,7 @@ export function initMainMenu() {
   if (startBtn) {
     startBtn.addEventListener('click', () => {
       const token = localStorage.getItem('token');
-      window.location.hash = token ? '#homepage' : '#login';
+      window.location.hash = token ? '#lobby' : '#login';
     });
   }
 
@@ -120,9 +126,16 @@ export function initMainMenu() {
   const handleHashChange = () => {
     const hash = window.location.hash;
 
-    if (hash === '#login' || hash === '#register') {
-      const nextView = hash === '#login' ? 'login' : 'register';
-      switchAuthView(nextView);
+    if (
+      hash === '#login' ||
+      hash === '#register' ||
+      hash === '#reset-password' ||
+      hash === '#forgot-password'
+    ) {
+      if (hash === '#login' || hash === '#register') {
+        const nextView = hash === '#login' ? 'login' : 'register';
+        switchAuthView(nextView);
+      }
       showAuthModal();
     } else {
       hideAuthModal();
@@ -138,10 +151,20 @@ export function initMainMenu() {
   currentAuthView = loginView?.classList.contains('is-hidden') ? 'register' : 'login';
   handleHashChange();
 
+  //add logout button to interface
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.hash = '#login';
+    });
+  }
+
   const closeModalBtn = document.getElementById('close-modal');
   if (closeModalBtn && authModal) {
     closeModalBtn.addEventListener('click', () => {
-      window.location.hash = '#menu'; 
+      window.location.hash = '#menu';
     });
   }
 
@@ -152,6 +175,9 @@ export function initMainMenu() {
       window.location.hash = isCurrentlyLogin ? '#register' : '#login';
     });
   }
+
+  initForgotPassword();
+  initResetPassword();
 
   initLogin();
   initRegister();
@@ -169,4 +195,94 @@ function preloadImages(paths) {
         })
     )
   );
+}
+
+function initForgotPassword() {
+  const form = document.getElementById('forgot-password-form');
+  const bmoSpeech = document.getElementById('bmo-speech');
+  if (!form) return;
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const email = form.querySelector('input[name="email"]').value;
+
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        if (bmoSpeech) {
+          bmoSpeech.textContent = data.message || 'Check email.';
+        }
+        form.reset();
+      } else {
+        if (bmoSpeech) {
+          bmoSpeech.textContent = data.message || 'Failed to send reset link.';
+        }
+      }
+    } catch (err) {
+      if (bmoSpeech) {
+        bmoSpeech.textContent = 'A network error occurred.';
+      }
+    }
+  };
+}
+
+function initResetPassword() {
+  const form = document.getElementById('reset-password-form');
+  const bmoSpeech = document.getElementById('bmo-speech');
+  if (!form) return;
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const password = form.querySelector('input[name="password"]').value;
+    const confirmPassword = form.querySelector('input[name="confirmPassword"]').value;
+
+    if (password !== confirmPassword) {
+      if (bmoSpeech) {
+        bmoSpeech.textContent = "Passwords don't match.";
+      }
+      return;
+    }
+
+    const hashParts = window.location.hash.split('?');
+    const params = new URLSearchParams(hashParts[1] || '');
+    const token = params.get('token');
+
+    if (!token) {
+      if (bmoSpeech) bmoSpeech.textContent = 'Reset token is missing or invalid.';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        if (bmoSpeech) {
+          bmoSpeech.textContent = 'Password has been reset successfully.';
+        }
+        form.reset();
+        setTimeout(() => {
+          window.location.hash = '#login';
+        }, 2000);
+      } else {
+        if (bmoSpeech) {
+          bmoSpeech.textContent = data.message || 'Unable to reset password.';
+        }
+      }
+    } catch (err) {
+      if (bmoSpeech) {
+        bmoSpeech.textContent = 'Server error occurred.';
+      }
+    }
+  };
 }
