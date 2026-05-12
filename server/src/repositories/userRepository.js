@@ -127,14 +127,6 @@ export async function deleteResetToken(tokenId) {
   await pool.query('DELETE FROM password_reset_tokens WHERE id = ?', [tokenId]);
 }
 
-export async function getTopUsers(limit = 10) {
-  const [rows] = await pool.query(
-    'SELECT id, username, displayed_name AS displayedName, avatar, rating FROM users ORDER BY rating DESC LIMIT ?',
-    [limit]
-  );
-  return rows;
-}
-
 export async function updateRating(userId, newRating) {
   await pool.query('UPDATE users SET rating = ? WHERE id = ?', [newRating, userId]);
 }
