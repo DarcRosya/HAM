@@ -18,6 +18,8 @@ const routes = {
   '#lobby': { path: 'src/pages/lobby.html', init: initLobby, private: true },
 };
 
+let currentRoutePath = null;
+
 async function router() {
   const hash = window.location.hash || '#menu';
   const route = routes[hash];
@@ -31,12 +33,17 @@ async function router() {
     return;
   }
 
+  if (currentRoutePath === route.path) {
+    return;
+  }
+
   try {
     const response = await fetch(route.path);
     if (!response.ok) throw new Error('Failed to fetch page');
 
     const html = await response.text();
     mainContainer.innerHTML = html;
+    currentRoutePath = route.path;
 
     if (route.init) {
       route.init();
