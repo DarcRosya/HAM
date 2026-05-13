@@ -1,11 +1,43 @@
 import { initLogin } from './login.js';
 import { initRegister } from './register.js';
+import { API_BASE_URL } from '../services/api.js';
 
 let cachedModalAssetsReady = null;
 let activeHashHandler = null;
 let currentAuthView = 'login';
 let switchTimeoutId = null;
 let resetTimeoutId = null;
+let bmoErrorTimeoutId = null;
+let defaultSpeechHtml = null;
+const HAPPY_BMO_IMAGE = 'src/assets/images/happy-bmo.png';
+const SAD_BMO_IMAGE = 'src/assets/images/sad_bmo.png';
+
+export function showBmoError(message) {
+  const bmoSpeech = document.getElementById('bmo-speech');
+  if (!bmoSpeech) return;
+
+  const speechText = ensureSpeechTextElement(bmoSpeech);
+  const fallbackHtml = bmoSpeech.dataset.defaultHtml || speechText.innerHTML;
+  defaultSpeechHtml = fallbackHtml;
+
+  if (bmoErrorTimeoutId) {
+    window.clearTimeout(bmoErrorTimeoutId);
+    bmoErrorTimeoutId = null;
+  }
+
+  bmoSpeech.classList.add('error-state');
+  setBmoSad(true);
+  speechText.textContent = message || 'Something went wrong';
+
+  bmoErrorTimeoutId = window.setTimeout(() => {
+    bmoSpeech.classList.remove('error-state');
+    setBmoSad(false);
+    if (defaultSpeechHtml) {
+      speechText.innerHTML = defaultSpeechHtml;
+    }
+    bmoErrorTimeoutId = null;
+  }, 4000);
+}
 
 export function initMainMenu() {
   const startBtn = document.getElementById('start-game-btn');
@@ -24,7 +56,7 @@ export function initMainMenu() {
   const loginSpeechHtml =
     'No account yet?<br><span class="green-text">Click on me</span> to sign up!';
   const registerSpeechHtml =
-    'Already have an account?<br><span class="green-text">Click on me</span> to log in!';
+    'Have an account?<br><span class="green-text">Click on me</span> to log in!';
   const formSwitchDelay = 160;
   const modalFadeDuration = 300;
 
@@ -35,10 +67,15 @@ export function initMainMenu() {
       'src/assets/images/metal-frame.png',
       'src/assets/images/speech-bubble1.png',
       'src/assets/images/happy-bmo.png',
+      'src/assets/images/sad_bmo.png',
     ]);
   }
 
   const modalAssetsReady = cachedModalAssetsReady;
+
+  if (typeof window !== 'undefined') {
+    window.showBmoError = showBmoError;
+  }
 
   if (startBtn) {
     startBtn.addEventListener('click', () => {
@@ -51,6 +88,9 @@ export function initMainMenu() {
     if (!bmoSpeech) return;
     const speechText = bmoSpeech.querySelector('.speech-text');
     const nextHtml = isLoginView ? loginSpeechHtml : registerSpeechHtml;
+
+    defaultSpeechHtml = nextHtml;
+    bmoSpeech.dataset.defaultHtml = nextHtml;
 
     if (speechText) {
       speechText.innerHTML = nextHtml;
@@ -79,8 +119,10 @@ export function initMainMenu() {
 
     const { instant = false } = options;
     const modalHidden = authModal?.classList.contains('is-hidden');
+    const bmoContainer = document.querySelector('.bmo-container');
 
     if (instant || modalHidden) {
+      clearBmoError({ resetText: false });
       applyAuthView(view);
       return;
     }
@@ -90,8 +132,18 @@ export function initMainMenu() {
       currentForm.classList.add('is-hidden');
     }
 
+    if (bmoContainer) {
+      bmoContainer.classList.add('is-hidden');
+    }
+
     switchTimeoutId = window.setTimeout(() => {
+      clearBmoError({ resetText: true });
       applyAuthView(view);
+
+      setTimeout(() => {
+        if (bmoContainer) bmoContainer.classList.remove('is-hidden');
+      }, 50);
+
       switchTimeoutId = null;
     }, formSwitchDelay);
   };
@@ -113,6 +165,7 @@ export function initMainMenu() {
       window.clearTimeout(switchTimeoutId);
       switchTimeoutId = null;
     }
+    clearBmoError({ resetText: false });
     if (resetTimeoutId) {
       window.clearTimeout(resetTimeoutId);
     }
@@ -183,6 +236,44 @@ export function initMainMenu() {
   initRegister();
 }
 
+function ensureSpeechTextElement(bmoSpeech) {
+  let speechText = bmoSpeech.querySelector('.speech-text');
+  if (!speechText) {
+    bmoSpeech.innerHTML = '<span class="speech-text"></span>';
+    speechText = bmoSpeech.querySelector('.speech-text');
+  }
+  return speechText;
+}
+
+function clearBmoError(options = {}) {
+  const { resetText = true } = options;
+  const bmoSpeech = document.getElementById('bmo-speech');
+  if (!bmoSpeech) return;
+  const speechText = ensureSpeechTextElement(bmoSpeech);
+
+  if (bmoErrorTimeoutId) {
+    window.clearTimeout(bmoErrorTimeoutId);
+    bmoErrorTimeoutId = null;
+  }
+
+  bmoSpeech.classList.remove('error-state');
+  setBmoSad(false);
+  if (resetText) {
+    const fallbackHtml = bmoSpeech.dataset.defaultHtml || defaultSpeechHtml;
+    if (fallbackHtml) {
+      speechText.innerHTML = fallbackHtml;
+    }
+  }
+}
+
+function setBmoSad(isSad) {
+  const bmoBtn = document.getElementById('bmo-toggle');
+  if (!bmoBtn) return;
+  bmoBtn.classList.toggle('is-sad', isSad);
+  const nextImage = isSad ? SAD_BMO_IMAGE : HAPPY_BMO_IMAGE;
+  bmoBtn.style.backgroundImage = `url('${nextImage}')`;
+}
+
 function preloadImages(paths) {
   return Promise.all(
     paths.map(
@@ -207,7 +298,7 @@ function initForgotPassword() {
     const email = form.querySelector('input[name="email"]').value;
 
     try {
-      const res = await fetch('/api/auth/forgot-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -259,7 +350,7 @@ function initResetPassword() {
     }
 
     try {
-      const res = await fetch('/api/auth/reset-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),

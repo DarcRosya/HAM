@@ -20,7 +20,9 @@ export async function getUserMatchHistory(userId) {
     `SELECT
       mh.id,
       mh.winner_id AS winnerId,
+      mh.started_at AS startedAt,
       mh.ended_at AS endedAt,
+      TIMESTAMPDIFF(SECOND, mh.started_at, mh.ended_at) AS duration,
       CASE
         WHEN mh.winner_id IS NULL THEN 0
         WHEN mh.winner_id = ? THEN mh.rating_change
@@ -34,7 +36,7 @@ export async function getUserMatchHistory(userId) {
       ON u.id = CASE WHEN mh.player1_id = ? THEN mh.player2_id ELSE mh.player1_id END
     WHERE mh.player1_id = ? OR mh.player2_id = ?
     ORDER BY mh.ended_at DESC
-    LIMIT 25`,
+    LIMIT 4`,
     [userId, userId, userId, userId]
   );
   return rows;

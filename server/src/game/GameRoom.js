@@ -22,6 +22,7 @@ export class GameRoom {
     this.activeTurn = Math.random() > 0.5 ? player1.user.id : player2.user.id;
     this.turnDuration = 30000; // 30 seconds in ms
     this.turnStartTime = Date.now();
+    this.turnExpiresAt = this.turnStartTime + this.turnDuration;
 
     this.sockets = {
       [player1.user.id]: player1,
@@ -166,6 +167,11 @@ export class GameRoom {
       return;
     }
 
+    if (Date.now() > this.turnExpiresAt) {
+      this.sockets[playerId].emit('error', { message: 'Your turn time has expired!' });
+      return;
+    }
+
     const activePlayer = this.players[playerId];
 
     const cardIndex = activePlayer.hand.findIndex((c) => c.instanceId === cardInstanceId);
@@ -197,6 +203,11 @@ export class GameRoom {
   attackTarget(playerId, attackerInstanceId, targetId, targetType) {
     if (this.status !== 'playing') return;
     if (String(this.activeTurn) !== String(playerId)) return;
+
+    if (Date.now() > this.turnExpiresAt) {
+      this.sockets[playerId].emit('error', { message: 'Your turn time has expired!' });
+      return;
+    }
 
     const attackerPlayer = this.players[playerId];
     const opponentId = Object.keys(this.players).find((id) => String(id) !== String(playerId));
