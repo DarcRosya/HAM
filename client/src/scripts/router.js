@@ -17,6 +17,10 @@ const routes = {
 };
 
 let currentRoutePath = null;
+const LOBBY_PATH = 'src/pages/lobby.html';
+const routeFadeDuration = 240;
+
+const waitForFade = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
 
 async function router() {
   const fullHash = window.location.hash || '#menu';
@@ -38,6 +42,16 @@ async function router() {
   }
 
   try {
+    const shouldFade = route.path === LOBBY_PATH;
+
+    if (shouldFade) {
+      mainContainer.classList.remove('route-fade-in');
+      mainContainer.classList.add('route-fade-out');
+      await waitForFade(routeFadeDuration);
+    } else {
+      mainContainer.classList.remove('route-fade-out', 'route-fade-in');
+    }
+
     const response = await fetch(route.path);
     if (!response.ok) throw new Error('Failed to fetch page');
 
@@ -45,11 +59,22 @@ async function router() {
     mainContainer.innerHTML = html;
     currentRoutePath = route.path;
 
+    if (shouldFade) {
+      requestAnimationFrame(() => {
+        mainContainer.classList.remove('route-fade-out');
+        mainContainer.classList.add('route-fade-in');
+        window.setTimeout(() => {
+          mainContainer.classList.remove('route-fade-in');
+        }, routeFadeDuration);
+      });
+    }
+
     if (route.init) {
       route.init();
     }
   } catch (err) {
     console.error(err);
+    mainContainer.classList.remove('route-fade-out', 'route-fade-in');
     mainContainer.innerHTML = '<h1>Load Error</h1>';
   }
 }
