@@ -10,6 +10,7 @@ const routes = {
   '#menu': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#login': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#register': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
+  '#forgot-password': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#reset-password': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#battle': { path: 'src/pages/battle.html', init: initBattle, private: true },
   '#lobby': { path: 'src/pages/lobby.html', init: initLobby, private: true },
@@ -18,7 +19,9 @@ const routes = {
 let currentRoutePath = null;
 
 async function router() {
-  const hash = window.location.hash || '#menu';
+  const fullHash = window.location.hash || '#menu';
+  const hash = fullHash.split('?')[0];
+
   const route = routes[hash];
 
   if (!route) {
