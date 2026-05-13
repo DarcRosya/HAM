@@ -210,6 +210,25 @@ html {
   transform: scale(1.1);
 }
 
+.back-btn {
+  position: absolute;
+  top: -5px;
+  left: -10px;
+  width: 45px;
+  height: 45px;
+  background: url('../assets/images/back.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.back-btn:hover {
+  transform: scale(1.1);
+}
+
 .modal-header {
   color: white;
   font-size: 28px;
@@ -228,7 +247,7 @@ html {
   flex-direction: column;
   align-items: center;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   z-index: 0;
   transition: height 0.3s ease;
 }
@@ -365,7 +384,7 @@ html {
   display: flex;
   align-items: center;
   left: 30px;
-  gap: 10px;
+  gap: 2px;
   transition:
     opacity 0.15s ease,
     visibility 0.15s ease;
@@ -379,13 +398,14 @@ html {
 
 .bmo-container.is-right {
   left: auto;
-  right: 30px;
+  right: 45px;
   flex-direction: row-reverse;
 }
 
 .bmo-btn {
-  width: 100px;
-  height: 150px;
+  width: 140px;
+  height: 160px;
+  margin-left: 10px;
   background-image: url('../assets/images/happy-bmo.png');
   background-size: contain;
   background-repeat: no-repeat;
@@ -417,15 +437,13 @@ html {
 .speech-bubble {
   background-image: url('../assets/images/speech-bubble1.png');
   background-size: 100% 100%;
-  padding: 5px 40px 15px 40px;
+  padding: 10px 20px 25px 20px;
   font-family: 'Londrina Solid', sans-serif;
   font-size: 15px;
   line-height: 1.2;
   text-align: center;
   font-weight: 700;
-  margin-top: -100px;
-  min-width: 120px;
-  max-width: 260px;
+  margin-top: -110px;
 }
 .speech-text {
   display: block;
@@ -442,7 +460,7 @@ html {
   align-items: center;
   justify-content: center;
   width: fit-content;
-  max-width: 300px;
+  max-width: 270px;
   height: auto;
 }
 
@@ -507,4 +525,138 @@ html {
 
 #signup-view .action-btn {
   margin-top: -12px;
+}
+
+#auth-modal:has(#forgot-view:not(.is-hidden)) .wooden-board {
+  display: none;
+}
+
+.recovery-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 40px;
+}
+
+.green-board-sign {
+  position: relative;
+  width: 340px;
+  height: 170px;
+  background: url('../assets/images/green_board.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 45px;
+}
+
+.green-board-sign .input-group {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding-top: 40px;
+}
+
+.recover-action-btn {
+  width: 240px;
+  height: 80px;
+  background: url('../assets/images/button.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  border: none;
+  cursor: pointer;
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s;
+}
+
+.recover-action-btn:hover {
+  transform: scale(1.1);
+}
+
+.recover-action-btn span {
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 2px 2px 0 black;
+}
+
+.mail-icon-recovery {
+  background: url('../assets/images/mail-icon.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  width: 40px;
+  height: 40px;
+}
+
+#auth-modal:has(#forgot-view:not(.is-hidden)) .wooden-board,
+#auth-modal:has(#reset-view:not(.is-hidden)) .wooden-board {
+  display: none;
+}
+
+.reset-board {
+  background-image: url('../assets/images/board-signup.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  width: 360px;
+  height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-top: 50px;
+}
+
+#reset-inputs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+  width: 230px;
+}
+
+.lock-reset-icon {
+  background-image: url('../assets/images/lock-icon.png');
+}
+.shield-reset-icon {
+  background-image: url('../assets/images/shield-icon.png');
+}
+
+#confirm-reset-btn {
+  margin-top: -60px;
+  z-index: 10;
+  position: relative;
+}
+
+#success-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  cursor: pointer;
+}
+
+.success-text-handwritten {
+  font-family: 'Indie Flower', cursive;
+  font-size: 60px;
+  font-weight: 900;
+  color: #3e2723;
+  transform: rotate(7deg);
+  text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.2);
+}
+
+.ui-locked {
+  pointer-events: none;
+}
+
+.ui-locked #success-message,
+.ui-locked #auth-modal {
+  pointer-events: auto;
 }
