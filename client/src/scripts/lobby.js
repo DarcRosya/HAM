@@ -18,19 +18,83 @@ export function initLobby() {
   const tipElement = document.getElementById('search-tips');
   const cancelBtn = document.getElementById('cancel-search-btn');
   const searchTips = ['loading message', 'text2', 'text3'];
+  const matchFrame = document.getElementById('match-frame');
+  const matchFramePaths = Array.from({ length: 8 }, (_, index) => {
+    return `src/assets/images/find_match/${index + 1}.png`;
+  });
+  const frameIntervalMs = 320;
+  const frameMotion = [
+    { scale: 1.0, y: 0 },
+    { scale: 1.03, y: -2 },
+    { scale: 1.07, y: -4 },
+    { scale: 1.04, y: -2 },
+    { scale: 1.01, y: 0 },
+    { scale: 0.99, y: 1 },
+    { scale: 0.97, y: 2 },
+    { scale: 1.03, y: -1 },
+  ];
   let tipInterval = null;
+  let frameInterval = null;
+
+  const preloadMatchFrames = () => {
+    matchFramePaths.forEach((path) => {
+      const img = new Image();
+      img.src = path;
+    });
+  };
+
+  const applyFrameMotion = (index) => {
+    if (!matchFrame) return;
+    const motion = frameMotion[index % frameMotion.length];
+    matchFrame.style.setProperty('--frame-scale', motion.scale);
+    matchFrame.style.setProperty('--frame-y', `${motion.y}px`);
+  };
+
+  const resetMatchFrame = () => {
+    if (!matchFrame) return;
+    matchFrame.src = matchFramePaths[0];
+    applyFrameMotion(0);
+  };
+
+  const startMatchAnimation = () => {
+    if (!matchFrame) return;
+    let frameIndex = 0;
+    resetMatchFrame();
+
+    if (frameInterval) {
+      clearInterval(frameInterval);
+    }
+
+    frameInterval = setInterval(() => {
+      frameIndex = (frameIndex + 1) % matchFramePaths.length;
+      matchFrame.src = matchFramePaths[frameIndex];
+      applyFrameMotion(frameIndex);
+    }, frameIntervalMs);
+  };
+
+  const stopMatchAnimation = () => {
+    if (!frameInterval) return;
+    clearInterval(frameInterval);
+    frameInterval = null;
+    resetMatchFrame();
+  };
 
   socket.off('match_found');
   socket.off('waiting_for_opponent');
 
+  if (matchFrame && typeof Image !== 'undefined') {
+    preloadMatchFrames();
+  }
+
   if (playBtn && searchOverlay) {
     playBtn.addEventListener('click', () => {
-      searchOverlay.classList.remove('hidden');
+      searchOverlay.classList.remove('is-hidden');
+      startMatchAnimation();
       let tipIndex = 0;
       tipElement.textContent = searchTips[tipIndex];
 
       tipInterval = setInterval(() => {
-        if (searchOverlay.classList.contains('hidden')) {
+        if (searchOverlay.classList.contains('is-hidden')) {
           clearInterval(tipInterval);
           return;
         }
@@ -44,13 +108,16 @@ export function initLobby() {
 
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
-      searchOverlay.classList.add('hidden');
+      searchOverlay.classList.add('is-hidden');
       clearInterval(tipInterval);
+      stopMatchAnimation();
       socket.emit('cancel_matchmaking');
     });
   }
 
   socket.on('match_found', (state) => {
+    clearInterval(tipInterval);
+    stopMatchAnimation();
     sessionStorage.setItem('pendingMatchState', JSON.stringify(state));
     window.location.hash = '#battle';
   });

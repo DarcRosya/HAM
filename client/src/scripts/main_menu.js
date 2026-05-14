@@ -10,6 +10,13 @@ let resetTimeoutId = null;
 let bmoErrorTimeoutId = null;
 let defaultSpeechHtml = null;
 
+let isInstantLoadEnabled = true;
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    isInstantLoadEnabled = false;
+  }, 100);
+});
+
 const BMO_ASSETS = {
   neutral: 'src/assets/images/happy-bmo.png',
   sad: 'src/assets/images/sad_bmo.png',
@@ -27,6 +34,27 @@ function setBmoState({ emotion = 'neutral', speech = null }) {
   if (speech !== null) {
     const speechText = ensureSpeechTextElement(bmoSpeech);
     speechText.innerHTML = speech;
+  }
+}
+
+function showResetSuccessUI() {
+  const resetInputsGroup = document.getElementById('reset-inputs-group');
+  const confirmBtn = document.getElementById('confirm-reset-btn');
+  const successMessage = document.getElementById('success-message');
+
+  if (resetInputsGroup) resetInputsGroup.classList.add('is-hidden');
+  if (confirmBtn) confirmBtn.classList.add('is-hidden');
+  if (successMessage) successMessage.classList.remove('is-hidden');
+
+  setBmoState({
+    emotion: 'happy',
+    speech: "Password changed!<br><span class='green-text'>Click on me</span> to log in.",
+  });
+
+  const bmoSpeech = document.getElementById('bmo-speech');
+  if (bmoSpeech) {
+    const speechText = bmoSpeech.querySelector('.speech-text') || bmoSpeech;
+    speechText.style.fontFamily = "'Londrina Solid', sans-serif";
   }
 }
 
@@ -58,6 +86,52 @@ export function showBmoError(message) {
   }, 4000);
 }
 
+function clearBmoError(options = {}) {
+  const { resetText = true } = options;
+  const bmoSpeech = document.getElementById('bmo-speech');
+  if (!bmoSpeech) return;
+  const speechText = ensureSpeechTextElement(bmoSpeech);
+
+  if (bmoErrorTimeoutId) {
+    window.clearTimeout(bmoErrorTimeoutId);
+    bmoErrorTimeoutId = null;
+  }
+
+  bmoSpeech.classList.remove('error-state');
+  setBmoState({ emotion: 'neutral' });
+
+  if (resetText) {
+    const fallbackHtml = bmoSpeech.dataset.defaultHtml || defaultSpeechHtml;
+    if (fallbackHtml) {
+      speechText.innerHTML = fallbackHtml;
+      speechText.style.fontFamily = '';
+    }
+  }
+}
+
+function ensureSpeechTextElement(bmoSpeech) {
+  let speechText = bmoSpeech.querySelector('.speech-text');
+  if (!speechText) {
+    bmoSpeech.innerHTML = '<span class="speech-text"></span>';
+    speechText = bmoSpeech.querySelector('.speech-text');
+  }
+  return speechText;
+}
+
+function preloadImages(paths) {
+  return Promise.all(
+    paths.map(
+      (path) =>
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = resolve;
+          img.onerror = resolve;
+          img.src = path;
+        })
+    )
+  );
+}
+
 export function initMainMenu() {
   const startBtn = document.getElementById('start-game-btn');
   const authModal = document.getElementById('auth-modal');
@@ -68,8 +142,6 @@ export function initMainMenu() {
   const woodenBoard = document.querySelector('.wooden-board');
   const resetView = document.getElementById('reset-view');
   const forgotView = document.getElementById('forgot-view');
-
-  const fullHash = window.location.hash;
 
   const loginSpeechHtml =
     'No account yet?<br><span class="green-text">Click on me</span> to sign up!';
@@ -86,6 +158,7 @@ export function initMainMenu() {
       'src/assets/images/speech-bubble1.png',
       'src/assets/images/happy-bmo.png',
       'src/assets/images/sad_bmo.png',
+      'src/assets/images/happiest_bmo.png',
     ]);
   }
 
@@ -102,36 +175,48 @@ export function initMainMenu() {
     });
   }
 
-  const setSpeechText = (isLoginView) => {
-    if (!bmoSpeech) return;
-    const speechText = bmoSpeech.querySelector('.speech-text');
-    const nextHtml = isLoginView ? loginSpeechHtml : registerSpeechHtml;
-
-    defaultSpeechHtml = nextHtml;
-    bmoSpeech.dataset.defaultHtml = nextHtml;
-
-    if (speechText) {
-      speechText.innerHTML = nextHtml;
-    } else {
-      bmoSpeech.innerHTML = `<span class="speech-text">${nextHtml}</span>`;
-    }
-  };
-
   const applyAuthView = (view) => {
-    const isLoginView = view === 'login';
+    const views = { login: loginView, register: signupView, forgot: forgotView, reset: resetView };
 
-    if (loginView) loginView.classList.toggle('is-hidden', !isLoginView);
-    if (signupView) signupView.classList.toggle('is-hidden', isLoginView);
-    if (woodenBoard) woodenBoard.classList.toggle('signup-board', !isLoginView);
-    if (bmoContainer) bmoContainer.classList.toggle('is-right', !isLoginView);
-    setSpeechText(isLoginView);
+    Object.values(views).forEach((v) => v?.classList.add('is-hidden'));
+
+    const backBtn = document.getElementById('back-to-login-btn');
+    backBtn?.classList.add('is-hidden');
+
+    if (woodenBoard) {
+      woodenBoard.classList.remove('signup-board');
+      woodenBoard.classList.remove('is-hidden');
+    }
+    if (bmoContainer) bmoContainer.classList.remove('is-right');
+
+    if (view === 'login') {
+      views['login']?.classList.remove('is-hidden');
+      setBmoState({ emotion: 'neutral', speech: loginSpeechHtml });
+    } else if (view === 'register') {
+      views['register']?.classList.remove('is-hidden');
+      if (woodenBoard) woodenBoard.classList.add('signup-board');
+      if (bmoContainer) bmoContainer.classList.add('is-right');
+      setBmoState({ emotion: 'neutral', speech: registerSpeechHtml });
+    } else if (view === 'forgot') {
+      views['forgot']?.classList.remove('is-hidden');
+      if (woodenBoard) woodenBoard.classList.add('is-hidden');
+      backBtn?.classList.remove('is-hidden');
+      setBmoState({
+        emotion: 'neutral',
+        speech: 'Forgot password?<br><span class="green-text">Click on me</span> to go back!',
+      });
+    } else if (view === 'reset') {
+      views['reset']?.classList.remove('is-hidden');
+      if (woodenBoard) woodenBoard.classList.add('is-hidden');
+      if (bmoContainer) bmoContainer.classList.add('is-right');
+    }
+
     currentAuthView = view;
   };
 
   const switchAuthView = (view, options = {}) => {
-    if (view === currentAuthView && !authModal?.classList.contains('is-hidden')) {
-      return;
-    }
+    if (view === currentAuthView && !authModal?.classList.contains('is-hidden')) return;
+
     if (switchTimeoutId) {
       window.clearTimeout(switchTimeoutId);
       switchTimeoutId = null;
@@ -139,7 +224,6 @@ export function initMainMenu() {
 
     const { instant = false } = options;
     const modalHidden = authModal?.classList.contains('is-hidden');
-    const bmoContainer = document.querySelector('.bmo-container');
 
     if (instant || modalHidden) {
       clearBmoError({ resetText: false });
@@ -147,17 +231,14 @@ export function initMainMenu() {
       return;
     }
 
-    const currentForm = currentAuthView === 'login' ? loginView : signupView;
-    if (currentForm) {
-      currentForm.classList.add('is-hidden');
-    }
+    const views = [loginView, signupView, forgotView, resetView];
+    const currentForm = views.find((v) => !v?.classList.contains('is-hidden'));
+    if (currentForm) currentForm.classList.add('is-hidden');
 
-    if (bmoContainer) {
-      bmoContainer.classList.add('is-hidden');
-    }
+    if (bmoContainer) bmoContainer.classList.add('is-hidden');
 
     switchTimeoutId = window.setTimeout(() => {
-      clearBmoError({ resetText: true });
+      clearBmoError({ resetText: false });
       applyAuthView(view);
 
       setTimeout(() => {
@@ -168,14 +249,27 @@ export function initMainMenu() {
     }, formSwitchDelay);
   };
 
-  const showAuthModal = () => {
+  const showAuthModal = (instant = false) => {
     if (!authModal) return;
     if (resetTimeoutId) {
       window.clearTimeout(resetTimeoutId);
       resetTimeoutId = null;
     }
+
     modalAssetsReady.then(() => {
-      requestAnimationFrame(() => authModal.classList.remove('is-hidden'));
+      if (instant) {
+        const frame = authModal.querySelector('.modal-frame');
+        authModal.style.transition = 'none';
+        if (frame) frame.style.transition = 'none';
+
+        authModal.classList.remove('is-hidden');
+        void authModal.offsetWidth;
+
+        authModal.style.transition = '';
+        if (frame) frame.style.transition = '';
+      } else {
+        requestAnimationFrame(() => authModal.classList.remove('is-hidden'));
+      }
     });
   };
 
@@ -186,9 +280,7 @@ export function initMainMenu() {
       switchTimeoutId = null;
     }
     clearBmoError({ resetText: false });
-    if (resetTimeoutId) {
-      window.clearTimeout(resetTimeoutId);
-    }
+    if (resetTimeoutId) window.clearTimeout(resetTimeoutId);
 
     resetTimeoutId = window.setTimeout(() => {
       applyAuthView('login');
@@ -200,54 +292,65 @@ export function initMainMenu() {
     const [route, query] = window.location.hash.split('?');
     const params = new URLSearchParams(query || '');
     const header = document.querySelector('.modal-header');
-    const backBtn = document.getElementById('back-to-login-btn');
-    const bmoContainer = document.querySelector('.bmo-container');
 
-    clearBmoError({ resetText: false });
-
-    [loginView, signupView, forgotView, resetView].forEach((v) => v?.classList.add('is-hidden'));
-    backBtn?.classList.add('is-hidden');
-    bmoContainer?.classList.remove('is-right');
-    woodenBoard?.classList.remove('signup-board');
+    let targetView = null;
 
     if (route === '#login') {
       if (header) header.textContent = 'LOG IN';
-      currentAuthView = null;
-      switchAuthView('login', { instant: true });
-      showAuthModal();
+      targetView = 'login';
     } else if (route === '#register') {
       if (header) header.textContent = 'SIGN UP';
-      woodenBoard?.classList.add('signup-board');
-      switchAuthView('register', { instant: true });
-      showAuthModal();
+      targetView = 'register';
     } else if (route === '#forgot-password') {
       if (header) header.textContent = 'PASSWORD RECOVERY';
-      backBtn?.classList.remove('is-hidden');
-      forgotView?.classList.remove('is-hidden');
-      if (bmoSpeech) {
-        bmoSpeech.innerHTML =
-          '<span class="speech-text">I\'ll send you instructions<br> to reset your password.</span>';
-      }
-      showAuthModal();
+      targetView = 'forgot';
     } else if (route === '#reset-password') {
-      if (!params.get('token')) {
+      const token = params.get('token');
+
+      if (token && localStorage.getItem(`reset_success_${token}`)) {
+        switchAuthView('reset', { instant: isInstantLoadEnabled });
+        showResetSuccessUI();
+        showAuthModal(isInstantLoadEnabled);
+        return;
+      }
+
+      if (!token) {
         showBmoError('Invalid or missing token');
         return;
       }
-      if (header) header.textContent = 'PASSWORD RECOVERY';
-      resetView?.classList.remove('is-hidden');
-      bmoContainer?.classList.add('is-right');
-      setBmoState({ emotion: 'neutral' });
-      ensureSpeechTextElement(bmoSpeech).innerHTML = 'Now come up with<br>new password!';
-      showAuthModal();
+
+      header.textContent = 'PASSWORD RECOVERY';
+      targetView = 'reset';
     } else {
       hideAuthModal();
+      return;
+    }
+
+    const isInstant =
+      isInstantLoadEnabled && window.location.hash !== '' && window.location.hash !== '#menu';
+
+    switchAuthView(targetView, { instant: isInstant });
+
+    if (targetView === 'reset') {
+      setBmoState({ emotion: 'neutral', speech: 'Now come up with<br>new password!' });
+    }
+
+    if (authModal) {
+      cachedModalAssetsReady.then(() => {
+        if (isInstant) {
+          authModal.style.opacity = '0';
+          authModal.classList.remove('is-hidden');
+
+          requestAnimationFrame(() => {
+            authModal.style.transition = 'opacity 0.4s ease';
+            authModal.style.opacity = '1';
+          });
+        } else {
+          authModal.classList.remove('is-hidden');
+        }
+      });
     }
   };
-
-  if (activeHashHandler) {
-    window.removeEventListener('hashchange', activeHashHandler);
-  }
 
   activeHashHandler = handleHashChange;
   window.addEventListener('hashchange', handleHashChange);
@@ -259,10 +362,10 @@ export function initMainMenu() {
       localStorage.removeItem('passwordResetSuccess');
     }
   });
+
   currentAuthView = loginView?.classList.contains('is-hidden') ? 'register' : 'login';
   handleHashChange();
 
-  //add logout button to interface
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
@@ -289,7 +392,22 @@ export function initMainMenu() {
   const bmoToggleBtn = document.getElementById('bmo-toggle');
   if (bmoToggleBtn) {
     bmoToggleBtn.addEventListener('click', () => {
-      const isCurrentlyLogin = window.location.hash === '#login';
+      const hash = window.location.hash.split('?')[0];
+
+      if (hash === '#forgot-password') {
+        window.location.hash = '#login';
+        return;
+      }
+
+      if (hash === '#reset-password') {
+        const successMsg = document.getElementById('success-message');
+        if (successMsg && !successMsg.classList.contains('is-hidden')) {
+          window.location.hash = '#login';
+        }
+        return;
+      }
+
+      const isCurrentlyLogin = hash === '#login';
       window.location.hash = isCurrentlyLogin ? '#register' : '#login';
     });
   }
@@ -308,50 +426,6 @@ export function initMainMenu() {
   initRegister();
 }
 
-function ensureSpeechTextElement(bmoSpeech) {
-  let speechText = bmoSpeech.querySelector('.speech-text');
-  if (!speechText) {
-    bmoSpeech.innerHTML = '<span class="speech-text"></span>';
-    speechText = bmoSpeech.querySelector('.speech-text');
-  }
-  return speechText;
-}
-
-function clearBmoError(options = {}) {
-  const { resetText = true } = options;
-  const bmoSpeech = document.getElementById('bmo-speech');
-  if (!bmoSpeech) return;
-  const speechText = ensureSpeechTextElement(bmoSpeech);
-
-  if (bmoErrorTimeoutId) {
-    window.clearTimeout(bmoErrorTimeoutId);
-    bmoErrorTimeoutId = null;
-  }
-
-  bmoSpeech.classList.remove('error-state');
-  setBmoState({ emotion: 'neutral' });
-  if (resetText) {
-    const fallbackHtml = bmoSpeech.dataset.defaultHtml || defaultSpeechHtml;
-    if (fallbackHtml) {
-      speechText.innerHTML = fallbackHtml;
-    }
-  }
-}
-
-function preloadImages(paths) {
-  return Promise.all(
-    paths.map(
-      (path) =>
-        new Promise((resolve) => {
-          const img = new Image();
-          img.onload = resolve;
-          img.onerror = resolve;
-          img.src = path;
-        })
-    )
-  );
-}
-
 function initForgotPassword() {
   const form = document.getElementById('forgot-password-form');
   const bmoSpeech = document.getElementById('bmo-speech');
@@ -364,36 +438,29 @@ function initForgotPassword() {
     const email = emailInput?.value?.trim();
 
     if (!email) {
-      if (bmoSpeech) {
-        showBmoError('Please enter your email.');
-      }
+      showBmoError('Please enter your email.');
       return;
     }
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
 
       const data = await res.json();
       if (res.ok) {
-        if (bmoSpeech) {
-          bmoSpeech.textContent = data.message || 'Check your email for reset link.';
-        }
+        setBmoState({
+          emotion: 'happy',
+          speech: 'Link sent!<br><span class="green-text">Click on me</span> to go back.',
+        });
         form.reset();
       } else {
-        if (bmoSpeech) {
-          bmoSpeech.textContent = data.message || 'Failed to send reset link.';
-        }
+        showBmoError(data.message || 'Failed to send reset link.');
       }
     } catch (err) {
-      if (bmoSpeech) {
-        bmoSpeech.textContent = 'Network error occurred.';
-      }
+      showBmoError('Network error occurred.');
     }
   });
 }
@@ -430,20 +497,11 @@ function initResetPassword() {
       });
 
       if (res.ok) {
-        localStorage.setItem(
-          'passwordResetSuccess',
-          JSON.stringify({
-            redirect: true,
+        localStorage.setItem(`reset_success_${token}`, 'true');
 
-            ts: Date.now(),
-          })
-        );
-        resetInputsGroup.classList.add('is-hidden');
-        confirmBtn.classList.add('is-hidden');
-        successMessage.classList.remove('is-hidden');
-        setBmoState({ emotion: 'happy' });
-        ensureSpeechTextElement(bmoSpeech).innerHTML =
-          "Password changed!<span class='green-text'> Close<br>this tab</span> and return to login.";
+        clearBmoError({ resetText: false });
+
+        showResetSuccessUI();
       } else {
         const data = await res.json();
         showBmoError(data.message);
