@@ -33,9 +33,20 @@ app.get('/health/db', async (req, res) => {
 
 const httpServer = http.createServer(app);
 
-initSocketManager(httpServer, clientOrigin);
+const io = initSocketManager(httpServer, clientOrigin);
 
 const port = Number(process.env.PORT) || 3001;
+
+process.on('SIGINT', () => {
+  console.log('Server is shutting down... Sending cleanup signal to all clients.');
+  if (io) {
+    io.emit('server-shutdown');
+  }
+
+  setTimeout(() => {
+    process.exit(0);
+  }, 1000);
+});
 
 async function startServer() {
   try {

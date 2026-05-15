@@ -14,7 +14,7 @@ body {
 }
 
 .main-container {
-    background: url('../assets/images/lobby-bg.png') no-repeat center center fixed;
+    background: url('../../assets/images/lobby-bg.png') no-repeat center center fixed;
     background-size: cover;
     width: 1280px;
     height: 720px;
@@ -70,7 +70,7 @@ body {
 }
 
 .edit-btn {
-    background: url('../assets/images/edit-bg.png') no-repeat center;
+    background: url('../../assets/images/edit-bg.png') no-repeat center;
     background-size: contain;
     border: none;
     width: 130px;
@@ -91,12 +91,19 @@ body {
     transition: transform 0.02s; 
 }
 
+.edit-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.25);
+}
+
 .play-section {
     margin-bottom: 20px;
 }
 
 .play-btn {
-    background: url('../assets/images/play-bg.png') no-repeat center;
+    background: url('../../assets/images/play-bg.png') no-repeat center;
     background-size: contain;
     background-color: transparent;
     border: none;
@@ -378,7 +385,7 @@ body {
 }
 
 .change-pw-btn {
-    background: url('../assets/images/change-btn.png') no-repeat center;
+    background: url('../../assets/images/change-btn.png') no-repeat center;
     background-size: 100% 100%;
     width: 180px;
     height: 45px;
@@ -395,7 +402,7 @@ body {
 }
 
 .apply-changes-btn {
-    background: url('../assets/images/apply-changes-btn.png') no-repeat center;
+    background: url('../../assets/images/apply-changes-btn.png') no-repeat center;
     background-size: 100% 100%;
     width: 280px;
     height: 120px;
@@ -467,7 +474,7 @@ body {
 .back-btn {
     width: 45px;
     height: 45px;
-    background: url('../assets/images/back.png');
+    background: url('../../assets/images/back.png');
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
@@ -497,11 +504,11 @@ body {
 }
 
 .toggle-pass.visible-pass {
-    background-image: url('../assets/images/visible-pass.png');
+    background-image: url('../../assets/images/visible-pass.png');
 }
 
 .toggle-pass.invisible-pass {
-    background-image: url('../assets/images/invisible-pass.png');
+    background-image: url('../../assets/images/invisible-pass.png');
 }
 
 .password-form-container {
