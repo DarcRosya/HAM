@@ -96,6 +96,7 @@ const AuthUI = {
       register: document.getElementById('signup-view'),
       forgot: document.getElementById('forgot-view'),
       reset: document.getElementById('reset-view'),
+      logout: document.getElementById('logout-view'),
     };
   },
 
@@ -113,6 +114,7 @@ const AuthUI = {
       register: 'Have an account?<br><span class="green-text">Click on me</span> to log in!',
       forgot: 'Forgot password?<br><span class="green-text">Click on me</span> to go back!',
       reset: 'Now come up with<br>new password!',
+      logout: `Leaving already,<br>${JSON.parse(localStorage.getItem('user') || '{}').displayedName || 'user'}?`,
     };
 
     const headerMap = {
@@ -120,6 +122,7 @@ const AuthUI = {
       register: 'SIGN UP',
       forgot: 'PASSWORD RECOVERY',
       reset: 'PASSWORD RECOVERY',
+      logout: 'LOG OUT',
     };
 
     if (this.header) this.header.textContent = headerMap[viewName] || '';
@@ -135,6 +138,8 @@ const AuthUI = {
     } else if (viewName === 'reset') {
       this.board?.classList.add('is-hidden');
       this.bmoContainer?.classList.add('is-right');
+    } else if (viewName === 'logout') {
+      this.board?.classList.add('is-hidden');
     }
 
     BMO.setState({ emotion: 'neutral', speech: speechMap[viewName] });
@@ -179,6 +184,10 @@ const handleHashChange = () => {
       AuthUI.applyView('reset');
       AuthUI.showModal();
       break;
+    case '#logout':
+      AuthUI.applyView('logout');
+      AuthUI.showModal();
+      break;
     case '#menu':
     case '#cards':
     case '#credits':
@@ -221,7 +230,10 @@ export function mount() {
 
   const closeModalBtn = document.getElementById('close-modal');
   if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', () => (window.location.hash = '#menu'));
+    closeModalBtn.addEventListener('click', () => {
+      window.location.hash = '#menu';
+      AuthUI.hideModal();
+    });
   }
 
   const backToLoginBtn = document.getElementById('back-to-login-btn');
@@ -234,6 +246,41 @@ export function mount() {
     forgotBtn.addEventListener('click', (e) => {
       e.preventDefault();
       window.location.hash = '#forgot-password';
+    });
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    if (localStorage.getItem('token')) {
+      logoutBtn.classList.remove('is-hidden');
+    } else {
+      logoutBtn.classList.add('is-hidden');
+    }
+    logoutBtn.addEventListener('click', () => {
+      AuthUI.applyView('logout');
+      BMO.setState({
+        emotion: 'sad',
+        speech: BMO.defaultHtml,
+      });
+      AuthUI.showModal();
+    });
+  }
+
+  const stayBtn = document.getElementById('stay-btn');
+  if (stayBtn) {
+    stayBtn.addEventListener('click', () => {
+      AuthUI.hideModal();
+      window.location.hash = '#menu';
+    });
+  }
+
+  const confirmLogoutBtn = document.getElementById('confirm-logout-btn');
+  if (confirmLogoutBtn) {
+    confirmLogoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.hash = '#menu';
+      location.reload();
     });
   }
 
