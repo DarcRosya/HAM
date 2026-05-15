@@ -45,68 +45,41 @@
   <div class="game-board">
 
     <div class="top-zone">
-      <div class="hand enemy-hand">
-        <img src="assets/images/card-back.png" alt="Enemy Card" class="card">
-        <img src="assets/images/card-back.png" alt="Enemy Card" class="card">
-        <img src="assets/images/card-back.png" alt="Enemy Card" class="card">
-        <img src="assets/images/card-back.png" alt="Enemy Card" class="card">
-        <img src="assets/images/card-back.png" alt="Enemy Card" class="card">
+      <div class="hand enemy-hand" id="opp-hand">
       </div>
       <div class="player-info">
         <div class="username">12345678901234567890</div>
         <div class="avatar-wrapper">
-          <img src="assets/images/avatar-enemy.png" alt="Enemy Avatar" class="avatar">
+          <img src="/assets/images/avatar-enemy.png" alt="Enemy Avatar" class="avatar" id="opp-avatar">
           <div class="health-indicator">
-            <img src="assets/images/heart.png" alt="HP" class="heart-img">
-            <span class="health-text">ХП</span>
+            <img src="/assets/images/heart.png" alt="HP" class="heart-img">
+            <span class="health-text" id="opp-hp">20</span>
           </div>
         </div>
         <div class="mana-bar">
-          <span class="mana-text">3/6</span>
-          <div class="mana-crystals">
-            <div class="crystal active"></div>
-            <div class="crystal active"></div>
-            <div class="crystal active"></div>
-            <div class="crystal empty"></div>
-            <div class="crystal empty"></div>
-            <div class="crystal empty"></div>
-          </div>
+          <span class="mana-text" id="opp-mana">3 / 3</span>
         </div>
       </div>
     </div>
 
     <div class="battlefield">
       <div class="decks-column">
-        <div class="his-deck"></div>
-        <div class="my-deck" data-count="six sevenn"></div>
+        <div class="his-deck" id="opp-deck">30</div>
+        <div class="my-deck" id="player-deck" data-count="30"></div>
+        <div id="fatigue-info" class="hidden">Fatigue: <span id="fatigue-value">0</span></div>
       </div>
 
       <div class="active-cards-column">
-        <div class="active-group enemy-active-group">
-          <img src="assets/images/card-front.png" alt="Active Enemy" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active Enemy" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active Enemy" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active Enemy" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active Enemy" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active Enemy" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active Enemy" class="active-card">
+        <div class="active-group enemy-active-group" id="opp-table">
         </div>
 
-        <div class="active-group my-active-group">
-          <img src="assets/images/card-front.png" alt="Active My" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active My" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active My" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active My" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active My" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active My" class="active-card">
-          <img src="assets/images/card-front.png" alt="Active My" class="active-card">
+        <div class="active-group my-active-group" id="my-table">
         </div>
       </div>
 
       <div class="actions-column">
-        <button class="text-btn">SURRENDER</button>
-        <button class="end-turn-btn">end of the turn</button>
-        <button class="text-btn">LEAVE</button>
+        <button class="text-btn" id="surrender-btn">SURRENDER</button>
+        <button class="end-turn-btn" id="end-turn-btn">end of the turn</button>
       </div>
     </div>
 
@@ -114,33 +87,17 @@
       <div class="player-info">
         <div class="username">12345678901234567890</div>
         <div class="avatar-wrapper">
-          <img src="assets/images/avatar-my.png" alt="My Avatar" class="avatar">
+          <img src="/assets/images/avatar-my.png" alt="My Avatar" class="avatar">
           <div class="health-indicator">
-            <img src="assets/images/heart.png" alt="HP" class="heart-img">
-            <span class="health-text">ХП</span>
+            <img src="/assets/images/heart.png" alt="HP" class="heart-img">
+            <span class="health-text" id="player-hp">20</span>
           </div>
         </div>
         <div class="mana-bar">
-          <span class="mana-text">3/9</span>
-          <div class="mana-crystals">
-            <div class="crystal active"></div>
-            <div class="crystal active"></div>
-            <div class="crystal active"></div>
-            <div class="crystal empty"></div>
-            <div class="crystal empty"></div>
-            <div class="crystal empty"></div>
-            <div class="crystal empty"></div>
-            <div class="crystal empty"></div>
-            <div class="crystal empty"></div>
-          </div>
+          <span class="mana-text" id="player-mana">3 / 3</span>
         </div>
       </div>
-      <div class="hand my-hand">
-        <img src="assets/images/card-back.png" alt="My Card" class="card">
-        <img src="assets/images/ard-back.png" alt="My Card" class="card">
-        <img src="assets/images/card-back.png" alt="My Card" class="card">
-        <img src="assets/images/card-back.png" alt="My Card" class="card">
-        <img src="assets/images/card-back.png" alt="My Card" class="card">
+      <div class="hand my-hand" id="hand-display">
       </div>
     </div>
 

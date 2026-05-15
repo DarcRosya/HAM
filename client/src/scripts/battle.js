@@ -551,17 +551,24 @@ function updateBattleUI(state, socket) {
   oppTable.innerHTML = '';
 
   me.table.forEach((card) => {
-    const div = document.createElement('div');
-    div.className = 'card-slot';
-    div.textContent = `${card.name} | atk ${card.attack} | def ${card.defense} | cost ${card.cost}`;
+    const cardUI = renderCard(card);
+    cardUI.classList.add('card-slot');
+    cardUI.dataset.instanceId = card.instanceId;
 
     if (card.canAttack && isMyTurn) {
-      div.addEventListener('mousedown', (e) => {
+      cardUI.addEventListener('mousedown', (e) => {
         e.preventDefault();
         draggingAttackId = card.instanceId;
       });
     }
-    myTable.appendChild(div);
+    myTable.appendChild(cardUI);
+  });
+
+  opponent.table.forEach((card) => {
+    const cardUI = renderCard(card);
+    cardUI.classList.add('card-slot', 'enemy-card');
+    cardUI.dataset.instanceId = card.instanceId;
+    oppTable.appendChild(cardUI);
   });
 
   opponent.table.forEach((card) => {
@@ -575,16 +582,14 @@ function updateBattleUI(state, socket) {
   const oppHand = document.getElementById('opp-hand');
   oppHand.innerHTML = '';
   for (let i = 0; i < opponent.handCount; i++) {
-    const back = document.createElement('div');
-    back.className = 'card-back';
-    back.textContent = 'Card back';
+    const back = renderCard({ faceDown: true });
     oppHand.appendChild(back);
   }
 
   const handDisplay = document.getElementById('hand-display');
   handDisplay.innerHTML = '';
   me.hand.forEach((card) => {
-    const cardUI = renderCard({ label: card.name });
+    const cardUI = renderCard(card);
     cardUI.addEventListener('click', () => {
       if (isMyTurn) {
         socket.emit('play_card', { roomId: state.roomId, cardInstanceId: card.instanceId });

@@ -1,13 +1,13 @@
 export function renderCard(props = {}) {
   const {
     name = 'Unknown',
-    mana = 0,
+    cost = 0,
     attack = 0,
     defense = 0,
     type = 'Unit',
     description = '',
-    art = 'default-art.png',
-    faceDown = false
+    art = '/assets/cards-art/bubblegum.png',
+    faceDown = false,
   } = props;
 
   const cardDiv = document.createElement('div');
@@ -15,16 +15,16 @@ export function renderCard(props = {}) {
 
   if (faceDown) {
     cardDiv.classList.add('face-down');
-    cardDiv.innerHTML = `<img src="src/assets/images/card-back.png" class="card-back">`;
+    cardDiv.innerHTML = `<img src="/assets/images/card-back.png" class="card-back" style="width: 100%; height: 100%;">`;
     return cardDiv;
   }
 
-   cardDiv.innerHTML = `
+  cardDiv.innerHTML = `
     <div class="card-art" style="background-image: url('${art}');"></div>
-    <img src="src/assets/images/card-frame.png" class="card-frame">
+    <img src="/assets/images/card-frame.png" class="card-frame">
 
     <div class="card-title">${name}</div>
-    <div class="card-mana">${mana}</div>
+    <div class="card-cost">${cost}</div>
     <div class="card-type">${type}</div>
     <div class="card-description">${description}</div>
 
