@@ -4,12 +4,13 @@ import { fileURLToPath } from 'url';
 import {
   findById,
   findConflictingUser,
-  getTopUsers,
   updatePasswordHash,
   updateProfileData,
 } from '../repositories/userRepository.js';
+import { getUserMatchHistory } from '../repositories/matchRepository.js';
 import { generateToken } from '../utils/jwt.js';
 import { hashPassword, verifyPassword } from '../utils/hash.js';
+import { validatePassword } from '../utils/validators.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,6 +69,11 @@ export const updatePassword = async (req, res) => {
     const isValid = await verifyPassword(oldPassword, user.passwordHash);
     if (!isValid) return res.status(401).json({ message: 'Incorrect old password' });
 
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
+
     const newHash = await hashPassword(newPassword);
     await updatePasswordHash(userId, newHash);
 
@@ -77,12 +83,13 @@ export const updatePassword = async (req, res) => {
   }
 };
 
-export const getLeaderboard = async (req, res) => {
+export const getMatchHistory = async (req, res) => {
   try {
-    const users = await getTopUsers(10);
-    res.status(200).json(users);
+    const userId = req.user.id;
+    const history = await getUserMatchHistory(userId);
+    res.status(200).json(history);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

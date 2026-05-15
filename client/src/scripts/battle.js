@@ -278,14 +278,18 @@ export function initBattle() {
     const btn = document.getElementById('return-lobby-btn');
     overlay.classList.remove('hidden');
     text.textContent = message;
-    btn.disabled = false;
+    btn.disabled = true;
+    const enableBtnTimeout = setTimeout(() => {
+      btn.disabled = false;
+    }, 2000);
     const redirectTimeout = setTimeout(() => {
-      window.location.replace('#homepage');
-    }, 8000);
+      window.location.replace('#lobby');
+    }, 10000);
 
     btn.onclick = () => {
+      clearTimeout(enableBtnTimeout);
       clearTimeout(redirectTimeout);
-      window.location.replace('#homepage');
+      window.location.replace('#lobby');
     };
     teardownBattle({ emitSurrender: false });
   };

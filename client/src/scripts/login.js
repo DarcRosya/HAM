@@ -1,5 +1,11 @@
 import { authService } from '../services/auth.js';
 
+const showBmoError = (message) => {
+  if (typeof window !== 'undefined' && typeof window.showBmoError === 'function') {
+    window.showBmoError(message);
+  }
+};
+
 export function initLogin() {
   const loginBtn = document.getElementById('login-btn');
   const usernameInput = document.getElementById('login-username');
@@ -23,7 +29,8 @@ export function initLogin() {
     const password = passwordInput.value;
 
     if (!username || username.length > 255) {
-      return alert('Invalid login');
+      showBmoError('Invalid login');
+      return;
     }
 
     const credentials = {
@@ -36,12 +43,12 @@ export function initLogin() {
       if (res && res.token) {
         localStorage.setItem('token', res.token);
         localStorage.setItem('user', JSON.stringify(res.user));
-        window.location.hash = '#homepage';
+        window.location.hash = '#lobby';
       } else {
-        alert('Token not received from server');
+        showBmoError('Token not received from server');
       }
     } catch (err) {
-      alert('Login failed: ' + err.message);
+      showBmoError(`Login failed: ${err.message}`);
     }
   });
 }

@@ -114,20 +114,28 @@ Success Response (200):
 
 ### Users
 
-#### GET `/api/users/leaderboard`
+#### GET `/api/users/history`
 
-Returns top players by rating.
+Returns the last 25 matches for the authenticated user. `ratingChange` is positive for wins, negative for losses, and 0 for draws.
+
+Headers:
+
+```
+Authorization: Bearer <JWT>
+```
 
 Success Response (200):
 
 ```json
 [
   {
-    "id": 1,
-    "username": "player1",
-    "displayedName": "Player One",
-    "avatar": "/assets/avatars/finn.png",
-    "rating": 540
+    "id": 12,
+    "winnerId": 5,
+    "endedAt": "2026-05-12T12:34:56.000Z",
+    "ratingChange": 25,
+    "username": "coolboy",
+    "displayedName": "Opponent Name",
+    "avatar": "/assets/avatars/finn.png"
   }
 ]
 ```

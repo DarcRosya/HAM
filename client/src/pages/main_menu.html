@@ -27,12 +27,13 @@
             </div>
         </div>
 
-        <div id="auth-modal" class="modal-overlay hidden">
+        <div id="auth-modal" class="modal-overlay is-hidden">
 
             <div class="modal-frame">
+                <button id="back-to-login-btn" class="back-btn is-hidden"></button>
                 <button id="close-modal" class="close-btn"></button>
 
-                <div class="modal-header">LOG IN OR SIGN UP</div>
+                <div class="modal-header"></div>
 
                 <div class="wooden-board">
 
@@ -50,7 +51,7 @@
                     </div>
 
                     <form id="registerForm">
-                        <div id="signup-view" class="form-view hidden">
+                        <div id="signup-view" class="form-view is-hidden">
                             <div class="input-group">
                                 <span class="icon swords-icon"></span>
                                 <input type="text" id="nickname" placeholder="NAME">
@@ -74,13 +75,51 @@
                             <button id="register-btn" class="action-btn">SIGN UP</button>
                         </div>
                     </form>
+                </div>
 
+                <div id="forgot-view" class="form-view is-hidden">
+                    <form id="forgot-password-form" class="recovery-container">
+
+                        <div class="green-board-sign">
+                            <div class="input-group">
+                                <span class="icon mail-icon-recovery"></span>
+                                <input type="email" name="email" placeholder="EMAIL">
+                            </div>
+                        </div>
+
+                        <button id="recover-btn" type="submit" class="recover-action-btn">
+                            <span>RECOVER</span>
+                        </button>
+
+                    </form>
+                </div>
+
+                <div id="reset-view" class="form-view is-hidden">
+                    <div class="reset-board">
+                        <div id="reset-inputs-group">
+                            <div class="input-group">
+                                <span class="icon lock-reset-icon"></span>
+                                <input type="password" id="new-password" placeholder="NEW PASSWORD">
+                            </div>
+                            <div class="input-group">
+                                <span class="icon shield-reset-icon"></span>
+                                <input type="password" id="confirm-new-password" placeholder="CONFIRM PASSWORD">
+                            </div>
+                        </div>
+                        <div id="success-message" class="is-hidden">
+                            <div class="success-text-handwritten">SUCCESS</div>
+                        </div>
+                    </div>
+                    <button id="confirm-reset-btn" class="recover-action-btn">
+                        <span>CONFIRM</span>
+                    </button>
                 </div>
 
                 <div class="bmo-container">
                     <button id="bmo-toggle" class="bmo-btn"></button>
                     <div id="bmo-speech" class="speech-bubble">
-                        No account yet?<br><span class="green-text">Click on me</span> to sign up!
+                        <span class="speech-text">No account yet?<br><span class="green-text">Click on me</span> to sign
+                            up!</span>
                     </div>
                 </div>
 
