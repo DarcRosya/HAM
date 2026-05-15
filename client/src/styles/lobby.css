@@ -90,6 +90,13 @@ body {
     transition: transform 0.02s; 
 }
 
+.edit-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.25);
+}
+
 .play-section {
     margin-bottom: 20px;
 }

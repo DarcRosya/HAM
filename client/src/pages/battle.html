@@ -8,7 +8,9 @@
 </head>
 
 <body>
-
+  <div id="battle-loader" class="battle-loader">
+    <h1>Connecting to battlefield...</h1>
+  </div>
 
   <div id="coin-toss-overlay" aria-hidden="true">
     <div class="coin-toss-stage">
@@ -46,6 +48,10 @@
 
   <div class="battle-container">
     <h2>Battlefield</h2>
+
+    <div id="opponent-connection-status" class="opponent-connection-status hidden" aria-live="polite">
+      <span id="opponent-connection-text"></span>
+    </div>
 
     <div id="opponent-section">
       <h4 id="opp-avatar">Opponent HP: <span id="opp-hp"></span></h4>

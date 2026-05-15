@@ -11,6 +11,7 @@ import { getUserMatchHistory } from '../repositories/matchRepository.js';
 import { generateToken } from '../utils/jwt.js';
 import { hashPassword, verifyPassword } from '../utils/hash.js';
 import { validatePassword } from '../utils/validators.js';
+import { gameService } from '../services/gameService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +23,10 @@ export const updateProfile = async (req, res) => {
   try {
     const { username, email, displayedName, avatar } = req.body;
     const userId = req.user.id;
+
+    if (gameService.findGameByPlayer(userId)) {
+      return res.status(403).json({ message: 'Cannot edit profile during an active match' });
+    }
 
     const profileUpdates = {};
     if (username !== undefined) profileUpdates.username = username;
@@ -39,7 +44,17 @@ export const updateProfile = async (req, res) => {
 
     if (username !== undefined || email !== undefined) {
       const existing = await findConflictingUser({ userId, username, email });
-      if (existing) return res.status(409).json({ message: 'Username/Email already taken' });
+
+      if (existing) {
+        if (existing.username === username) {
+          return res
+            .status(409)
+            .json({ field: 'username', message: 'This username is already taken' });
+        }
+        if (existing.email === email) {
+          return res.status(409).json({ field: 'email', message: 'This email is already in use' });
+        }
+      }
     }
 
     await updateProfileData(userId, profileUpdates);
@@ -62,6 +77,10 @@ export const updatePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
     const userId = req.user.id;
+
+    if (gameService.findGameByPlayer(userId)) {
+      return res.status(403).json({ message: 'Cannot edit profile during an active match' });
+    }
 
     const user = await findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
