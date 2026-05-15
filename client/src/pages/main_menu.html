@@ -27,6 +27,10 @@
             </div>
         </div>
 
+        <div class="top-right-actions">
+            <button id="logout-btn" class="logout-icon-btn"></button>
+        </div>
+
         <div id="auth-modal" class="modal-overlay is-hidden">
 
             <div class="modal-frame">
@@ -75,6 +79,18 @@
                             <button id="register-btn" class="action-btn">SIGN UP</button>
                         </div>
                     </form>
+                </div>
+
+                <div id="logout-view" class="form-view is-hidden">
+                    <div class="logout-board">
+                        <div class="logout-question-sign">
+                            <span>Are you sure you want<br>to log out?</span>
+                        </div>
+                        <div class="logout-actions">
+                            <button id="stay-btn" class="action-btn small-action">STAY</button>
+                            <button id="confirm-logout-btn" class="action-btn small-action danger">LOG OUT</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="forgot-view" class="form-view is-hidden">

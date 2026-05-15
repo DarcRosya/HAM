@@ -20,7 +20,14 @@ export function mount() {
     cancelBtn: document.getElementById('cancel-search-btn'),
     matchFrame: document.getElementById('match-frame'),
     historyList: document.getElementById('history-list'),
+    returnBtn: document.getElementById('return-btn'),
   };
+
+  if (elements.returnBtn) {
+    elements.returnBtn.addEventListener('click', () => {
+      window.location.hash = '#menu';
+    });
+  }
 
   renderUserProfile();
   initHistory(elements.historyList);
