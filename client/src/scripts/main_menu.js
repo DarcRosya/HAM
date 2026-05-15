@@ -39,9 +39,9 @@ const BMO = {
     if (!this.btn || !this.speech) return;
 
     const assets = {
-      neutral: 'src/assets/images/happy-bmo.png',
-      sad: 'src/assets/images/sad_bmo.png',
-      happy: 'src/assets/images/happiest_bmo.png',
+      neutral: '/assets/images/happy-bmo.png',
+      sad: '/assets/images/sad_bmo.png',
+      happy: '/assets/images/happiest_bmo.png',
     };
 
     this.btn.style.backgroundImage = `url('${assets[emotion]}')`;

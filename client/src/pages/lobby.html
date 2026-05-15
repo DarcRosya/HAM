@@ -13,7 +13,7 @@
 
     <header class="player-bar">
       <div class="player-info">
-        <img id="avatar" src="avatar.png" alt="Avatar" class="avatar">
+        <img id="avatar" src="/assets/avatars/avatar.png" alt="Avatar" class="avatar">
         <div class="names">
           <h2 class="display-name"></h2>
           <p class="username"></p>
@@ -30,6 +30,93 @@
       <h3 class="history-title">Match history</h3>
       <div id="history-list"></div>
     </section>
+
+    <div id="edit-modal" class="modal-overlay hidden">
+      <div class="edit-frame">
+        <button id="close-edit-modal" class="close-btn"></button>
+
+        <div class="edit-avatar-container">
+          <img id="edit-avatar-preview" src="/assets/avatars/avatar.png" alt="Avatar" class="large-avatar clickable">
+        </div>
+        <div id="edit-main-content">
+          <form id="edit-profile-form" class="edit-form">
+            <div class="edit-input-group">
+              <label>Displayed name</label>
+              <input type="text" id="edit-display-name" name="displayedName" required>
+              <span id="display-name-error" class="error-msg hidden"></span>
+            </div>
+
+            <div class="edit-input-group">
+              <label>Username</label>
+              <input type="text" id="edit-username" name="username" required>
+              <span id="username-error" class="error-msg hidden"></span>
+            </div>
+
+            <div class="edit-input-group">
+              <label>Email</label>
+              <input type="email" id="edit-email" name="email" required>
+              <span id="email-error" class="error-msg hidden"></span>
+            </div>
+
+            <button type="button" class="change-pw-btn">change password</button>
+
+            <button type="submit" class="apply-changes-btn" id="apply-profile-btn">
+              <span>Apply changes</span>
+            </button>
+          </form>
+        </div>
+
+        <div id="pfp-selection-view" class="hidden">
+          <button id="back-to-lobby-btn" class="back-btn is-hidden back-pfp-btn"></button>
+          <div class="pfp-grid">
+          </div>
+          <button type="button" id="confirm-pfp-btn" class="apply-changes-btn">
+            <span>Change pfp</span>
+          </button>
+        </div>
+
+        <form id="password-change-view" class="hidden">
+          <button id="back-to-lobby-btn" class="back-btn is-hidden back-pw-btn"></button>
+          <div class="edit-header">Change password</div>
+
+          <div class="password-form-container">
+            <div class="edit-input-group">
+              <label>Enter your old password</label>
+              <div class="pass-wrapper">
+                <input type="password" id="old-password" name="oldPassword" required>
+                <button type="button" class="toggle-pass invisible-pass"></button>
+
+              </div>
+              <span id="old-pass-error" class="error-msg hidden"></span>
+            </div>
+
+            <div class="edit-input-group">
+              <label>Enter your new password</label>
+              <div class="pass-wrapper">
+                <input type="password" id="new-password-input" name="newPassword" required>
+                <button type="button" class="toggle-pass invisible-pass"></button>
+              </div>
+              <span id="new-pass-error" class="error-msg hidden"></span>
+            </div>
+
+            <div class="edit-input-group">
+              <label>Confirm your new password</label>
+              <div class="pass-wrapper">
+                <input type="password" id="confirm-new-password-input" name="confirmPassword" required>
+                <button type="button" class="toggle-pass invisible-pass"></button>
+              </div>
+              <span id="pass-match-error" class="error-msg hidden"></span>
+            </div>
+          </div>
+
+          <div class="pfp-actions">
+            <button type="button" id="submit-password-btn" class="apply-changes-btn">
+              <span>Change password</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <div id="search-overlay" class="search-overlay is-hidden">
@@ -37,7 +124,7 @@
 
       <div class="animation-zone">
         <div class="match-animation">
-          <img id="match-frame" src="src/assets/images/find_match/1.png" alt="Searching for match">
+          <img id="match-frame" src="/assets/images/find_match/1.png" alt="Searching for match">
         </div>
       </div>
 
@@ -48,6 +135,8 @@
       <button id="cancel-search-btn" class="cancel-btn">CANCEL</button>
     </div>
   </div>
+
+
 
   <script type="module" src="../scripts/lobby.js"></script>
 </body>
