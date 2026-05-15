@@ -1,18 +1,15 @@
 import { renderCard } from './Card.js';
+import { allCards } from './allCards.js';
 
-const starterCards = ['AS', '10H', '3D', 'KC', '7S'];
-
-export function renderHand(cards = starterCards) {
+export function renderHand(cards = allCards) {
   const handDiv = document.createElement('div');
   handDiv.className = 'hand';
 
-  cards.forEach((label, index) => {
-    const cardElement = renderCard({
-      label: label,
-      faceDown: false,
-    });
+  cards.forEach((card, index) => {
+    const cardElement = renderCard(card);
 
     cardElement.dataset.index = index;
+
     handDiv.appendChild(cardElement);
   });
 

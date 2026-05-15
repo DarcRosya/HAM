@@ -8,8 +8,6 @@
 </head>
 
 <body>
-
-
   <div id="coin-toss-overlay" aria-hidden="true">
     <div class="coin-toss-stage">
       <div class="coin">
@@ -44,81 +42,110 @@
     </div>
   </div>
 
-  <div class="battle-container">
-    <h2>Battlefield</h2>
+  <div class="game-board">
 
-    <div id="opponent-section">
-      <h4 id="opp-avatar">Opponent HP: <span id="opp-hp"></span></h4>
-      <p>Mana: <span id="opp-mana"></span></p>
-
-      <div class="deck-column">
-        <h4>Opponent deck</h4>
-        <div id="opp-deck"></div>
+    <div class="top-zone">
+      <div class="hand enemy-hand">
+        <img src="card-back.png" alt="Enemy Card" class="card">
+        <img src="card-back.png" alt="Enemy Card" class="card">
+        <img src="card-back.png" alt="Enemy Card" class="card">
+        <img src="card-back.png" alt="Enemy Card" class="card">
+        <img src="card-back.png" alt="Enemy Card" class="card">
       </div>
-
-      <p>Opponent field cards: <span id="opp-field-count"></span></p>
-
-      <h3>Opponent Table</h3>
-      <div id="opp-table"></div>
-
-      <h3>Opponent Hand</h3>
-      <div id="opp-hand"></div>
+      <div class="player-info">
+        <div class="username">12345678901234567890</div>
+        <div class="avatar-wrapper">
+          <img src="avatar-enemy.png" alt="Enemy Avatar" class="avatar">
+          <div class="health-indicator">
+            <img src="heart.png" alt="HP" class="heart-img">
+            <span class="health-text">ХП</span>
+          </div>
+        </div>
+        <div class="mana-bar">
+          <span class="mana-text">3/6</span>
+          <div class="mana-crystals">
+            <div class="crystal active"></div>
+            <div class="crystal active"></div>
+            <div class="crystal active"></div>
+            <div class="crystal empty"></div>
+            <div class="crystal empty"></div>
+            <div class="crystal empty"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <hr />
-
-    <div id="player-section">
-      <h4>Your HP: <span id="player-hp"></span></h4>
-      <p>Mana: <span id="player-mana"></span></p>
-
-      <div class="deck-column">
-        <h4>Your deck</h4>
-        <div id="player-deck"></div>
+    <div class="battlefield">
+      <div class="decks-column">
+        <div class="his-deck"></div>
+        <div class="my-deck" data-count="six sevenn"></div>
       </div>
 
-      <div>
-        <p>Your cards on field: <span id="player-field-count"></span></p>
+      <div class="active-cards-column">
+        <div class="active-group enemy-active-group">
+          <img src="card-front.png" alt="Active Enemy" class="active-card">
+          <img src="card-front.png" alt="Active Enemy" class="active-card">
+          <img src="card-front.png" alt="Active Enemy" class="active-card">
+          <img src="card-front.png" alt="Active Enemy" class="active-card">
+          <img src="card-front.png" alt="Active Enemy" class="active-card">
+          <img src="card-front.png" alt="Active Enemy" class="active-card">
+          <img src="card-front.png" alt="Active Enemy" class="active-card">
+        </div>
+
+        <div class="active-group my-active-group">
+          <img src="card-front.png" alt="Active My" class="active-card">
+          <img src="card-front.png" alt="Active My" class="active-card">
+          <img src="card-front.png" alt="Active My" class="active-card">
+          <img src="card-front.png" alt="Active My" class="active-card">
+          <img src="card-front.png" alt="Active My" class="active-card">
+          <img src="card-front.png" alt="Active My" class="active-card">
+          <img src="card-front.png" alt="Active My" class="active-card">
+        </div>
       </div>
 
-      <div>
-        <p>Your cards in hand: <span id="player-hand-count"></span></p>
+      <div class="actions-column">
+        <button class="text-btn">SURRENDER</button>
+        <button class="end-turn-btn">end of the turn</button>
+        <button class="text-btn">LEAVE</button>
       </div>
-
-      <hr />
-
-      <div id="game-info">
-        <p>Turn: <span id="info-turn"></span></p>
-        <button id="end-turn-btn">End turn</button>
-        <button id="surrender-btn" style="background: red; color: white;">Surrender</button>
-        <div id="battle-message" class="battle-message hidden"></div>
-        <p>Time: <span id="info-timer"></span>s</p>
-        <p>Round: <span id="info-round"></span></p>
-        <p id="fatigue-info" class="hidden">Fatigue damage: <span id="fatigue-value"></span></p>
-      </div>
-
-      <hr />
-
-      <h4>Your cards in hand</h4>
-      <div id="hand-display"></div>
-
-      <h3>Your Table</h3>
-      <div id="my-table"></div>
     </div>
+
+    <div class="bottom-zone">
+      <div class="player-info">
+        <div class="username">12345678901234567890</div>
+        <div class="avatar-wrapper">
+          <img src="avatar-my.png" alt="My Avatar" class="avatar">
+          <div class="health-indicator">
+            <img src="heart.png" alt="HP" class="heart-img">
+            <span class="health-text">ХП</span>
+          </div>
+        </div>
+        <div class="mana-bar">
+          <span class="mana-text">3/9</span>
+          <div class="mana-crystals">
+            <div class="crystal active"></div>
+            <div class="crystal active"></div>
+            <div class="crystal active"></div>
+            <div class="crystal empty"></div>
+            <div class="crystal empty"></div>
+            <div class="crystal empty"></div>
+            <div class="crystal empty"></div>
+            <div class="crystal empty"></div>
+            <div class="crystal empty"></div>
+          </div>
+        </div>
+      </div>
+      <div class="hand my-hand">
+        <img src="card-back.png" alt="My Card" class="card">
+        <img src="card-back.png" alt="My Card" class="card">
+        <img src="card-back.png" alt="My Card" class="card">
+        <img src="card-back.png" alt="My Card" class="card">
+        <img src="card-back.png" alt="My Card" class="card">
+      </div>
+    </div>
+
   </div>
 
-  <div id="game-result-overlay" class="hidden">
-    <div class="game-result-box">
-      <h1 id="result-text"></h1>
-
-      <button id="return-lobby-btn" disabled>
-        Return to Lobby
-      </button>
-    </div>
-  </div>
-
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="../scripts/battle.js"></script>
 </body>
 
 </html>

@@ -4,6 +4,8 @@ import { initRegister } from './register.js';
 import { initBattle } from './battle.js';
 import { initHomepage } from './homepage.js';
 import { initLobby } from './lobby.js';
+import { initGallery } from './gallery.js';
+import { initCredits } from './credits.js';
 import { checkAuth } from '../services/authGuard.js';
 
 const mainContainer = document.getElementById('main-container');
@@ -16,6 +18,8 @@ const routes = {
   '#battle': { path: 'src/pages/battle.html', init: initBattle, private: true },
   '#homepage': { path: 'src/pages/homepage.html', init: initHomepage, private: true },
   '#lobby': { path: 'src/pages/lobby.html', init: initLobby, private: true },
+  '#gallery': { path: 'src/pages/gallery.html', init: initGallery, private: false },
+  '#credits': { path: 'src/pages/credits.html', init: initCredits, private: false }
 };
 
 async function router() {
