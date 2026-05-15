@@ -134,6 +134,8 @@ function preloadImages(paths) {
 
 export function initMainMenu() {
   const startBtn = document.getElementById('start-game-btn');
+  const cardsBtn = document.getElementById('cards-btn');
+  const creditsBtn = document.getElementById('credits-btn');
   const authModal = document.getElementById('auth-modal');
   const loginView = document.getElementById('login-view');
   const signupView = document.getElementById('signup-view');
@@ -172,6 +174,30 @@ export function initMainMenu() {
     startBtn.addEventListener('click', () => {
       const token = localStorage.getItem('token');
       window.location.hash = token ? '#lobby' : '#login';
+    });
+  }
+
+  if (cardsBtn) {
+    cardsBtn.addEventListener('click', () => {
+        window.location.hash = '#gallery';
+    });
+  }
+
+  if (creditsBtn) {
+    creditsBtn.addEventListener('click', () => {
+        window.location.hash = '#credits';
+    });
+  }
+
+  if (cardsBtn) {
+    cardsBtn.addEventListener('click', () => {
+        window.location.hash = '#gallery';
+    });
+  }
+
+  if (creditsBtn) {
+    creditsBtn.addEventListener('click', () => {
+        window.location.hash = '#credits';
     });
   }
 

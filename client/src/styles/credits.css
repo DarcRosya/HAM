@@ -1,0 +1,86 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Londrina Solid', serif;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.credits-container {
+     width: 1280px; 
+    height: 720px;
+    background-image: url('../assets/images/credits-bg.png'); 
+    text-align: center;
+    padding: 20px;
+    opacity: 0; 
+    transition: opacity 1s ease-in-out;
+}
+
+.main-title {
+    color: white;
+    font-size: 2.2rem;
+    margin-top: 50px;
+    text-shadow:
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+         3px  3px 4px rgba(0,0,0,0.4); 
+    letter-spacing: 1px;
+}
+
+.frames-wrapper {
+    margin-top: 80px;
+    display: flex;
+    justify-content: center;
+    gap: 50px; 
+    flex-wrap: wrap; 
+}
+
+.frame-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 250px;
+}
+
+.image-container {
+    position: relative;
+    width: 200px;
+    height: 250px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: white; 
+    border-radius: 50%; 
+}
+
+.frame-img {
+    background-image: url('../assets/images/gold-frame.png'); 
+    background-size: contain; 
+    background-position: center;
+    background-repeat: no-repeat;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 130%; 
+    height: 130%; 
+    z-index: 2; 
+    pointer-events: none; 
+}
+
+.frame-text {
+    margin-bottom: 1px;
+    color: white;
+    font-size: 1.4rem;
+    text-shadow:
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000;
+}
