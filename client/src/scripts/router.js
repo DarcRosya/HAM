@@ -1,6 +1,8 @@
 import { initMainMenu } from './main_menu.js';
 import { initBattle } from './battle.js';
 import { initLobby } from './lobby.js';
+import { initGallery } from './gallery.js';
+import { initCredits } from './credits.js';
 import { checkAuth } from '../services/authGuard.js';
 
 const mainContainer = document.getElementById('main-container');
@@ -14,6 +16,8 @@ const routes = {
   '#reset-password': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
   '#battle': { path: 'src/pages/battle.html', init: initBattle, private: true },
   '#lobby': { path: 'src/pages/lobby.html', init: initLobby, private: true },
+  '#gallery': { path: 'src/pages/gallery.html', init: initGallery, private: false },
+  '#credits': { path: 'src/pages/credits.html', init: initCredits, private: false }
 };
 
 let currentRoutePath = null;

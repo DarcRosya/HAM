@@ -1,6 +1,7 @@
 import { CARDS } from './cards.js';
 import { updateRating, findById } from '../repositories/userRepository.js';
 import { saveMatchResult } from '../repositories/matchRepository.js';
+import { getUserSocketCount } from '../socket/socketRegistry.js';
 
 const STARTING_CARDS_COUNT = 4;
 
@@ -14,25 +15,30 @@ const shuffleArray = (array) => {
 };
 
 export class GameRoom {
-  constructor(roomId, player1, player2) {
+  constructor(roomId, player1, player2, io, onGameEnd) {
     this.roomId = roomId;
     this.status = 'playing';
     this.startedAt = new Date();
+    this.io = io;
+    this.onGameEnd = onGameEnd;
 
     this.activeTurn = Math.random() > 0.5 ? player1.user.id : player2.user.id;
     this.turnDuration = 30000; // 30 seconds in ms
     this.turnStartTime = Date.now();
     this.turnExpiresAt = this.turnStartTime + this.turnDuration;
 
-    this.sockets = {
-      [player1.user.id]: player1,
-      [player2.user.id]: player2,
-    };
-
     this.players = {
       [player1.user.id]: this.createPlayerState(player1),
       [player2.user.id]: this.createPlayerState(player2),
     };
+
+    this.disconnectCounts = {
+      [player1.user.id]: 0,
+      [player2.user.id]: 0,
+    };
+    this.disconnectGraceTimers = {};
+    this.disconnectGraceMs = 30000;
+    this.maxDisconnectStrikes = 3;
 
     setTimeout(() => {
       if (this.status === 'playing') {
@@ -44,6 +50,7 @@ export class GameRoom {
   startTurnTimer() {
     this.clearTurnTimer();
     this.turnStartTime = Date.now();
+    this.turnExpiresAt = this.turnStartTime + this.turnDuration;
     this.intervalId = setTimeout(() => {
       if (this.status === 'playing') {
         this.nextTurn();
@@ -78,11 +85,139 @@ export class GameRoom {
     };
   }
 
+  emitToPlayer(playerId, event, payload) {
+    if (!this.io) {
+      return;
+    }
+    this.io.to(String(playerId)).emit(event, payload);
+  }
+
+  getOpponentId(playerId) {
+    const normalizedId = String(playerId);
+    return Object.keys(this.players).find((id) => String(id) !== normalizedId) ?? null;
+  }
+
+  updatePlayerSocket(userId, socketId) {
+    const normalizedId = String(userId);
+    if (!this.players[normalizedId]) {
+      return;
+    }
+    this.players[normalizedId].socketId = socketId;
+  }
+
+  clearDisconnectTimer(userId) {
+    const normalizedId = String(userId);
+    const timer = this.disconnectGraceTimers[normalizedId];
+    if (timer) {
+      clearTimeout(timer);
+      delete this.disconnectGraceTimers[normalizedId];
+    }
+  }
+
+  clearAllDisconnectTimers() {
+    Object.keys(this.disconnectGraceTimers).forEach((key) => {
+      clearTimeout(this.disconnectGraceTimers[key]);
+    });
+    this.disconnectGraceTimers = {};
+  }
+
+  notifyOpponentDisconnected(userId) {
+    const opponentId = this.getOpponentId(userId);
+    if (!opponentId) {
+      return;
+    }
+    const strikes = this.disconnectCounts[String(userId)] ?? 0;
+    const remainingAttempts = Math.max(0, this.maxDisconnectStrikes - strikes);
+    this.emitToPlayer(opponentId, 'opponent-disconnected', {
+      remainingAttempts,
+      maxAttempts: this.maxDisconnectStrikes,
+      graceSeconds: Math.ceil(this.disconnectGraceMs / 1000),
+    });
+  }
+
+  notifyOpponentReconnected(userId) {
+    const opponentId = this.getOpponentId(userId);
+    if (!opponentId) {
+      return;
+    }
+    const strikes = this.disconnectCounts[String(userId)] ?? 0;
+    const remainingAttempts = Math.max(0, this.maxDisconnectStrikes - strikes);
+    this.emitToPlayer(opponentId, 'opponent-reconnected', {
+      remainingAttempts,
+      maxAttempts: this.maxDisconnectStrikes,
+    });
+  }
+
+  startDisconnectTimer(userId) {
+    const normalizedId = String(userId);
+    this.clearDisconnectTimer(normalizedId);
+
+    this.disconnectGraceTimers[normalizedId] = setTimeout(() => {
+      if (this.status !== 'playing') {
+        return;
+      }
+      if (getUserSocketCount(normalizedId) > 0) {
+        return;
+      }
+      const opponentId = this.getOpponentId(normalizedId);
+      if (opponentId) {
+        this.endGame(opponentId);
+      }
+    }, this.disconnectGraceMs);
+  }
+
+  handleFullDisconnect(userId) {
+    if (this.status !== 'playing') {
+      return;
+    }
+
+    const normalizedId = String(userId);
+    if (!this.players[normalizedId]) {
+      return;
+    }
+
+    this.disconnectCounts[normalizedId] = (this.disconnectCounts[normalizedId] ?? 0) + 1;
+    const strikes = this.disconnectCounts[normalizedId];
+
+    if (strikes >= this.maxDisconnectStrikes) {
+      this.clearDisconnectTimer(normalizedId);
+      const opponentId = this.getOpponentId(normalizedId);
+      if (opponentId) {
+        this.endGame(opponentId);
+      }
+      return;
+    }
+
+    this.clearTurnTimer();
+
+    this.startDisconnectTimer(normalizedId);
+    this.notifyOpponentDisconnected(normalizedId);
+  }
+
+  handleReconnect(userId, socket) {
+    const normalizedId = String(userId);
+    if (!this.players[normalizedId]) {
+      return;
+    }
+
+    if (socket?.id) {
+      this.players[normalizedId].socketId = socket.id;
+    }
+
+    if (this.disconnectGraceTimers[normalizedId]) {
+      this.clearDisconnectTimer(normalizedId);
+      this.notifyOpponentReconnected(normalizedId);
+
+      this.startTurnTimer();
+    }
+
+    this.broadcastState();
+  }
+
   broadcastState() {
-    for (const playerId in this.sockets) {
-      const playerSocket = this.sockets[playerId];
+    for (const playerId of Object.keys(this.players)) {
       const personalState = this.getGameState(playerId);
-      playerSocket.emit('game_state', personalState);
+      this.emitToPlayer(playerId, 'game_state', personalState);
     }
   }
 
@@ -112,6 +247,7 @@ export class GameRoom {
         hand: isMe ? player.hand : [],
         fatigue: player.fatigue,
         deckCount: player.deck.length,
+        isConnected: getUserSocketCount(id) > 0,
       };
     }
 
@@ -127,48 +263,60 @@ export class GameRoom {
   }
 
   nextTurn() {
-    const playerIds = Object.keys(this.players);
+    try {
+      const playerIds = Object.keys(this.players);
 
-    this.activeTurn = playerIds.find((id) => id !== String(this.activeTurn));
+      this.activeTurn = playerIds.find((id) => id !== String(this.activeTurn));
 
-    const currentPlayer = this.players[this.activeTurn];
+      const currentPlayer = this.players[this.activeTurn];
 
-    currentPlayer.maxMana = Math.min(currentPlayer.maxMana + 1, 10);
-    currentPlayer.mana = currentPlayer.maxMana;
+      currentPlayer.maxMana = Math.min(currentPlayer.maxMana + 1, 10);
+      currentPlayer.mana = currentPlayer.maxMana;
 
-    const cardsNeeded = STARTING_CARDS_COUNT - currentPlayer.hand.length;
+      let cardsNeeded = STARTING_CARDS_COUNT - currentPlayer.hand.length;
 
-    while (cardsNeeded > 0) {
-      if (currentPlayer.deck.length > 0) {
-        const drawnCard = currentPlayer.deck.shift();
-        currentPlayer.hand.push(drawnCard);
-      } else {
-        currentPlayer.fatigue += 1;
-        currentPlayer.hp -= currentPlayer.fatigue;
+      while (cardsNeeded > 0) {
+        if (currentPlayer.deck.length > 0) {
+          const drawnCard = currentPlayer.deck.shift();
+          currentPlayer.hand.push(drawnCard);
+        } else {
+          currentPlayer.fatigue += 1;
+          currentPlayer.hp -= currentPlayer.fatigue;
 
-        if (currentPlayer.hp <= 0) {
-          const winnerId = playerIds.find((id) => id !== String(this.activeTurn));
-          this.endGame(winnerId);
-          return;
+          if (currentPlayer.hp <= 0) {
+            const winnerId = playerIds.find((id) => id !== String(this.activeTurn));
+            this.endGame(winnerId);
+            return;
+          }
         }
+        cardsNeeded--;
       }
-      cardsNeeded--;
+
+      currentPlayer.table.forEach((card) => (card.canAttack = true));
+
+      this.startTurnTimer();
+    } catch (error) {
+      console.error(`[CRITICAL] Error in nextTurn for room ${this.roomId}:`, error);
+      this.status = 'error';
+      this.broadcastState();
     }
-
-    currentPlayer.table.forEach((card) => (card.canAttack = true));
-
-    this.startTurnTimer();
   }
 
   playCard(playerId, cardInstanceId) {
+    const player = this.players[String(playerId)];
+    if (!player) {
+      console.warn(`Action ignored: Player ${playerId} not found in room ${this.roomId}`);
+      return;
+    }
+
     if (this.status !== 'playing') return;
     if (String(this.activeTurn) !== String(playerId)) {
-      this.sockets[playerId].emit('error', { message: 'It is not your turn!' });
+      this.emitToPlayer(playerId, 'error', { message: 'It is not your turn!' });
       return;
     }
 
     if (Date.now() > this.turnExpiresAt) {
-      this.sockets[playerId].emit('error', { message: 'Your turn time has expired!' });
+      this.emitToPlayer(playerId, 'error', { message: 'Your turn time has expired!' });
       return;
     }
 
@@ -181,12 +329,12 @@ export class GameRoom {
     const card = activePlayer.hand[cardIndex];
 
     if (activePlayer.mana < card.cost) {
-      this.sockets[playerId].emit('error', { message: 'Not enough mana!' });
+      this.emitToPlayer(playerId, 'error', { message: 'Not enough mana!' });
       return;
     }
 
     if (activePlayer.table.length >= 7) {
-      this.sockets[playerId].emit('error', { message: 'There is no space on the table!' });
+      this.emitToPlayer(playerId, 'error', { message: 'There is no space on the table!' });
       return;
     }
 
@@ -201,11 +349,17 @@ export class GameRoom {
   }
 
   attackTarget(playerId, attackerInstanceId, targetId, targetType) {
+    const player = this.players[String(playerId)];
+    if (!player) {
+      console.warn(`Action ignored: Player ${playerId} not found in room ${this.roomId}`);
+      return;
+    }
+
     if (this.status !== 'playing') return;
     if (String(this.activeTurn) !== String(playerId)) return;
 
     if (Date.now() > this.turnExpiresAt) {
-      this.sockets[playerId].emit('error', { message: 'Your turn time has expired!' });
+      this.emitToPlayer(playerId, 'error', { message: 'Your turn time has expired!' });
       return;
     }
 
@@ -217,7 +371,7 @@ export class GameRoom {
     if (!attackerCard) return;
 
     if (!attackerCard.canAttack) {
-      this.sockets[playerId].emit('error', { message: 'This card cannot attack right now!' });
+      this.emitToPlayer(playerId, 'error', { message: 'This card cannot attack right now!' });
       return;
     }
 
@@ -225,7 +379,7 @@ export class GameRoom {
 
     if (targetType === 'avatar') {
       if (hasTaunt) {
-        this.sockets[playerId].emit('error', { message: 'You must attack a card with Taunt!' });
+        this.emitToPlayer(playerId, 'error', { message: 'You must attack a card with Taunt!' });
         return;
       }
 
@@ -241,7 +395,7 @@ export class GameRoom {
       if (!targetCard) return;
 
       if (hasTaunt && !targetCard.traits.includes('taunt')) {
-        this.sockets[playerId].emit('error', { message: 'You must attack a card with Taunt!' });
+        this.emitToPlayer(playerId, 'error', { message: 'You must attack a card with Taunt!' });
         return;
       }
 
@@ -266,6 +420,12 @@ export class GameRoom {
   }
 
   handleEndTurn(requestingUserId) {
+    const player = this.players[String(requestingUserId)];
+    if (!player) {
+      console.warn(`Action ignored: Player ${requestingUserId} not found in room ${this.roomId}`);
+      return;
+    }
+
     if (this.status !== 'playing') return;
 
     if (String(this.activeTurn) !== String(requestingUserId)) {
@@ -284,7 +444,14 @@ export class GameRoom {
     this.status = 'finished';
     this.clearTurnTimer();
 
-    const playerIds = Object.keys(this.sockets);
+    const playerIds = Object.keys(this.players);
+    this.clearDisconnectTimer(playerIds[0]);
+    this.clearDisconnectTimer(playerIds[1]);
+
+    if (typeof this.onGameEnd === 'function') {
+      setTimeout(() => this.onGameEnd(this.roomId), 10000);
+    }
+
     const p1Id = parseInt(playerIds[0]);
     const p2Id = parseInt(playerIds[1]);
     const winId = winnerId ? parseInt(winnerId) : null;
@@ -320,9 +487,8 @@ export class GameRoom {
       console.error('Failed to save match history or update rating:', e);
     }
 
-    for (const playerId in this.sockets) {
-      const playerSocket = this.sockets[playerId];
-      playerSocket.emit('game_over', { winnerId });
+    for (const playerId of Object.keys(this.players)) {
+      this.emitToPlayer(playerId, 'game_over', { winnerId });
     }
   }
 }

@@ -50,7 +50,7 @@ export async function findConflictingUser({ userId, username, email }) {
     return null;
   }
 
-  const query = `SELECT id FROM users WHERE (${conditions.join(' OR ')}) AND id != ? LIMIT 1`;
+  const query = `SELECT username, email FROM users WHERE (${conditions.join(' OR ')}) AND id != ? LIMIT 1`;
   values.push(userId);
 
   const [rows] = await pool.query(query, values);
