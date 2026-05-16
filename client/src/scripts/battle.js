@@ -204,28 +204,22 @@ const resetCoinOverlay = () => {
 };
 
 function setBattleFrozenState(isFrozen, message) {
-  const playerSection = document.getElementById('player-section');
-  let overlay = document.getElementById('freeze-overlay');
+  const overlay = document.getElementById('freeze-overlay');
+  const freezeText = document.getElementById('freeze-text');
 
   if (isFrozen) {
-    if (playerSection) {
-      playerSection.style.pointerEvents = 'none';
-      playerSection.style.opacity = '0.5';
-    }
     if (turnInterval) {
       clearInterval(turnInterval);
       turnInterval = null;
     }
-    if (overlay) {
-      overlay.innerHTML = message || 'Opponent disconnected...<br>Waiting for reconnect.';
-      overlay.style.display = 'block';
+    if (overlay && freezeText) {
+      freezeText.innerHTML = message || 'Opponent disconnected...<br>Waiting for reconnect.';
+      overlay.classList.remove('hidden');
     }
   } else {
-    if (playerSection) {
-      playerSection.style.pointerEvents = 'auto';
-      playerSection.style.opacity = '1';
+    if (overlay) {
+      overlay.classList.add('hidden');
     }
-    if (overlay) overlay.style.display = 'none';
   }
 }
 

@@ -11,9 +11,13 @@
 }
 
 #coin-toss-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100vw;
+  height: 100vh;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -397,4 +401,56 @@
 .battle-container.is-visible {
   opacity: 1;
   visibility: visible;
+}
+
+#freeze-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle, rgba(16, 26, 43, 0.5) 0%, rgba(10, 16, 28, 0.85) 100%);
+  backdrop-filter: blur(4px) grayscale(0.7);
+  -webkit-backdrop-filter: blur(4px) grayscale(0.7);
+  z-index: 9998; /* Чуть ниже монетки, но поверх всего стола */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+  pointer-events: auto; /* Жестко перехватываем клики */
+}
+
+#freeze-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#freeze-text {
+  color: #a6c7ff;
+  font-size: 36px;
+  text-align: center;
+  text-shadow:
+    0 0 15px rgba(166, 199, 255, 0.6),
+    2px 2px 0 #000;
+  font-family: 'Londrina Solid', sans-serif;
+  letter-spacing: 2px;
+  animation: pulse-freeze 2s infinite ease-in-out;
+}
+
+@keyframes pulse-freeze {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
 }
