@@ -77,11 +77,159 @@ export const BattleUI = {
         elements.loader.style.display = 'none';
       }, 400);
     }
+  },
 
-    if (elements.battleContainer) {
-      elements.battleContainer.classList.add('is-visible');
-      elements.battleContainer.style.opacity = '1';
-      elements.battleContainer.style.pointerEvents = 'auto';
+  renderVsScreen(state, myId) {
+    const vsOverlay = document.getElementById('vs-screen');
+    if (!vsOverlay) return;
+
+    if (state.phase === 'loading') return;
+
+    if (state.phase === 'coin_toss' || state.phase === 'playing' || state.phase === 'finished') {
+      vsOverlay.classList.add('hidden');
+      vsOverlay.classList.remove('vs-active');
+      vsOverlay.style.display = 'none';
+
+      // ВОТ ЭТО ВАЖНО: Снимаем блокировку мыши со стола
+      const gameBoard = document.querySelector('.game-board');
+      if (gameBoard) {
+        gameBoard.style.pointerEvents = '';
+      }
+      return;
+    }
+
+    // 2. ОТРИСОВКА ЭКРАНА (СТРОГО ОДИН РАЗ)
+    if (state.phase === 'vs_screen') {
+      if (!vsOverlay.classList.contains('vs-active')) {
+        const playerIds = Object.keys(state.players);
+        const oppId = playerIds.find((id) => String(id) !== String(myId));
+
+        const me = state.players[myId];
+        const opp = state.players[oppId];
+
+        if (me) {
+          document.getElementById('vs-you-avatar').src =
+            me.avatar || '/assets/images/avatar-my.png';
+          document.getElementById('vs-you-name').textContent = me.displayedName || me.username;
+          document.getElementById('vs-you-mmr').textContent = `MMR: ${me.rating}`;
+          document.getElementById('vs-you-sword').src =
+            `/assets/images/sword-${me.swordId || 1}.png`;
+        }
+
+        if (opp) {
+          document.getElementById('vs-opp-avatar').src =
+            opp.avatar || '/assets/images/avatar-enemy.png';
+          document.getElementById('vs-opp-name').textContent = opp.displayedName || opp.username;
+          document.getElementById('vs-opp-mmr').textContent = `MMR: ${opp.rating}`;
+          document.getElementById('vs-opp-sword').src =
+            `/assets/images/sword-${opp.swordId || 1}.png`;
+        }
+
+        // Возвращаем динамические элементы для эпичной анимации (искры, надпись)
+        let finaleTitle = document.getElementById('vs-finale-title');
+        if (!finaleTitle) {
+          finaleTitle = document.createElement('div');
+          finaleTitle.id = 'vs-finale-title';
+          finaleTitle.className = 'vs-finale-title';
+
+          const words = ['MAY', 'THE', 'STRONGEST', 'WIN'];
+          finaleTitle.innerHTML = words
+            .map((word, index) => {
+              return `<span class="vs-word" data-word-index="${index}">${word}</span>`;
+            })
+            .join('');
+
+          vsOverlay.appendChild(finaleTitle);
+        }
+
+        let particleWrapper = document.getElementById('vs-particles-wrapper');
+        if (!particleWrapper) {
+          particleWrapper = document.createElement('div');
+          particleWrapper.id = 'vs-particles-wrapper';
+
+          // Данные по ударам: время (сек) и CSS-переменные для их координат
+          const clashes = [
+            { time: 6.51, varX: 'var(--impact1-x)', varY: 'var(--impact1-y)' },
+            { time: 7.44, varX: 'var(--impact2-x)', varY: 'var(--impact2-y)' },
+            { time: 10.23, varX: 'var(--impact3-x)', varY: 'var(--impact3-y)' },
+          ];
+          const particlesPerClash = 25;
+
+          clashes.forEach((clash, index) => {
+            const container = document.createElement('div');
+            container.className = 'vs-particles-container';
+            // Жестко привязываем контейнер к переменной удара!
+            container.style.setProperty('--impact-x', clash.varX);
+            container.style.setProperty('--impact-y', clash.varY);
+
+            let particlesHTML = '';
+            for (let i = 0; i < particlesPerClash; i++) {
+              const angle = Math.random() * Math.PI * 2;
+              const velocity = 150 + Math.random() * 400;
+              const tx = Math.cos(angle) * velocity;
+              const ty = Math.sin(angle) * velocity;
+              const rot = Math.random() * 360;
+              const scale = 0.3 + Math.random() * 1.2;
+
+              particlesHTML += `<div class="vs-particle" data-clash-time="${clash.time}" style="--tx: ${tx}px; --ty: ${ty}px; --rot: ${rot}deg; --s: ${scale};"></div>`;
+            }
+            container.innerHTML = particlesHTML;
+            particleWrapper.appendChild(container);
+          });
+
+          vsOverlay.appendChild(particleWrapper);
+        }
+
+        let wipeTransition = document.getElementById('vs-wipe');
+        if (!wipeTransition) {
+          wipeTransition = document.createElement('div');
+          wipeTransition.id = 'vs-wipe';
+          wipeTransition.className = 'vs-wipe';
+          vsOverlay.appendChild(wipeTransition);
+        }
+
+        vsOverlay.style.display = '';
+        vsOverlay.classList.remove('hidden');
+
+        // Вызываем reflow браузера
+        void vsOverlay.offsetWidth;
+        vsOverlay.classList.add('vs-active');
+
+        // 3. ПРО-ХАК: СИНХРОНИЗАЦИЯ (теперь ВНУТРИ if, чтобы не сбивать анимацию при обновлении стейта)
+        const totalPhaseDuration = 15500;
+        const passedTimeMs = totalPhaseDuration - (state.turnEndsInMs || totalPhaseDuration);
+        const passedSeconds = Math.max(0, passedTimeMs / 1000);
+
+        // Синхронизируем базовые статичные 15.5s анимации (аватары, мечи, фон)
+        const animatedElements = vsOverlay.querySelectorAll(
+          '.vs-background-blur, .vs-opp, .vs-you, .vs-info, .vs-sword, .vs-text, .vs-wipe'
+        );
+        animatedElements.forEach((el) => {
+          el.style.animationDelay = `-${passedSeconds}s`;
+        });
+        vsOverlay.style.animationDelay = `-${passedSeconds}s`;
+
+        const wordsElements = vsOverlay.querySelectorAll('.vs-word');
+        const timeLeftSec = (state.turnEndsInMs || 0) / 1000;
+        const wordAnimDuration = 3.6;
+
+        wordsElements.forEach((word) => {
+          const index = parseInt(word.getAttribute('data-word-index') || '0', 10);
+          const staggerDelay = index * 0.15;
+          const delayToStart = timeLeftSec - wordAnimDuration + staggerDelay;
+          word.style.animationDelay = `${delayToStart}s`;
+        });
+
+        // ДИНАМИЧЕСКАЯ СИНХРОНИЗАЦИЯ ИСКР
+        const particles = vsOverlay.querySelectorAll('.vs-particle');
+        particles.forEach((p) => {
+          const clashTimeSec = parseFloat(p.getAttribute('data-clash-time') || '0');
+          const particleDelay = clashTimeSec - passedSeconds;
+          p.style.animationDelay = `${particleDelay}s`;
+        });
+
+        vsOverlay.style.animationDelay = `-${passedSeconds}s`;
+      }
     }
   },
 

@@ -5,7 +5,7 @@ import { initGallery } from './gallery.js';
 import { initCredits } from './credits.js';
 import { checkAuth } from '../services/authGuard.js';
 
-const mainContainer = document.getElementById('main-container');
+mainContainer = document.getElementById('main-container');
 
 const routes = {
   '': { path: 'src/pages/main_menu.html', init: initMainMenu, private: false },
@@ -17,7 +17,7 @@ const routes = {
   '#battle': { path: 'src/pages/battle.html', init: initBattle, private: true },
   '#lobby': { path: 'src/pages/lobby.html', init: initLobby, private: true },
   '#gallery': { path: 'src/pages/gallery.html', init: initGallery, private: false },
-  '#credits': { path: 'src/pages/credits.html', init: initCredits, private: false }
+  '#credits': { path: 'src/pages/credits.html', init: initCredits, private: false },
 };
 
 let currentRoutePath = null;

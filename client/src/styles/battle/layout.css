@@ -31,6 +31,9 @@ body {
   position: relative; /* Все absolute внутри отсчитываются отсюда */
   user-select: none;
   -webkit-user-select: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.5s ease-in-out;
 }
 
 /* =========================================

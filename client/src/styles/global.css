@@ -15,7 +15,9 @@ body {
   opacity: 1;
   transform: scale(1);
   transform-origin: center;
-  transition: opacity 240ms ease, transform 240ms ease;
+  transition:
+    opacity 240ms ease,
+    transform 240ms ease;
 }
 
 #main-container.route-fade-out {

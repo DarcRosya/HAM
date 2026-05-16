@@ -2,6 +2,14 @@
    ДИНАМИКА, АНИМАЦИИ И ОВЕРЛЕИ (ANIMATIONS)
 ========================================= */
 
+.game-board {
+  opacity: 0;
+  transition: opacity 0.8s ease-out;
+}
+.game-board.board-visible {
+  opacity: 1;
+}
+
 /* --- Анимация появления боевого контейнера --- */
 .battle-container {
   opacity: 0;
@@ -162,7 +170,7 @@
   align-items: center;
   color: white;
   font-family: 'Londrina Solid', sans-serif;
-  opacity: 0;
+  opacity: 1;
   pointer-events: none;
   animation: loaderFadeIn 0.2s ease forwards 0.15s;
 }
@@ -171,14 +179,8 @@
   letter-spacing: 2px;
 }
 .battle-loader.hidden {
-  display: none !important;
-  animation: none;
-}
-@keyframes loaderFadeIn {
-  to {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  opacity: 0;
+  pointer-events: none;
 }
 
 #game-result-overlay {
@@ -244,8 +246,923 @@
   }
 }
 
+/* --- VERSUS SCREEN СТИЛИ --- */
+.vs-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+.vs-overlay.hidden {
+  display: none !important;
+}
+
+.spotlight {
+  position: absolute;
+  top: 50%;
+  left: 50%; /* Стартуют строго из центра */
+  width: 60vh;
+  height: 60vh;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  mix-blend-mode: overlay;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.spot-left {
+  left: 25%;
+}
+.spot-right {
+  left: 75%;
+}
+
+.vs-background-blur {
+  position: absolute;
+  inset: 0;
+  background: #0a0a0c;
+  z-index: -1;
+}
+
+.vs-player {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+.vs-opp {
+  left: 15%;
+  top: 20%;
+  opacity: 0;
+}
+.vs-you {
+  right: 15%;
+  bottom: 20%;
+  opacity: 0;
+}
+.vs-avatar {
+  width: 180px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+}
+.vs-info {
+  text-align: center;
+  color: white;
+  text-shadow: 2px 2px 4px #000;
+  font-family: 'Diediedie', sans-serif;
+}
+.vs-name {
+  font-size: 3rem;
+  color: #ffeb3b;
+  margin-bottom: -10px;
+}
+.vs-mmr {
+  font-size: 2rem;
+  color: #4caf50;
+}
+.vs-sword {
+  width: 120px;
+  height: auto;
+  position: absolute;
+  z-index: 2;
+  opacity: 0;
+}
+
+.vs-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  text-align: center;
+}
+.vs-text {
+  font-size: 8rem;
+  color: #ff3333;
+  font-family: 'Diediedie', sans-serif;
+  text-shadow:
+    0 0 20px #000,
+    0 0 40px #f00;
+  opacity: 0;
+}
+
+.vs-finale-title {
+  position: absolute;
+  font-family: 'Londrina Solid', sans-serif;
+  font-weight: 900;
+  font-size: 6.5rem;
+  color: #ffeb3b;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  -webkit-text-stroke: 3px #000;
+  text-shadow:
+    5px 5px 0 #000,
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0 12px 20px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  z-index: 100;
+  display: flex; /* Чтобы margin работал корректно */
+}
+
+.vs-word {
+  display: inline-block;
+  opacity: 0;
+  margin: 0 15px;
+  /* Меняем плавность на ease-in для эффекта ускорения к земле */
+  animation: vs-word-stomp 3.6s ease-in both;
+}
+
+@keyframes vs-word-stomp {
+  0% {
+    opacity: 0;
+    transform: scale(3);
+    filter: blur(10px);
+  }
+  5% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  } /* Жесткое впечатывание за доли секунды */
+  85% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+    filter: blur(5px);
+  }
+}
+
+.vs-opp,
+.vs-you,
+.vs-info,
+.vs-text,
+.vs-finale-title {
+  z-index: 100 !important;
+}
+
+/* --- [VFX] ИСКРЫ И РАЗРЕЗ (HIT FLARE) --- */
+.vs-particles-container {
+  position: absolute;
+  top: calc(50% + var(--impact-y, 0px));
+  left: calc(50% + var(--impact-x, 0px));
+  z-index: 90;
+  pointer-events: none;
+}
+
+.vs-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  box-shadow:
+    0 0 15px #ff9800,
+    0 0 5px #ffeb3b;
+  border-radius: 50%;
+  opacity: 0;
+  /* Анимация длится 2 секунды. timing-function дает резкий взрыв и плавное затухание скорости */
+  animation: particle-explode 2s cubic-bezier(0.1, 0.9, 0.2, 1) both;
+}
+
+@keyframes particle-explode {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(var(--s)) rotate(0);
+  }
+  5% {
+    opacity: 1; /* Мгновенная вспышка в центре */
+  }
+  100% {
+    opacity: 0;
+    /* Разлет по векторам, заданным из JS */
+    transform: translate(var(--tx), var(--ty)) scale(0) rotate(var(--rot));
+  }
+}
+
+/* --- [VFX] ЧЕРНЫЙ КРУГ-ПЕРЕХОД (WIPE) --- */
+.vs-wipe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5vw;
+  height: 5vw;
+  background: #000;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  z-index: 999 !important;
+}
+
+/* --- АКТИВАЦИЯ ТАЙМЛАЙНА --- */
+.vs-active .vs-background-blur {
+  animation: vs-bg-anim 15.5s linear both;
+}
+.vs-active .spot-left {
+  animation: spot-chaos-left 6s ease-in-out forwards;
+}
+.vs-active .spot-right {
+  animation: spot-chaos-right 6s ease-in-out forwards;
+}
+.vs-active .vs-opp {
+  animation: vs-avatar-left-anim 15.5s linear both;
+}
+.vs-active .vs-you {
+  animation: vs-avatar-right-anim 15.5s linear both;
+}
+.vs-active .vs-info {
+  animation: vs-info-anim 15.5s linear both;
+}
+.vs-active .vs-sword {
+  animation: vs-sword-anim 15.5s linear both;
+}
+.vs-active .vs-opp .vs-sword {
+  animation: vs-sword-left-anim 15.5s linear both;
+}
+.vs-active .vs-you .vs-sword {
+  animation: vs-sword-right-anim 15.5s linear both;
+}
+.vs-active .vs-text {
+  animation: vs-text-anim 15.5s linear both;
+}
+.vs-active .vs-wipe {
+  animation: vs-wipe-anim 15.5s ease-in both;
+}
+
+:root {
+  --impact1-x: 0px;
+  --impact1-y: -50px;
+  --impact2-x: 0px;
+  --impact2-y: -50px;
+  --impact3-x: 20px;
+  --impact3-y: 0px;
+  --opp-avatar-start-x: -50vw;
+  --opp-avatar-start-y: -100vh;
+  --opp-avatar-hit-x: 297px;
+  --opp-avatar-hit-y: 312px;
+  --opp-avatar-swing-x: 180px;
+  --opp-avatar-swing-y: 200px;
+  --opp-avatar-hit2-x: 278px;
+  --opp-avatar-hit2-y: 47px;
+  --opp-avatar-hit3-x: 234px;
+  --opp-avatar-hit3-y: 150px;
+  --you-avatar-start-x: 100vw;
+  --you-avatar-start-y: 50vh;
+  --you-avatar-hit-x: -150px;
+  --you-avatar-hit-y: 27px;
+  --you-avatar-swing-x: -80px;
+  --you-avatar-swing-y: 10px;
+  --you-avatar-hit2-x: -240px;
+  --you-avatar-hit2-y: 36px;
+  --you-avatar-hit3-x: -214px;
+  --you-avatar-hit3-y: -30px;
+  --opp-sword-start-x: -502vw;
+  --opp-sword-start-rot: -208deg;
+  --opp-sword-hand-x: 172px;
+  --opp-sword-hand-y: -152px;
+  --opp-sword-hand-rot: 13deg;
+  --opp-sword-hit-x: 112px;
+  --opp-sword-hit-y: -194px;
+  --opp-sword-hit-rot: -199deg;
+  --opp-sword-swing-x: 169px;
+  --opp-sword-swing-y: -173px;
+  --opp-sword-swing-rot: -229deg;
+  --opp-sword-hit2-x: 92px;
+  --opp-sword-hit2-y: -73px;
+  --opp-sword-hit2-rot: -303deg;
+  --opp-sword-hit3-x: 126px;
+  --opp-sword-hit3-y: -151px;
+  --opp-sword-hit3-rot: -342deg;
+  --you-sword-start-x: 153vw;
+  --you-sword-start-rot: 175deg;
+  --you-sword-hand-x: -133px;
+  --you-sword-hand-y: -143px;
+  --you-sword-hand-rot: -159deg;
+  --you-sword-hit-x: -156px;
+  --you-sword-hit-y: -79px;
+  --you-sword-hit-rot: -41deg;
+  --you-sword-swing-x: -19px;
+  --you-sword-swing-y: 52px;
+  --you-sword-swing-rot: -199deg;
+  --you-sword-hit2-x: -111px;
+  --you-sword-hit2-y: -163px;
+  --you-sword-hit2-rot: 15deg;
+  --you-sword-hit3-x: -145px;
+  --you-sword-hit3-y: -146px;
+  --you-sword-hit3-rot: -20deg;
+  --coin-finn-blue: #9fd9ff;
+  --coin-finn-white: #f7fbff;
+  --coin-finn-border: #f1d28b;
+  --coin-jake-yellow: #f6c24a;
+  --coin-jake-orange: #e5952f;
+  --coin-jake-border: #c8771e;
+  --coin-text-dark: #1f2430;
+  --coin-text-warm: #3d1f08;
+  --coin-animation-duration: 7500ms;
+}
+
+/* ==========================================================================
+   KEYFRAMES 
+   ========================================================================== */
+
+@keyframes vs-bg-anim {
+  0%,
+  100% {
+    opacity: 1;
+  } /* Фон стабильно черный всё время */
+}
+
+@keyframes spot-chaos-left {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+    left: 50%;
+    top: 50%;
+  }
+  5% {
+    opacity: 0.8;
+    transform: translate(-30vw, -20vh) scale(1.5);
+    left: 50%;
+    top: 50%;
+  }
+  15% {
+    opacity: 0.5;
+    transform: translate(10vw, 30vh) scale(0.8);
+    left: 50%;
+    top: 50%;
+  }
+  25% {
+    opacity: 0.8;
+    transform: translate(-20vw, 10vh) scale(2);
+    left: 50%;
+    top: 50%;
+  }
+  30% {
+    opacity: 1;
+    left: 40%;
+    top: 60%;
+    transform: translate(-50%, -50%) scale(1);
+  } /* Лок на позиции аватара */
+  80% {
+    opacity: 1;
+    left: 25%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(1.2);
+  } /* Держим лок дольше на 1 сек */
+  82% {
+    opacity: 0;
+    left: 25%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0);
+  } /* Гаснет, когда мечи в кадре */
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes spot-chaos-right {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+    left: 50%;
+    top: 50%;
+  }
+  10% {
+    opacity: 0.8;
+    transform: translate(30vw, 20vh) scale(1.2);
+    left: 50%;
+    top: 50%;
+  }
+  20% {
+    opacity: 0.6;
+    transform: translate(-10vw, -30vh) scale(2);
+    left: 50%;
+    top: 50%;
+  }
+  28% {
+    opacity: 0.9;
+    transform: translate(20vw, -10vh) scale(0.9);
+    left: 50%;
+    top: 50%;
+  }
+  30% {
+    opacity: 1;
+    left: 75%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(1);
+  } /* Лок на позиции аватара */
+  80% {
+    opacity: 1;
+    left: 75%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(1.2);
+  } /* Держим лок дольше на 1 сек */
+  82% {
+    opacity: 0;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%) scale(0);
+  } /* Гаснет, когда мечи в кадре */
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes vs-info-anim {
+  0%,
+  11% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  14%,
+  39% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  41%,
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+@keyframes vs-text-anim {
+  0%,
+  11% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  20%,
+  36% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  38% {
+    opacity: 1;
+    transform: scale(1.4); /* Пульсация */
+    filter: drop-shadow(0 0 20px #ff0000);
+  }
+  40%,
+  100% {
+    opacity: 0;
+    transform: scale(0); /* ИСЧЕЗАЕТ ДО УДАРА МЕЧЕЙ (42%) */
+  }
+}
+
+/* --- АВАТАРЫ --- */
+@keyframes vs-avatar-left-anim {
+  0% {
+    transform: translate(var(--opp-avatar-start-x), var(--opp-avatar-start-y));
+    opacity: 0;
+  }
+  12%,
+  41% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: blur(0);
+  }
+  42% {
+    transform: translate(var(--opp-avatar-hit-x), var(--opp-avatar-hit-y)) scale(1.1);
+  } /* УДАР 1 */
+  45% {
+    transform: translate(var(--opp-avatar-swing-x), var(--opp-avatar-swing-y)) scale(1.05);
+  } /* ЗАМАХ */
+  48%,
+  50% {
+    transform: translate(var(--opp-avatar-hit2-x), var(--opp-avatar-hit2-y)) scale(1.1);
+  } /* УДАР 2 */
+  54%,
+  60% {
+    transform: translate(-10vw, -5vh) scale(0.9);
+    filter: blur(2px);
+  } /* Отскок */
+  66%,
+  76% {
+    transform: translate(var(--opp-avatar-hit3-x), var(--opp-avatar-hit3-y)) scale(1.15);
+    filter: blur(0);
+  } /* УДАР 3 */
+  77% {
+    transform: translate(var(--opp-avatar-hit3-x), var(--opp-avatar-hit3-y)) scaleX(1.5)
+      skewX(-15deg);
+    filter: blur(4px);
+    opacity: 0.8;
+  }
+  82%,
+  100% {
+    transform: translate(-250vw, var(--opp-avatar-hit3-y)) scaleX(3) skewX(-45deg);
+    filter: blur(20px);
+    opacity: 1;
+  }
+}
+
+@keyframes vs-avatar-right-anim {
+  0% {
+    transform: translate(var(--you-avatar-start-x), var(--you-avatar-start-y));
+    opacity: 0;
+  }
+  12%,
+  41% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: blur(0);
+  }
+  42% {
+    transform: translate(var(--you-avatar-hit-x), var(--you-avatar-hit-y)) scale(1.1);
+  } /* УДАР 1 */
+  45% {
+    transform: translate(var(--you-avatar-swing-x), var(--you-avatar-swing-y)) scale(1.05);
+  } /* ЗАМАХ */
+  48%,
+  50% {
+    transform: translate(var(--you-avatar-hit2-x), var(--you-avatar-hit2-y)) scale(1.1);
+  } /* УДАР 2 */
+  54%,
+  60% {
+    transform: translate(10vw, 5vh) scale(0.9);
+    filter: blur(2px);
+  } /* Отскок */
+  66%,
+  76% {
+    transform: translate(var(--you-avatar-hit3-x), var(--you-avatar-hit3-y)) scale(1.15);
+    filter: blur(0);
+  } /* УДАР 3 */
+  77% {
+    transform: translate(var(--you-avatar-hit3-x), var(--you-avatar-hit3-y)) scaleX(1.5)
+      skewX(15deg);
+    filter: blur(4px);
+    opacity: 0.8;
+  }
+  82%,
+  100% {
+    transform: translate(250vw, var(--you-avatar-hit3-y)) scaleX(3) skewX(45deg);
+    filter: blur(20px);
+    opacity: 1;
+  }
+}
+
+/* --- МЕЧИ --- */
+@keyframes vs-sword-left-anim {
+  0% {
+    opacity: 0;
+    transform: translate(var(--opp-sword-start-x), 0) scaleX(2.5) rotate(var(--opp-sword-start-rot));
+    filter: blur(12px);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50vw, 0) scaleX(2) rotate(var(--opp-sword-start-rot));
+    filter: blur(8px);
+  }
+  41% {
+    opacity: 1;
+    transform: translate(var(--opp-sword-hand-x), var(--opp-sword-hand-y)) scaleX(1)
+      rotate(var(--opp-sword-hand-rot));
+    filter: blur(0);
+  } /* В РУКЕ */
+  42% {
+    transform: translate(var(--opp-sword-hit-x), var(--opp-sword-hit-y))
+      rotate(var(--opp-sword-hit-rot));
+  } /* УДАР 1 */
+  45% {
+    transform: translate(var(--opp-sword-swing-x), var(--opp-sword-swing-y))
+      rotate(var(--opp-sword-swing-rot));
+  } /* ЗАМАХ */
+  48%,
+  50% {
+    transform: translate(var(--opp-sword-hit2-x), var(--opp-sword-hit2-y))
+      rotate(var(--opp-sword-hit2-rot));
+  } /* УДАР 2 */
+  54%,
+  60% {
+    transform: translate(-8vw, -5vh) rotate(calc(var(--opp-sword-hit2-rot) - 360deg));
+  } /* Финт назад */
+  66% {
+    transform: translate(var(--opp-sword-hit3-x), var(--opp-sword-hit3-y))
+      rotate(var(--opp-sword-hit3-rot));
+  } /* УДАР 3 */
+  68% {
+    transform: translate(var(--opp-sword-hit3-x), var(--opp-sword-hit3-y))
+      rotate(calc(var(--opp-sword-hit3-rot) + 5deg));
+  } /* Дрожь */
+  70% {
+    transform: translate(var(--opp-sword-hit3-x), var(--opp-sword-hit3-y))
+      rotate(calc(var(--opp-sword-hit3-rot) - 4deg));
+  }
+  72% {
+    transform: translate(var(--opp-sword-hit3-x), var(--opp-sword-hit3-y))
+      rotate(calc(var(--opp-sword-hit3-rot) + 6deg));
+  }
+  74% {
+    transform: translate(var(--opp-sword-hit3-x), var(--opp-sword-hit3-y))
+      rotate(calc(var(--opp-sword-hit3-rot) - 5deg));
+  }
+  76%,
+  100% {
+    transform: translate(var(--opp-sword-hit3-x), var(--opp-sword-hit3-y))
+      rotate(var(--opp-sword-hit3-rot));
+    opacity: 1;
+  }
+}
+
+@keyframes vs-sword-right-anim {
+  0% {
+    opacity: 0;
+    transform: translate(var(--you-sword-start-x), 0) scaleX(2.5) rotate(var(--you-sword-start-rot));
+    filter: blur(12px);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(50vw, 0) scaleX(2) rotate(var(--you-sword-start-rot));
+    filter: blur(8px);
+  }
+  41% {
+    opacity: 1;
+    transform: translate(var(--you-sword-hand-x), var(--you-sword-hand-y)) scaleX(1)
+      rotate(var(--you-sword-hand-rot));
+    filter: blur(0);
+  } /* В РУКЕ */
+  42% {
+    transform: translate(var(--you-sword-hit-x), var(--you-sword-hit-y))
+      rotate(var(--you-sword-hit-rot));
+  } /* УДАР 1 */
+  45% {
+    transform: translate(var(--you-sword-swing-x), var(--you-sword-swing-y))
+      rotate(var(--you-sword-swing-rot));
+  } /* ЗАМАХ */
+  48%,
+  50% {
+    transform: translate(var(--you-sword-hit2-x), var(--you-sword-hit2-y))
+      rotate(var(--you-sword-hit2-rot));
+  } /* УДАР 2 */
+  54%,
+  60% {
+    transform: translate(8vw, 5vh) rotate(calc(var(--you-sword-hit2-rot) + 360deg));
+  } /* Финт вперед */
+  66% {
+    transform: translate(var(--you-sword-hit3-x), var(--you-sword-hit3-y))
+      rotate(var(--you-sword-hit3-rot));
+  } /* УДАР 3 */
+  68% {
+    transform: translate(var(--you-sword-hit3-x), var(--you-sword-hit3-y))
+      rotate(calc(var(--you-sword-hit3-rot) - 5deg));
+  } /* Дрожь */
+  70% {
+    transform: translate(var(--you-sword-hit3-x), var(--you-sword-hit3-y))
+      rotate(calc(var(--you-sword-hit3-rot) + 4deg));
+  }
+  72% {
+    transform: translate(var(--you-sword-hit3-x), var(--you-sword-hit3-y))
+      rotate(calc(var(--you-sword-hit3-rot) - 6deg));
+  }
+  74% {
+    transform: translate(var(--you-sword-hit3-x), var(--you-sword-hit3-y))
+      rotate(calc(var(--you-sword-hit3-rot) + 5deg));
+  }
+  76%,
+  100% {
+    transform: translate(var(--you-sword-hit3-x), var(--you-sword-hit3-y))
+      rotate(var(--you-sword-hit3-rot));
+    opacity: 1;
+  }
+}
+
+/* --- [VFX] ФИЗИКА ИСКР ПРИ УДАРАХ --- */
+@keyframes vs-slash-anim {
+  0%,
+  41% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  42% {
+    opacity: 1;
+    transform: scaleX(1.5) rotate(15deg);
+  }
+  44%,
+  53% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  54% {
+    opacity: 1;
+    transform: scaleX(1.2) rotate(-20deg);
+  }
+  56%,
+  65% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  66% {
+    opacity: 1;
+    transform: scaleX(2) rotate(45deg);
+  }
+  69%,
+  100% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+}
+
+@keyframes vs-particles-anim {
+  0%,
+  41% {
+    opacity: 0;
+  }
+  42% {
+    opacity: 1;
+    box-shadow:
+      30px -30px 0 #fff,
+      -40px 20px 0 #ffeb3b,
+      20px 40px 0 #ff9800,
+      -30px -20px 0 #fff,
+      50px 10px 0 #ffeb3b,
+      -10px -50px 0 #ff9800,
+      15px -40px 0 #fff,
+      -40px -40px 0 #ffeb3b;
+  }
+  45%,
+  53% {
+    opacity: 0;
+  }
+  54% {
+    opacity: 1;
+    box-shadow:
+      -30px 30px 0 #fff,
+      40px -20px 0 #ffeb3b,
+      -20px -40px 0 #ff9800,
+      30px 20px 0 #fff,
+      -50px -10px 0 #ffeb3b,
+      10px 50px 0 #ff9800,
+      -15px 40px 0 #fff,
+      40px 40px 0 #ffeb3b;
+  }
+  57%,
+  65% {
+    opacity: 0;
+  }
+  66% {
+    opacity: 1;
+    box-shadow:
+      60px -60px 0 #fff,
+      -70px 40px 0 #ffeb3b,
+      40px 70px 0 #ff9800,
+      -50px -40px 0 #fff,
+      80px 20px 0 #ffeb3b,
+      -20px -80px 0 #ff9800,
+      30px -70px 0 #fff,
+      -70px -70px 0 #ffeb3b;
+  }
+  70%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* --- [VFX] ЧЕРНЫЙ ПЕРЕХОД ПОГЛОЩЕНИЯ ЭКРАНА --- */
+@keyframes vs-wipe-anim {
+  0%,
+  93% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  98%,
+  100% {
+    transform: translate(-50%, -50%) scale(60);
+    opacity: 1;
+  } /* Растягивает черный круг на весь экран */
+}
+
+/* ТРЯСКА СЦЕНЫ */
+@keyframes vs-screen-shake {
+  0%,
+  41% {
+    transform: translate(0, 0);
+  }
+  42% {
+    transform: translate(-12px, -12px);
+  }
+  44% {
+    transform: translate(12px, 12px);
+  }
+  46% {
+    transform: translate(0, 0);
+  }
+  54% {
+    transform: translate(12px, -12px);
+  }
+  56% {
+    transform: translate(-12px, 12px);
+  }
+  58% {
+    transform: translate(0, 0);
+  }
+  66% {
+    transform: translate(-20px, -20px);
+  }
+  68% {
+    transform: translate(20px, 20px);
+  }
+  70% {
+    transform: translate(-10px, 10px);
+  }
+  72%,
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
 /* --- 3D Монетка (Оставляем все старые переменные и кейфреймы как были) --- */
 :root {
+  /* --- ТОЧКИ СТОЛКНОВЕНИЯ ИСКР (Калибруй под пересечение лезвий) --- */
+  --impact1-x: 0px;
+  --impact1-y: -50px;
+  --impact2-x: 20px;
+  --impact1-y: -50px;
+  --impact3-x: 0px;
+  --impact3-y: 0px;
+
+  /* --- 1. ЛЕВЫЙ ИГРОК (ПРОТИВНИК / OPPONENT) --- */
+  --opp-avatar-start-x: -525vw;
+  --opp-avatar-start-y: -500vh;
+
+  --opp-avatar-hit-x: 250px;
+  --opp-avatar-hit-y: 274px;
+  --opp-avatar-swing-x: 180px; /* <-- ЗАМАХ (настрой) */
+  --opp-avatar-swing-y: 200px; /* <-- ЗАМАХ (настрой) */
+  --opp-avatar-hit2-x: 278px;
+  --opp-avatar-hit2-y: 47px;
+  --opp-avatar-hit3-x: 234px;
+  --opp-avatar-hit3-y: 150px;
+
+  /* --- 2. ПРАВЫЙ ИГРОК (ТЫ / YOU) --- */
+  --you-avatar-start-x: 100vw;
+  --you-avatar-start-y: 50vh;
+
+  --you-avatar-hit-x: -150px;
+  --you-avatar-hit-y: 27px;
+  --you-avatar-swing-x: -80px; /* <-- ЗАМАХ (настрой) */
+  --you-avatar-swing-y: 10px; /* <-- ЗАМАХ (настрой) */
+  --you-avatar-hit2-x: -240px;
+  --you-avatar-hit2-y: 36px;
+  --you-avatar-hit3-x: -214px;
+  --you-avatar-hit3-y: -30px;
+
+  /* --- 3. МЕЧ ПРОТИВНИКА (ЛЕВЫЙ) --- */
+  --opp-sword-start-x: -502vw;
+  --opp-sword-start-rot: -208deg;
+  --opp-sword-hand-x: 172px;
+  --opp-sword-hand-y: -152px;
+  --opp-sword-hand-rot: 10deg;
+
+  --opp-sword-hit-x: 109px;
+  --opp-sword-hit-y: -199px;
+  --opp-sword-hit-rot: -207deg;
+  --opp-sword-swing-x: 50px; /* <-- ЗАМАХ (настрой) */
+  --opp-sword-swing-y: -250px; /* <-- ЗАМАХ (настрой) */
+  --opp-sword-swing-rot: -180deg; /* <-- ЗАМАХ (настрой) */
+  --opp-sword-hit2-x: 92px;
+  --opp-sword-hit2-y: -73px;
+  --opp-sword-hit2-rot: -303deg;
+  --opp-sword-hit3-x: 126px;
+  --opp-sword-hit3-y: -151px;
+  --opp-sword-hit3-rot: -342deg;
+
+  /* --- 4. МЕЧ ИГРОКА (ПРАВЫЙ) --- */
+  --you-sword-start-x: 153vw;
+  --you-sword-start-rot: 180deg;
+  --you-sword-hand-x: -133px;
+  --you-sword-hand-y: -143px;
+  --you-sword-hand-rot: -159deg;
+
+  --you-sword-hit-x: -120px;
+  --you-sword-hit-y: -9px;
+  --you-sword-hit-rot: -59deg;
+  --you-sword-swing-x: -80px; /* <-- ЗАМАХ (настрой) */
+  --you-sword-swing-y: -50px; /* <-- ЗАМАХ (настрой) */
+  --you-sword-swing-rot: -20deg; /* <-- ЗАМАХ (настрой) */
+  --you-sword-hit2-x: -111px;
+  --you-sword-hit2-y: -163px;
+  --you-sword-hit2-rot: 15deg;
+  --you-sword-hit3-x: -130px;
+  --you-sword-hit3-y: -93px;
+  --you-sword-hit3-rot: -20deg;
+
+  /* --- КОНФИГУРАЦИЯ МОНЕТКИ --- */
   --coin-finn-blue: #9fd9ff;
   --coin-finn-white: #f7fbff;
   --coin-finn-border: #f1d28b;
@@ -498,5 +1415,18 @@
   }
   .coin-toss-caption {
     font-size: 12px;
+  }
+}
+
+.fade-in-smooth {
+  animation: smoothFadeIn 0.8s ease-out forwards;
+}
+
+@keyframes smoothFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }

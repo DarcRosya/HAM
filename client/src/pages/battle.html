@@ -16,6 +16,35 @@
 </head>
 
 <body>
+  <div id="vs-screen" class="vs-overlay hidden">
+    <div class="spotlight spot-left"></div>
+    <div class="spotlight spot-right"></div>
+
+    <div class="vs-background-blur"></div>
+
+    <div class="vs-player vs-opp">
+      <img id="vs-opp-avatar" class="vs-avatar" src="" alt="Opponent">
+      <div class="vs-info">
+        <div id="vs-opp-name" class="vs-name"></div>
+        <div id="vs-opp-mmr" class="vs-mmr"></div>
+      </div>
+      <img id="vs-opp-sword" class="vs-sword" src="" alt="Sword">
+    </div>
+
+    <div class="vs-center">
+      <div class="vs-text">VS</div>
+    </div>
+
+    <div class="vs-player vs-you">
+      <img id="vs-you-avatar" class="vs-avatar" src="" alt="You">
+      <div class="vs-info">
+        <div id="vs-you-name" class="vs-name"></div>
+        <div id="vs-you-mmr" class="vs-mmr"></div>
+      </div>
+      <img id="vs-you-sword" class="vs-sword" src="" alt="Sword">
+    </div>
+  </div>
+
   <div id="coin-toss-overlay" aria-hidden="true">
     <div class="coin-toss-stage">
       <div class="coin">
@@ -54,7 +83,7 @@
     <div id="freeze-text">Opponent disconnected...<br>Waiting for reconnect.</div>
   </div>
 
-  <div class="game-board" id="player-section">
+  <div class="game-board hidden" id="player-section">
 
     <div
       style="position: absolute; top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 50; pointer-events: none;">

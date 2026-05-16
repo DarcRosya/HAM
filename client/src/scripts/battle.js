@@ -48,16 +48,50 @@ async function startMatch(state) {
   battleState.isMatchStarted = true;
   battleState.setMatch(state);
   store.setMatchState(state);
-  BattleUI.reveal(battleState.elements);
+
+  // ЕСЛИ ФАЗА LOADING - НЕ УБИВАЕМ ЛОАДЕР! Ожидаем оппонента.
+  if (state.phase !== 'loading') {
+    BattleUI.reveal(battleState.elements);
+  } else {
+    const loaderTitle = battleState.elements.loader?.querySelector('h1');
+    if (loaderTitle) loaderTitle.textContent = 'WAITING FOR OPPONENT...';
+  }
 
   // Отправляем серверу сигнал, что мы отрисовали UI и готовы к бою
   BattleNetwork.sendReady();
 
   // Рисуем стол
   BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
-
-  // Если мы только что подключились, а там уже идет игра (реконнект), запускаем таймер
   syncLocalTimer(state);
+}
+
+function debugDOMState(triggerPoint, phase) {
+  const vs = document.getElementById('vs-screen');
+  const board = document.querySelector('.game-board');
+  const coin = document.getElementById('coin-toss-overlay');
+
+  console.log(`\n--- [DEBUG DOM: ${triggerPoint} | Фаза сервера: ${phase}] ---`);
+
+  if (vs) {
+    const vsComp = window.getComputedStyle(vs);
+    console.log(
+      `[VS-Screen] display: ${vsComp.display}, opacity: ${vsComp.opacity}, pointer-events: ${vsComp.pointerEvents}, z-index: ${vsComp.zIndex}, classes: [${vs.className}]`
+    );
+  }
+
+  if (board) {
+    const boardComp = window.getComputedStyle(board);
+    console.log(
+      `[Game-Board] display: ${boardComp.display}, opacity: ${boardComp.opacity}, pointer-events: ${boardComp.pointerEvents}, z-index: ${boardComp.zIndex}, height: ${boardComp.height}, classes: [${board.className}]`
+    );
+  }
+
+  if (coin) {
+    const coinComp = window.getComputedStyle(coin);
+    console.log(
+      `[Coin-Overlay] display: ${coinComp.display}, opacity: ${coinComp.opacity}, pointer-events: ${coinComp.pointerEvents}, z-index: ${coinComp.zIndex}, classes: [${coin.className}]`
+    );
+  }
 }
 
 // ==========================================
@@ -71,22 +105,48 @@ const networkCallbacks = {
   },
 
   onForceReconnect: (state) => {
-    if (!battleState.isMatchStarted) startMatch(state);
-    else networkCallbacks.onGameState(state);
-  },
+    if (!battleState.isMatchStarted) {
+      startMatch(state);
+    }
 
+    if (state.phase === 'playing' || state.phase === 'coin_toss') {
+      const loader = document.getElementById('battle-loader');
+      if (loader) {
+        loader.classList.add('hidden');
+        loader.style.display = 'none';
+      }
+    }
+
+    // КАСКАД: Направляем стейт в общую воронку отрисовки UI
+    networkCallbacks.onGameState(state);
+  },
   onGameState: (state) => {
+    debugDOMState('onGameState START', state.phase);
+
     if (!store.isInBattle()) return;
     battleState.setMatch(state);
     store.setMatchState(state);
-    BattleUI.reveal(battleState.elements);
+
+    // Прячем лоадер только когда загрузились оба
+    if (state.phase !== 'loading') {
+      BattleUI.reveal(battleState.elements);
+
+      // СРАЗУ снимаем display: none со стола, чтобы он дал высоту странице.
+      // Он останется невидимым, так как у него еще нет класса 'board-visible' (opacity: 0).
+      const board = document.querySelector('.game-board');
+      if (board) {
+        board.classList.remove('hidden');
+      }
+    }
+
+    const myId = getMyPlayerId();
+    BattleUI.renderVsScreen(state, myId);
 
     // Чистая синхронизация локального таймера на основе turnEndsInMs
     syncLocalTimer(state);
 
     // Проверка статуса оппонента
     const entries = Object.entries(state.players || {});
-    const myId = getMyPlayerId();
     const opponentEntry = entries.find(([id]) => String(id) !== String(myId));
     const opponent = opponentEntry ? opponentEntry[1] : null;
 
@@ -101,6 +161,21 @@ const networkCallbacks = {
     }
 
     BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
+
+    if (state.phase === 'coin_toss' || state.phase === 'playing') {
+      const board = document.querySelector('.game-board');
+      if (board) {
+        board.classList.remove('hidden');
+
+        board.style.pointerEvents = 'auto';
+
+        requestAnimationFrame(() => {
+          if (!board.classList.contains('board-visible')) {
+            board.classList.add('board-visible');
+          }
+        });
+      }
+    }
 
     // Синхронизация отображения 3D монетки на основе фазы сервера
     if (state.phase === 'coin_toss') {
@@ -117,6 +192,8 @@ const networkCallbacks = {
     } else if (state.phase === 'playing') {
       BattleUI.resetCoin(battleState.elements);
     }
+
+    debugDOMState('onGameState END', state.phase);
   },
 
   onGameOver: ({ winnerId }) => {
@@ -202,7 +279,7 @@ export function mount() {
 
   battleState.elements = {
     loader: document.getElementById('battle-loader'),
-    battleContainer: document.querySelector('.battle-container'),
+    battleContainer: document.querySelector('.game-board'),
     coinOverlay: document.getElementById('coin-toss-overlay'),
     coin: document.querySelector('.coin'),
     surrenderBtn: document.getElementById('surrender-btn'),

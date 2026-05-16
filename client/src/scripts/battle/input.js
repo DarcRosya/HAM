@@ -191,16 +191,33 @@ function handleMouseMove(e) {
 function handleMouseUp(e) {
   // 1. Отпускаем карту из руки
   if (battleState.drag.playCardId) {
-    const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
     const tableZone = document.getElementById('player-table-zone');
-    const isOverTable =
-      dropTarget?.closest('#player-table-zone') || dropTarget?.closest('.player-table');
+    let isOverTable = false;
 
-    if (isOverTable && tableZone) {
+    // ГЕОМЕТРИЧЕСКАЯ ПРОВЕРКА: Игнорируем pointer-events: none, проверяем физические границы
+    if (tableZone) {
+      const rect = tableZone.getBoundingClientRect();
+
+      // Срезаем по 30 пикселей сверху и снизу, чтобы нельзя было кинуть карту на самый край
+      const verticalPadding = 30;
+      // Срезаем по 50 пикселей по бокам
+      const horizontalPadding = 50;
+
+      if (
+        e.clientX >= rect.left + horizontalPadding &&
+        e.clientX <= rect.right - horizontalPadding &&
+        e.clientY >= rect.top + verticalPadding &&
+        e.clientY <= rect.bottom - verticalPadding
+      ) {
+        isOverTable = true;
+      }
+    }
+
+    if (isOverTable) {
       const existingCards = Array.from(tableZone.querySelectorAll('.card-board'));
       let targetIndex = existingCards.length;
 
-      // Вычисляем индекс вставки
+      // Вычисляем индекс вставки между картами
       for (let i = 0; i < existingCards.length; i++) {
         const rect = existingCards[i].getBoundingClientRect();
         if (e.clientX < rect.left + rect.width / 2) {

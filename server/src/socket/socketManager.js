@@ -47,6 +47,7 @@ export function initSocketManager(httpServer, clientOrigin) {
       try {
         const updatedUser = await findById(lobbyUserId);
         if (updatedUser) {
+          socket.user.rating = updatedUser.rating;
           socket.emit('profile_sync', updatedUser);
         }
       } catch (err) {

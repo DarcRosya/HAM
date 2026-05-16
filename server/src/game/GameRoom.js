@@ -27,6 +27,7 @@ export class GameRoom {
 
     this.turnDuration = 30000;
     this.coinTossDuration = 7500;
+    this.vsScreenDuration = 15500;
     this.animationCompensation = 2000;
 
     this.players = {
@@ -53,11 +54,11 @@ export class GameRoom {
 
     if (this.readyPlayers.size === 2) {
       clearTimeout(this.loadingWatchdog);
-      this.phase = 'coin_toss';
-      this.turnExpiresAt = Date.now() + this.coinTossDuration;
+      this.phase = 'vs_screen';
+      this.turnExpiresAt = Date.now() + this.vsScreenDuration;
 
       this.broadcastState();
-      this.startPhaseTimer(this.coinTossDuration, 'playing');
+      this.startPhaseTimer(this.vsScreenDuration, 'coin_toss');
     }
   }
 
@@ -72,7 +73,12 @@ export class GameRoom {
     this.intervalId = setTimeout(() => {
       if (this.status !== 'playing') return;
 
-      if (this.phase === 'coin_toss' && nextPhase === 'playing') {
+      if (this.phase === 'vs_screen' && nextPhase === 'coin_toss') {
+        this.phase = 'coin_toss';
+        this.turnExpiresAt = Date.now() + this.coinTossDuration;
+        this.startPhaseTimer(this.coinTossDuration, 'playing');
+        this.broadcastState();
+      } else if (this.phase === 'coin_toss' && nextPhase === 'playing') {
         this.phase = 'playing';
         this.turnExpiresAt = Date.now() + this.turnDuration;
         this.startPhaseTimer(this.turnDuration, 'next_turn');
@@ -97,6 +103,8 @@ export class GameRoom {
       username: socket.user.username,
       avatar: socket.user.avatar,
       displayedName: socket.user.displayedName,
+      rating: socket.user.rating || 500,
+      swordId: Math.floor(Math.random()) + 1,
       hp: 20,
       mana: 3,
       maxMana: 3,
@@ -223,7 +231,15 @@ export class GameRoom {
       return;
     }
 
-    this.clearTurnTimer();
+    if (this.phase === 'playing') {
+      this.clearTurnTimer();
+      this.pausedAt = Date.now(); // Запоминаем точное время паузы
+      console.log(`[ROOM ${this.roomId}] Игра поставлена на паузу в фазе playing.`);
+    } else {
+      console.log(
+        `[ROOM ${this.roomId}] Дисконнект в фазе ${this.phase}. Таймер НЕ остановлен (идет интро).`
+      );
+    }
 
     this.startDisconnectTimer(normalizedId);
     this.notifyOpponentDisconnected(normalizedId);
@@ -243,12 +259,18 @@ export class GameRoom {
       this.clearDisconnectTimer(normalizedId);
       this.notifyOpponentReconnected(normalizedId);
 
-      const remainingMs = Math.max(0, this.turnExpiresAt - Date.now());
+      if (this.phase === 'playing' && this.pausedAt) {
+        const pausedDuration = Date.now() - this.pausedAt;
+        this.turnExpiresAt += pausedDuration; // Компенсируем время простоя
+        this.pausedAt = null;
 
-      if (this.phase === 'coin_toss') {
-        this.startPhaseTimer(remainingMs, 'playing');
-      } else if (this.phase === 'playing') {
+        const remainingMs = Math.max(0, this.turnExpiresAt - Date.now());
+        console.log(`[ROOM ${this.roomId}] Таймер возобновлен. Осталось: ${remainingMs}мс`);
         this.startPhaseTimer(remainingMs, 'next_turn');
+      } else {
+        console.log(
+          `[ROOM ${this.roomId}] Реконнект в фазе ${this.phase}. Таймер продолжает идти синхронно.`
+        );
       }
     }
 
@@ -279,6 +301,8 @@ export class GameRoom {
         username: player.username,
         avatar: player.avatar,
         displayedName: player.displayedName,
+        rating: player.rating,
+        swordId: player.swordId,
         hp: player.hp,
         mana: player.mana,
         maxMana: player.maxMana,
