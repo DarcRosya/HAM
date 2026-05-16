@@ -5,7 +5,11 @@ import { store } from '../core/store.js';
 // --- Глобальное состояние компонента ---
 let isMounted = false;
 let isMatchStarted = false;
+
 let draggingAttackId = null;
+let draggingPlayCardId = null;
+let dragGhostElement = null;
+
 let latestState = null;
 let battleSocket = null;
 let turnInterval = null;
@@ -493,55 +497,91 @@ const handleSurrenderClick = () => {
 };
 
 const handleMouseUp = (e) => {
-  // Прячем стрелочку при отпускании мыши
+  // === 1. Логика отпускания стрелки атаки (твой старый код) ===
   if (draggingAttackId) {
     const svg = document.getElementById('attack-arrow-svg');
     if (svg) {
       svg.style.display = 'none';
       svg.style.pointerEvents = 'none';
     }
+
+    if (latestState) {
+      const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+      const cardTarget = elementBelow?.closest('.enemy-card');
+      const avatarTarget = elementBelow?.closest(
+        '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
+      );
+      const selfTarget = elementBelow?.closest(
+        '#player-avatar, #player-hp, #my-username-zone, #my-table-zone .card-slot, #my-mana-zone'
+      );
+
+      if (selfTarget) {
+        showBattleMessage("You can't attack yourself!");
+      } else if (cardTarget) {
+        battleSocket.emit('attack_target', {
+          roomId: latestState.roomId,
+          attackerInstanceId: draggingAttackId,
+          targetId: cardTarget.dataset.instanceId,
+          targetType: 'card',
+        });
+      } else if (avatarTarget) {
+        battleSocket.emit('attack_target', {
+          roomId: latestState.roomId,
+          attackerInstanceId: draggingAttackId,
+          targetId: null,
+          targetType: 'avatar',
+        });
+      }
+    }
+    draggingAttackId = null;
   }
 
-  if (!draggingAttackId || !latestState) return;
+  // === 2. НОВАЯ ЛОГИКА: Отпускание карты из руки на стол ===
+  if (draggingPlayCardId && latestState) {
+    const tableZone = document.getElementById('my-table-zone');
+    const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
 
-  // Берем элемент строго под острием курсора
-  const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+    // Проверяем, входит ли мышка в область размещения на столе
+    const isOverTable = dropTarget?.closest('#my-table-zone') || dropTarget?.closest('.my-table');
 
-  console.log('=== [DEBUG ATTACK] ===');
-  console.log('1. Курсор отпущен на:', e.clientX, e.clientY);
-  console.log('2. Элемент под курсором:', elementBelow);
+    if (isOverTable && tableZone) {
+      // ФИКС СЕЛЕКТОРА: Раньше мы искали card-slot, а теперь у нас токены card-board
+      const existingCards = Array.from(tableZone.querySelectorAll('.card-board'));
+      let targetIndex = existingCards.length; // По умолчанию в самый конец
 
-  const cardTarget = elementBelow?.closest('.enemy-card');
-  const avatarTarget = elementBelow?.closest(
-    '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
-  );
+      // ВЫЧИСЛЯЕМ ПОЗИЦИЮ
+      for (let i = 0; i < existingCards.length; i++) {
+        const rect = existingCards[i].getBoundingClientRect();
+        const cardCenter = rect.left + rect.width / 2;
+        if (e.clientX < cardCenter) {
+          targetIndex = i;
+          break; // Нашли место!
+        }
+      }
 
-  console.log('3. Попали в КАРТУ врага?', !!cardTarget);
-  console.log('4. Попали в АВАТАР врага?', !!avatarTarget);
+      // Отправляем на сервер команду розыгрыша
+      battleSocket.emit('play_card', {
+        roomId: latestState.roomId,
+        cardInstanceId: draggingPlayCardId,
+        targetIndex: targetIndex,
+      });
+    } else {
+      console.log('Card dropped outside table zone. Returning to hand.');
+    }
 
-  const selfTarget = elementBelow?.closest(
-    '#player-avatar, #player-hp, #my-username-zone, #my-table-zone .card-slot, #my-mana-zone'
-  );
+    // В любом случае уничтожаем летающего призрака
+    if (dragGhostElement) {
+      dragGhostElement.remove();
+      dragGhostElement = null;
+    }
 
-  if (selfTarget) {
-    showBattleMessage("You can't attack yourself!");
-  } else if (cardTarget) {
-    battleSocket.emit('attack_target', {
-      roomId: latestState.roomId,
-      attackerInstanceId: draggingAttackId,
-      targetId: cardTarget.dataset.instanceId,
-      targetType: 'card',
-    });
-  } else if (avatarTarget) {
-    battleSocket.emit('attack_target', {
-      roomId: latestState.roomId,
-      attackerInstanceId: draggingAttackId,
-      targetId: null,
-      targetType: 'avatar',
-    });
+    draggingPlayCardId = null;
+
+    // Мгновенный принудительный ререндер.
+    // Поскольку стейт на сервере не изменился (если промахнулись),
+    // функция просто перерисует руку, вернув карте opacity = 1 и её законное место в веере.
+    updateBattleUI(latestState, battleSocket);
   }
-
-  draggingAttackId = null;
 };
 
 const handleMouseMove = (e) => {
@@ -550,10 +590,14 @@ const handleMouseMove = (e) => {
     const line = document.getElementById('attack-line');
     if (board && line) {
       const boardRect = board.getBoundingClientRect();
-      // Вычисляем координаты мыши относительно доски
       line.setAttribute('x2', e.clientX - boardRect.left);
       line.setAttribute('y2', e.clientY - boardRect.top);
     }
+  }
+
+  if (draggingPlayCardId && dragGhostElement) {
+    dragGhostElement.style.left = e.clientX + 'px';
+    dragGhostElement.style.top = e.clientY + 'px';
   }
 };
 
@@ -824,24 +868,59 @@ function updateBattleUI(state, socket) {
         renderMana('my-mana-zone', me.mana, me.maxMana);
       };
 
-      cardUI.onclick = () => {
-        if (isMyTurn) {
-          if (me.mana < card.cost) {
-            showBattleMessage('Not enough mana!');
-            return;
-          }
-          if (me.table.length >= 7) {
-            showBattleMessage('Table is full!');
-            return;
-          }
-          cardUI.style.pointerEvents = 'none';
-          hoveredCardCost = 0;
-          renderMana('my-mana-zone', me.mana, me.maxMana);
-          socket.emit('play_card', { roomId: state.roomId, cardInstanceId: card.instanceId });
-        } else {
+      cardUI.onmousedown = (e) => {
+        e.preventDefault();
+
+        if (!isMyTurn) {
           showBattleMessage('Wait for your turn!');
+          return;
         }
+        if (me.mana < card.cost) {
+          showBattleMessage('Not enough mana!');
+          return;
+        }
+        if (me.table.length >= 7) {
+          showBattleMessage('Table is full!');
+          return;
+        }
+
+        e.preventDefault();
+        draggingPlayCardId = card.instanceId;
+        hoveredCardCost = 0;
+        renderMana('my-mana-zone', me.mana, me.maxMana);
+
+        // Создаем призрака для переноса
+        dragGhostElement = cardUI.cloneNode(true);
+        dragGhostElement.style.position = 'fixed';
+        dragGhostElement.style.pointerEvents = 'none';
+        dragGhostElement.style.zIndex = 10000;
+
+        // Сбрасываем эффекты ховера руки, центрируем карту строго по курсору
+        // Добавляем легкий наклон (rotate(2deg)), как будто карту несут рукой
+        dragGhostElement.style.transform = 'translate(-50%, -50%) scale(0.85) rotate(2deg)';
+        dragGhostElement.style.boxShadow = '0 15px 30px rgba(0,0,0,0.5)';
+        dragGhostElement.style.transition = 'none';
+        dragGhostElement.style.left = e.clientX + 'px';
+        dragGhostElement.style.top = e.clientY + 'px';
+
+        // Убираем зеленую ауру с призрака во время таскания, чтобы не мешала
+        dragGhostElement.classList.remove('playable');
+
+        document.body.appendChild(dragGhostElement);
+
+        // ЖЕСТКИЙ UX: Полностью скрываем карту в руке, имитируя, что мы её "взяли"
+        cardUI.style.opacity = '0';
+        cardUI.style.pointerEvents = 'none';
       };
+
+      // Проверка при отрисовке: если карту сейчас тащат, она должна оставаться невидимой в руке
+      if (card.instanceId === draggingPlayCardId) {
+        cardUI.style.opacity = '0';
+        cardUI.style.pointerEvents = 'none';
+      } else {
+        cardUI.style.opacity = '1';
+        cardUI.style.pointerEvents = 'auto';
+      }
 
       // Аура играбельности
       if (isMyTurn && me.mana >= card.cost) {

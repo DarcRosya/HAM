@@ -20,7 +20,10 @@ body {
   background-size: cover;
   background-position: center;
   position: relative; /* ФУНДАМЕНТ: все absolute внутри будут отсчитываться от этой доски */
-  overflow: visible; /* Карты смогут вылезать за края доски! */
+  overflow: none; /* Карты смогут вылезать за края доски! */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 
 .player-info {
@@ -440,8 +443,12 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 5px; /* КРУТИ ДЛЯ РАССТОЯНИЯ МЕЖДУ КАРТАМИ В РЯДУ */
+  gap: 15px; /* Увеличили расстояние для круглых токенов */
   width: 100%;
+
+  /* НОВОЕ: Фикс схлопывания пустой зоны. Теперь стол всегда имеет высоту 130px для приема мыши */
+  min-height: 130px;
+  z-index: 10;
 }
 
 #opp-table-zone {

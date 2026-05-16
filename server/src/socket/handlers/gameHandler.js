@@ -17,11 +17,11 @@ export function registerGameHandlers(io, socket) {
     }
   });
 
-  socket.on('play_card', ({ roomId, cardInstanceId }) => {
+  socket.on('play_card', ({ roomId, cardInstanceId, targetIndex }) => {
     try {
       const game = gameService.getGame(roomId);
       if (game) {
-        game.playCard(socket.user.id, cardInstanceId);
+        game.playCard(socket.user.id, cardInstanceId, targetIndex);
       }
     } catch (e) {
       console.error('Error in play_card:', e);
