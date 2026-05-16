@@ -22,7 +22,7 @@ html {
   width: 100%;
   height: 100%;
 
-  background-image: url('../assets/images/main-bg1.png');
+  background-image: url('../../assets/images/main-bg1.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -74,7 +74,7 @@ html {
   justify-content: center;
   align-items: center;
 
-  background-image: url('../assets/images/button.png');
+  background-image: url('../../assets/images/button.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
 
@@ -174,7 +174,7 @@ html {
   position: relative;
   width: 450px;
   height: 580px;
-  background-image: url('../assets/images/metal-frame.png');
+  background-image: url('../../assets/images/metal-frame.png');
   background-size: 100% 100%;
   display: flex;
   flex-direction: column;
@@ -183,7 +183,10 @@ html {
   font-weight: bold;
   transform: scale(0.85);
   opacity: 0;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition:
+    width 0.3s ease,
+    height 0.3s ease,
+    transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 #auth-modal:not(.is-hidden) .modal-frame {
@@ -197,7 +200,7 @@ html {
   right: -10px;
   width: 50px;
   height: 50px;
-  background-image: url('../assets/images/close-btn.png');
+  background-image: url('../../assets/images/close-btn.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
@@ -216,7 +219,7 @@ html {
   left: -10px;
   width: 45px;
   height: 45px;
-  background: url('../assets/images/back.png');
+  background: url('../../assets/images/back.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
@@ -239,7 +242,7 @@ html {
 .wooden-board {
   width: 360px;
   height: 280px;
-  background-image: url('../assets/images/board-login.png');
+  background-image: url('../../assets/images/board-login.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
   padding: 30px 50px;
@@ -249,14 +252,32 @@ html {
   position: relative;
   overflow: visible;
   z-index: 0;
-  transition: height 0.3s ease;
+  transition:
+    height 0.3s ease,
+    opacity 0.3s ease,
+    padding 0.3s ease,
+    margin 0.3s ease,
+    visibility 0.3s ease;
+  overflow: hidden;
+}
+
+.wooden-board.is-hidden {
+  opacity: 0;
+  height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  border: none !important;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .wooden-board::after {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url('../assets/images/board-signup.png');
+  background-image: url('../../assets/images/board-signup.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
   opacity: 0;
@@ -340,29 +361,29 @@ html {
 }
 
 .finn-icon {
-  background-image: url('../assets/images/finn-icon.png');
+  background-image: url('../../assets/images/finn-icon.png');
 }
 
 .lock-icon {
-  background-image: url('../assets/images/lock-icon.png');
+  background-image: url('../../assets/images/lock-icon.png');
 }
 
 .swords-icon {
-  background-image: url('../assets/images/swords-icon.png');
+  background-image: url('../../assets/images/swords-icon.png');
 }
 
 .mail-icon {
-  background-image: url('../assets/images/mail-icon.png');
+  background-image: url('../../assets/images/mail-icon.png');
 }
 
 .shield-icon {
-  background-image: url('../assets/images/shield-icon.png');
+  background-image: url('../../assets/images/shield-icon.png');
 }
 
 .action-btn {
   width: 200px;
   height: 60px;
-  background-image: url('../assets/images/button.png');
+  background-image: url('../../assets/images/button.png');
   background-size: 100% 100%;
   background-color: transparent;
   border: none;
@@ -406,7 +427,7 @@ html {
   width: 140px;
   height: 160px;
   margin-left: 10px;
-  background-image: url('../assets/images/happy-bmo.png');
+  background-image: url('../../assets/images/happy-bmo.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-color: transparent;
@@ -419,7 +440,7 @@ html {
 }
 
 .bmo-btn.is-sad {
-  background-image: url('../assets/images/sad_bmo.png');
+  background-image: url('../../assets/images/sad_bmo.png');
 }
 
 .bmo-btn.is-sad::after {
@@ -435,7 +456,7 @@ html {
 }
 
 .speech-bubble {
-  background-image: url('../assets/images/speech-bubble1.png');
+  background-image: url('../../assets/images/speech-bubble1.png');
   background-size: 100% 100%;
   padding: 10px 20px 25px 20px;
   font-family: 'Londrina Solid', sans-serif;
@@ -527,10 +548,6 @@ html {
   margin-top: -12px;
 }
 
-#auth-modal:has(#forgot-view:not(.is-hidden)) .wooden-board {
-  display: none;
-}
-
 .recovery-container {
   display: flex;
   flex-direction: column;
@@ -542,7 +559,7 @@ html {
   position: relative;
   width: 340px;
   height: 170px;
-  background: url('../assets/images/green_board.png');
+  background: url('../../assets/images/green_board.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;
@@ -562,7 +579,7 @@ html {
 .recover-action-btn {
   width: 240px;
   height: 80px;
-  background: url('../assets/images/button.png');
+  background: url('../../assets/images/button.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;
@@ -587,7 +604,7 @@ html {
 }
 
 .mail-icon-recovery {
-  background: url('../assets/images/mail-icon.png');
+  background: url('../../assets/images/mail-icon.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
@@ -595,13 +612,8 @@ html {
   height: 40px;
 }
 
-#auth-modal:has(#forgot-view:not(.is-hidden)) .wooden-board,
-#auth-modal:has(#reset-view:not(.is-hidden)) .wooden-board {
-  display: none;
-}
-
 .reset-board {
-  background-image: url('../assets/images/board-signup.png');
+  background-image: url('../../assets/images/board-signup.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
   width: 360px;
@@ -621,10 +633,10 @@ html {
 }
 
 .lock-reset-icon {
-  background-image: url('../assets/images/lock-icon.png');
+  background-image: url('../../assets/images/lock-icon.png');
 }
 .shield-reset-icon {
-  background-image: url('../assets/images/shield-icon.png');
+  background-image: url('../../assets/images/shield-icon.png');
 }
 
 #confirm-reset-btn {
@@ -659,4 +671,73 @@ html {
 .ui-locked #success-message,
 .ui-locked #auth-modal {
   pointer-events: auto;
+}
+
+.top-right-actions {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.logout-icon-btn {
+  width: 70px;
+  height: 70px;
+  background: url('/assets/images/logout-btn.png') no-repeat center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+}
+
+.logout-icon-btn:hover {
+  transform: scale(1.1);
+}
+
+#auth-modal:has(#logout-view:not(.is-hidden)) .wooden-board {
+  display: none;
+}
+
+.logout-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.logout-question-sign {
+  position: relative;
+  width: 340px;
+  height: 170px;
+  background: url('../../assets/images/green_board.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 45px;
+  margin-top: 20px;
+}
+
+.logout-question-sign span {
+  color: #f8f8f8;
+  font-size: 22px;
+  text-align: center;
+  line-height: 1.2;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+  margin-top: 40px;
+}
+
+.logout-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 35px;
+}
+
+.small-action {
+  background: url('../../assets/images/red-btn.png');
+  background-size: 100% 100%;
+  width: 140px;
+  height: 60px;
+  margin-top: 0;
+  font-size: 18px;
 }

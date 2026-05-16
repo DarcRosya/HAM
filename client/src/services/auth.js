@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './api.js';
+import { store } from '../core/store.js';
 
 const BASE_URL = `${API_BASE_URL}/api/auth`;
 
@@ -6,9 +7,7 @@ export const authService = {
   register: async (userData) => {
     const response = await fetch(`${BASE_URL}/register`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
     });
 
@@ -24,9 +23,7 @@ export const authService = {
   login: async (credentials) => {
     const response = await fetch(`${BASE_URL}/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
     });
 
@@ -37,17 +34,10 @@ export const authService = {
       throw new Error(data?.message || `Login failed: ${response.status}`);
     }
 
-    if (data?.token) {
-      localStorage.setItem('token', data.token);
-      window.location.hash = '#homepage';
-    }
-
     return data;
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.hash = '#menu';
+  logout: (socket) => {
+    store.performLogout(socket);
   },
 };

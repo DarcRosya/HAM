@@ -5,11 +5,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HAM Card Game</title>
+
+  <link rel="stylesheet" href="/src/styles/global.css" />
+  <link rel="stylesheet" href="/src/styles/card.css" />
+
+  <link rel="stylesheet" href="/src/styles/battle/layout.css" />
+  <link rel="stylesheet" href="/src/styles/battle/ui.css" />
+  <link rel="stylesheet" href="/src/styles/battle/animations.css" />
 </head>
 
 <body>
-
-
   <div id="coin-toss-overlay" aria-hidden="true">
     <div class="coin-toss-stage">
       <div class="coin">
@@ -44,81 +49,84 @@
     </div>
   </div>
 
-  <div class="battle-container">
-    <h2>Battlefield</h2>
-
-    <div id="opponent-section">
-      <h4 id="opp-avatar">Opponent HP: <span id="opp-hp"></span></h4>
-      <p>Mana: <span id="opp-mana"></span></p>
-
-      <div class="deck-column">
-        <h4>Opponent deck</h4>
-        <div id="opp-deck"></div>
-      </div>
-
-      <p>Opponent field cards: <span id="opp-field-count"></span></p>
-
-      <h3>Opponent Table</h3>
-      <div id="opp-table"></div>
-
-      <h3>Opponent Hand</h3>
-      <div id="opp-hand"></div>
-    </div>
-
-    <hr />
-
-    <div id="player-section">
-      <h4>Your HP: <span id="player-hp"></span></h4>
-      <p>Mana: <span id="player-mana"></span></p>
-
-      <div class="deck-column">
-        <h4>Your deck</h4>
-        <div id="player-deck"></div>
-      </div>
-
-      <div>
-        <p>Your cards on field: <span id="player-field-count"></span></p>
-      </div>
-
-      <div>
-        <p>Your cards in hand: <span id="player-hand-count"></span></p>
-      </div>
-
-      <hr />
-
-      <div id="game-info">
-        <p>Turn: <span id="info-turn"></span></p>
-        <button id="end-turn-btn">End turn</button>
-        <button id="surrender-btn" style="background: red; color: white;">Surrender</button>
-        <div id="battle-message" class="battle-message hidden"></div>
-        <p>Time: <span id="info-timer"></span>s</p>
-        <p>Round: <span id="info-round"></span></p>
-        <p id="fatigue-info" class="hidden">Fatigue damage: <span id="fatigue-value"></span></p>
-      </div>
-
-      <hr />
-
-      <h4>Your cards in hand</h4>
-      <div id="hand-display"></div>
-
-      <h3>Your Table</h3>
-      <div id="my-table"></div>
-    </div>
+  <div id="freeze-overlay" class="hidden">
+    <div id="freeze-text">Opponent disconnected...<br>Waiting for reconnect.</div>
   </div>
 
-  <div id="game-result-overlay" class="hidden">
-    <div class="game-result-box">
-      <h1 id="result-text"></h1>
+  <div class="game-board" id="player-section">
 
-      <button id="return-lobby-btn" disabled>
-        Return to Lobby
-      </button>
+    <div
+      style="position: absolute; top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 50; pointer-events: none;">
+      <div id="opponent-connection-status" class="opponent-connection-status hidden">
+        <span id="opponent-connection-text"></span>
+      </div>
     </div>
+
+    <div id="battle-message" class="battle-message"></div>
+
+    <div class="sidebar-right">
+      <div id="opp-mana-zone" class="flask-container opp-flask"></div>
+
+      <div class="turn-info-block">
+        <div id="info-turn" class="turn-indicator"></div>
+        <div id="info-timer" class="timer-display">0</div>
+        <button class="end-turn-btn" id="end-turn-btn">END TURN</button>
+      </div>
+
+      <div id="player-mana-zone" class="flask-container player-flask"></div>
+
+      <button class="text-btn" id="surrender-btn" style="margin-top: 20px;">SURRENDER</button>
+    </div>
+
+    <div class="sidebar-left">
+      <div class="his-deck" id="opp-deck">30</div>
+      <div class="player-deck" id="player-deck" data-count="30"></div>
+      <div id="fatigue-info" class="hidden" style="color: red; font-weight: bold; text-align: center;">Fatigue: <span
+          id="fatigue-value">0</span></div>
+    </div>
+
+    <div class="battle-center-column">
+
+      <div class="row-hand enemy-hand" id="opp-hand-zone"></div>
+      <div class="row-hand player-hand" id="player-hand-zone"></div>
+
+      <div class="username" id="opp-username-zone">Opponent</div>
+      <div class="avatar-container" id="opp-avatar-zone">
+        <img src="/assets/images/avatar-enemy.png" alt="Enemy" class="avatar" id="opp-avatar">
+        <div class="health-badge" id="opp-health-zone">
+          <img src="/assets/images/heart.png" alt="HP" class="heart-img">
+          <span class="health-text" id="opp-hp">20</span>
+        </div>
+      </div>
+
+      <div class="row-table enemy-table" id="opp-table-zone"></div>
+      <div class="row-table player-table" id="player-table-zone"></div>
+
+      <div class="username" id="player-username-zone">You</div>
+      <div class="avatar-container" id="player-avatar-zone">
+        <img src="/assets/images/avatar-my.png" alt="Me" class="avatar" id="player-avatar">
+        <div class="health-badge" id="player-health-zone">
+          <img src="/assets/images/heart.png" alt="HP" class="heart-img">
+          <span class="health-text" id="player-hp">20</span>
+        </div>
+      </div>
+
+    </div>
+
+    <svg id="attack-arrow-svg"
+      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; display: none;">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="rgba(255, 50, 50, 0.9)" />
+        </marker>
+      </defs>
+      <line id="attack-line" x1="0" y1="0" x2="0" y2="0" stroke="rgba(255, 50, 50, 0.9)" stroke-width="6"
+        stroke-dasharray="10,10" marker-end="url(#arrowhead)" />
+    </svg>
+
+  </div>
   </div>
 
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="../scripts/battle.js"></script>
 </body>
 
 </html>

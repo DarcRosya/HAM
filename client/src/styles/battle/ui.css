@@ -1,0 +1,299 @@
+/* =========================================
+   ДИЗАЙН ИНТЕРФЕЙСА (UI / SKIN)
+========================================= */
+body {
+  background-color: #111;
+  font-family: 'Londrina Solid', serif;
+}
+
+.game-board {
+  background-color: #1a2538; /* Спасательный круг, если картинка не загрузилась */
+  background-image: url('/assets/images/battle-bg3.PNG');
+  background-size: cover;
+  background-position: center;
+}
+
+/* =========================================
+   ЭЛЕМЕНТЫ ПРОФИЛЕЙ (АВАТАРЫ, ХП, ИМЕНА)
+========================================= */
+.username {
+  font-size: 18px;
+  color: #3e2723;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#opp-username-zone {
+  background-image: url('/assets/images/scroll-name.png');
+  background-size: 100% 100%;
+}
+#opp-mana-zone,
+#player-mana-zone {
+  background-image: url('/assets/images/scroll-mana.png');
+  background-size: 100% 100%;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid #202560;
+  object-fit: cover;
+}
+
+.heart-img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.health-text {
+  position: relative;
+  z-index: 2;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  text-shadow: 1px 1px 0 #000;
+  margin-top: -3px;
+}
+
+/* =========================================
+   КОЛБА МАНЫ И ИНДИКАТОРЫ
+========================================= */
+.mana-text-badge {
+  position: absolute;
+  right: -20px;
+  top: -25px;
+  background: rgba(22, 25, 43, 0.95);
+  border: 2px solid #5c7cb3;
+  border-radius: 8px;
+  padding: 4px 14px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+.flask-liquid {
+  background: linear-gradient(to right, #00aaff, #00ffff);
+  box-shadow:
+    inset -6px 0 8px rgba(255, 255, 255, 0.6),
+    0 0 15px 4px rgba(0, 255, 255, 0.5);
+}
+
+.flask-preview {
+  background: rgba(255, 50, 50, 0.9);
+  box-shadow:
+    inset -6px 0 8px rgba(255, 150, 150, 0.6),
+    0 0 20px 5px rgba(255, 0, 0, 0.8);
+}
+
+.turn-indicator {
+  font-size: 24px;
+  color: #f8e274;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.timer-display {
+  font-size: 54px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 20px;
+}
+
+/* =========================================
+   КНОПКИ
+========================================= */
+.end-turn-btn {
+  background: url('/assets/images/edit-bg.png') no-repeat center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+  height: 170px;
+  width: 220px;
+  color: white;
+  font-size: 22px;
+  font-weight: 300;
+  transition: transform 0.1s;
+  padding-bottom: 5px;
+}
+.end-turn-btn:hover {
+  filter: brightness(1.2);
+  transform: scale(1.03);
+}
+.end-turn-btn:active {
+  transform: scale(0.95);
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: #422415;
+  font-size: 28px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  font-family: 'Diediedie', sans-serif;
+  font-weight: lighter;
+  opacity: 0.8;
+}
+.text-btn:hover {
+  color: #ba9e8f;
+  opacity: 1;
+}
+
+/* =========================================
+   КОЛОДЫ
+========================================= */
+.his-deck,
+.player-deck {
+  width: 130px;
+  height: 170px;
+  background-image: url('/assets/images/card-back.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 5px;
+  margin-left: 40px;
+}
+.his-deck {
+  transform: rotate(180deg);
+}
+.player-deck {
+  position: relative;
+  cursor: pointer;
+}
+
+.player-deck::after {
+  content: attr(data-count);
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #733873;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 18px;
+  font-weight: 300;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.player-deck:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(5px);
+}
+
+/* =========================================
+   СОСТОЯНИЯ КАРТ (ПОДСВЕТКИ)
+========================================= */
+.card.playable {
+  border: 3px solid #33ff33 !important;
+  border-radius: 12px;
+  box-shadow:
+    0 0 10px 3px #1aff1a,
+    0 0 25px 8px rgba(0, 255, 0, 0.6),
+    inset 0 0 15px 3px rgba(26, 255, 26, 0.9) !important;
+}
+
+.card-slot.can-attack {
+  box-shadow: 0 0 15px 5px rgba(0, 255, 0, 0.7);
+  cursor: grab;
+}
+.card-slot.can-attack:active {
+  cursor: grabbing;
+}
+.card-slot.exhausted {
+  filter: grayscale(0.8) brightness(0.6);
+  pointer-events: none;
+}
+
+/* Гарантия кликабельности токенов */
+.card-slot,
+.card-board {
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+
+/* =========================================
+   ТУЛТИПЫ (ПОДСКАЗКИ ТРЕЙТОВ)
+========================================= */
+.traits-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 240px;
+}
+.trait-item {
+  background: rgba(13, 17, 28, 0.93);
+  border: 2px solid #ffd700;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.85),
+    inset 0 0 15px rgba(0, 0, 0, 0.6);
+  color: #fff;
+  transition: all 0.2s ease;
+}
+.trait-title {
+  font-family: 'Londrina Solid', sans-serif;
+  font-size: 26px;
+  color: #ffd700;
+  text-shadow: 1px 1px 2px #000;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.trait-desc {
+  font-family: 'Georgia', serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #a6c7ff;
+}
+
+/* =========================================
+   СТАТУСЫ СЕТИ И РЕЗУЛЬТАТЫ
+========================================= */
+.opponent-connection-status {
+  width: min(820px, 92vw);
+  margin: 0 auto 18px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(22, 31, 45, 0.9);
+  border: 1px solid rgba(166, 199, 255, 0.35);
+  color: #f2f6ff;
+  font-size: 16px;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+.game-result-box {
+  text-align: center;
+  color: white;
+  background: #1e1e1e;
+  padding: 30px 40px;
+  border-radius: 12px;
+  min-width: 300px;
+}
+#result-text {
+  font-size: 32px;
+  margin-bottom: 20px;
+}
+#return-lobby-btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}

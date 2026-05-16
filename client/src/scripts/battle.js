@@ -1,456 +1,275 @@
-import { socketService } from '../services/socket.js';
-import { renderCard } from '../components/Card.js';
+import { store } from '../core/store.js';
+import { battleState } from './battle/state.js';
+import { BattleUI } from './battle/ui.js';
+import { BattleInput } from './battle/input.js';
+import { BattleNetwork } from './battle/network.js';
 
-let draggingAttackId = null;
-let latestState = null;
-let battleSocket = null;
-let battleHandlers = null;
-let battleNodes = null;
-let turnInterval = null;
-let gameActive = false;
 const COIN_TOSS_DURATION_MS = 7500;
 
-const resolvePlayers = (state, socket) => {
-  const entries = Object.entries(state?.players ?? {});
-  if (entries.length === 0) {
-    return { myPlayerId: null, me: null, opponentId: null, opponent: null };
-  }
-
-  const myEntry =
-    entries.find(([, player]) => player.socketId === socket.id) ||
-    entries.find(([id]) => String(id) === String(socket.id));
-
-  if (!myEntry) {
-    return { myPlayerId: null, me: null, opponentId: null, opponent: null };
-  }
-
-  const [myPlayerId, me] = myEntry;
-  const opponentEntry = entries.find(([id]) => String(id) !== String(myPlayerId));
-  const [opponentId, opponent] = opponentEntry ?? [];
-
-  return { myPlayerId, me, opponentId, opponent };
+const TRAITS_DESC = {
+  taunt: { title: 'Taunt', desc: 'Enemies must attack this unit first.' },
+  charge: { title: 'Charge', desc: 'Can attack the same turn it is played.' },
+  // Сюда будешь добавлять новые механики по мере развития игры
 };
 
-const startLocalTimer = (seconds) => {
-  if (turnInterval) {
-    clearInterval(turnInterval);
-    turnInterval = null;
-  }
+// ==========================================
+// ЛОКАЛЬНАЯ БИЗНЕС-ЛОГИКА (Таймеры и Монетка)
+// ==========================================
+
+function startLocalTimer(seconds) {
+  if (battleState.timers.turn) clearInterval(battleState.timers.turn);
+
   let remaining = seconds;
-  const timerDisplay = document.getElementById('info-timer');
-  if (!timerDisplay) {
-    return;
-  }
-  timerDisplay.textContent = remaining;
-  turnInterval = setInterval(() => {
+  const display = battleState.elements.timerDisplay;
+  if (!display) return;
+
+  display.textContent = remaining;
+  battleState.timers.turn = setInterval(() => {
     remaining--;
-    timerDisplay.textContent = Math.max(0, remaining);
+    display.textContent = Math.max(0, remaining);
     if (remaining <= 0) {
-      clearInterval(turnInterval);
-      turnInterval = null;
+      clearInterval(battleState.timers.turn);
+      battleState.timers.turn = null;
     }
   }, 1000);
-};
+}
 
-const resetCoinOverlay = () => {
-  if (!battleNodes?.coinOverlay || !battleNodes?.coin) {
-    return;
-  }
+async function startMatch(state) {
+  battleState.isMatchStarted = true;
+  battleState.setMatch(state);
+  store.setMatchState(state);
 
-  battleNodes.coinOverlay.classList.remove('is-active');
-  battleNodes.coinOverlay.setAttribute('aria-hidden', 'true');
+  BattleUI.reveal(battleState.elements);
 
-  setTimeout(() => {
-    if (battleNodes?.coin) {
-      battleNodes.coin.classList.remove('coin--you', 'coin--opp');
-    }
-  }, 300);
-};
+  const isFresh = localStorage.getItem('matchIsFresh') === 'true';
+  const alreadyTossed = store.hasObservedCoinToss(state.roomId);
 
-const detachBattleListeners = () => {
-  if (!battleSocket || !battleHandlers) {
-    return;
-  }
+  if (isFresh) localStorage.removeItem('matchIsFresh');
 
-  const {
-    handleMatchFound,
-    handleGameState,
-    handleGameOver,
-    handleError,
-    handleMouseUp,
-    handleMouseMove,
-    handleHashChange,
-    handleEndTurnClick,
-    handleSurrenderClick,
-  } = battleHandlers;
-
-  battleSocket.off('match_found', handleMatchFound);
-  battleSocket.off('game_state', handleGameState);
-  battleSocket.off('game_over', handleGameOver);
-  battleSocket.off('error', handleError);
-
-  window.removeEventListener('mouseup', handleMouseUp);
-  window.removeEventListener('mousemove', handleMouseMove);
-  window.removeEventListener('hashchange', handleHashChange);
-
-  if (battleNodes?.endTurnBtn && handleEndTurnClick) {
-    battleNodes.endTurnBtn.removeEventListener('click', handleEndTurnClick);
-  }
-
-  if (battleNodes?.surrenderBtn && handleSurrenderClick) {
-    battleNodes.surrenderBtn.removeEventListener('click', handleSurrenderClick);
-  }
-
-  battleHandlers = null;
-};
-
-const teardownBattle = ({ emitSurrender = false } = {}) => {
-  if (emitSurrender && gameActive && latestState?.roomId && battleSocket) {
-    battleSocket.emit('surrender', { roomId: latestState.roomId });
-  }
-
-  if (turnInterval) {
-    clearInterval(turnInterval);
-    turnInterval = null;
-  }
-
-  gameActive = false;
-  draggingAttackId = null;
-  resetCoinOverlay();
-  detachBattleListeners();
-  latestState = null;
-};
-
-const showBattleMessage = (text) => {
-  const msg = document.getElementById('battle-message');
-  if (!msg) return;
-
-  msg.textContent = text;
-  msg.classList.remove('hidden');
-
-  setTimeout(() => {
-    msg.classList.add('hidden');
-  }, 2000);
-};
-
-export function initBattle() {
-  detachBattleListeners();
-
-  const socket = socketService.connect();
-  battleSocket = socket;
-  const coinOverlay = document.getElementById('coin-toss-overlay');
-  const coin = coinOverlay?.querySelector('.coin');
-  const endTurnBtn = document.getElementById('end-turn-btn');
-  const surrenderBtn = document.getElementById('surrender-btn');
-
-  battleNodes = {
-    coinOverlay,
-    coin,
-    endTurnBtn,
-    surrenderBtn,
-  };
-
-  socket.off('match_found');
-  socket.off('game_state');
-  socket.off('game_over');
-  socket.off('error');
-
-  const handleError = (data) => {
-    showBattleMessage(data.message);
-    console.log('Socket error:', data);
-  };
-
-  const handleGameState = (state) => {
-    latestState = state;
-    gameActive = true;
-    if (state.turnTimer !== undefined) {
-      startLocalTimer(state.turnTimer);
-    }
-    updateBattleUI(state, socket);
-  };
-
-  const handleMatchFound = async (state) => {
-    latestState = state;
-    gameActive = true;
-    console.log('Match found:', state);
-
-    if (!coinOverlay || !coin) {
-      startLocalTimer(state.turnTimer);
-      updateBattleUI(state, socket);
-      return;
-    }
-
-    const { myPlayerId, me, opponent } = resolvePlayers(state, socket);
-    if (!myPlayerId || !me || !opponent) {
-      updateBattleUI(state, socket);
-      return;
-    }
-
-    const isMyTurn = String(state.activeTurn) === String(myPlayerId);
-
-    coinOverlay.classList.add('is-active');
-    coinOverlay.setAttribute('aria-hidden', 'false');
-
-    coin.classList.remove('coin--you', 'coin--opp');
-    void coin.offsetWidth;
-    coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
-
-    await new Promise((resolve) => setTimeout(resolve, COIN_TOSS_DURATION_MS));
-
-    resetCoinOverlay();
+  if (
+    !battleState.elements.coinOverlay ||
+    !battleState.elements.coin ||
+    alreadyTossed ||
+    !isFresh
+  ) {
+    BattleUI.resetCoin(battleState.elements);
     startLocalTimer(state.turnTimer);
-    updateBattleUI(state, socket);
-  };
+    BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
+    store.markCoinTossObserved(state.roomId);
+    return;
+  }
 
-  const handleEndTurnClick = () => {
-    if (!latestState) {
-      return;
-    }
+  // Анимация монетки
+  const myId = getMyPlayerId();
+  if (!myId) {
+    BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
+    return;
+  }
 
-    const { myPlayerId } = resolvePlayers(latestState, socket);
-    const myId = myPlayerId ?? socket.id;
+  battleState.elements.coinOverlay.style.display = '';
+  battleState.elements.coinOverlay.classList.add('is-active');
+  battleState.elements.coinOverlay.setAttribute('aria-hidden', 'false');
+  battleState.elements.coin.classList.remove('coin--you', 'coin--opp');
 
-    if (String(latestState.activeTurn) === String(myId)) {
-      socket.emit('end_turn');
+  // Рефлоу для запуска CSS анимации
+  void battleState.elements.coin.offsetWidth;
+
+  const isMyTurn = String(state.activeTurn) === String(myId);
+  battleState.elements.coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
+
+  await new Promise((resolve) => setTimeout(resolve, COIN_TOSS_DURATION_MS));
+  if (!battleState.isMounted) return;
+
+  if (!store.isInBattle()) {
+    BattleUI.resetCoin(battleState.elements);
+    return;
+  }
+
+  store.markCoinTossObserved(state.roomId);
+  BattleUI.resetCoin(battleState.elements);
+
+  startLocalTimer(battleState.match.turnTimer);
+  BattleUI.updateBoard(battleState.match, BattleNetwork.socket?.id, battleState.drag);
+}
+
+function getMyPlayerId() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const entries = Object.entries(battleState.match?.players ?? {});
+  const myEntry = entries.find(([id]) => String(id) === String(user.id));
+  return myEntry ? myEntry[0] : null;
+}
+
+// ==========================================
+// КОЛЛБЭКИ ДЛЯ СЕТИ (Реакция на сервер)
+// ==========================================
+
+const networkCallbacks = {
+  onMatchFound: (state) => {
+    if (!battleState.isMatchStarted) startMatch(state);
+    else networkCallbacks.onGameState(state);
+  },
+
+  onForceReconnect: (state) => {
+    if (!battleState.isMatchStarted) startMatch(state);
+    else networkCallbacks.onGameState(state);
+  },
+
+  onGameState: (state) => {
+    if (!store.isInBattle()) return;
+    battleState.setMatch(state);
+    store.setMatchState(state);
+    BattleUI.reveal(battleState.elements);
+
+    if (state.turnTimer !== undefined) startLocalTimer(state.turnTimer);
+
+    // Проверка статуса оппонента
+    const entries = Object.entries(state.players || {});
+    const myId = getMyPlayerId();
+    const opponentEntry = entries.find(([id]) => String(id) !== String(myId));
+    const opponent = opponentEntry ? opponentEntry[1] : null;
+
+    if (opponent && opponent.isConnected === false) {
+      BattleUI.setFrozen(
+        true,
+        'Opponent disconnected...<br>Waiting for reconnect.',
+        battleState.elements
+      );
     } else {
-      showBattleMessage('Not your turn!');
-    }
-  };
-
-  const handleSurrenderClick = () => {
-    if (!latestState) {
-      return;
-    }
-    socket.emit('surrender', {
-      roomId: latestState.roomId,
-    });
-  };
-
-  const handleMouseUp = (e) => {
-    if (!draggingAttackId || !latestState) {
-      return;
+      BattleUI.setFrozen(false, '', battleState.elements);
     }
 
-    const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
-    const cardTarget = elementBelow?.closest('.enemy-card');
-    const avatarTarget = elementBelow?.closest('#opp-avatar');
+    BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
+  },
 
-    if (cardTarget) {
-      const targetId = cardTarget.dataset.instanceId;
-      console.log(`Attacking card: ${targetId}`);
+  onGameOver: ({ winnerId }) => {
+    BattleUI.hideStatus(battleState.elements);
+    store.clearMatchState();
 
-      socket.emit('attack_target', {
-        roomId: latestState.roomId,
-        attackerInstanceId: draggingAttackId,
-        targetId: targetId,
-        targetType: 'card',
-      });
-    } else if (avatarTarget) {
-      console.log('Attacking enemy avatar!');
-
-      socket.emit('attack_target', {
-        roomId: latestState.roomId,
-        attackerInstanceId: draggingAttackId,
-        targetId: null,
-        targetType: 'avatar',
-      });
-    }
-
-    draggingAttackId = null;
-  };
-
-  const handleMouseMove = (e) => {
-    if (draggingAttackId) {
-      //dragging
-    }
-  };
-
-  const handleGameOver = ({ winnerId }) => {
-    console.log('Game over. Winner:', winnerId);
-    gameActive = false;
-
-    const { myPlayerId } = resolvePlayers(latestState, socket);
-    const myId = myPlayerId ?? socket.id;
-    const message = String(winnerId) === String(myId) ? 'You won!' : 'You lost!';
+    const myId = getMyPlayerId();
+    const isWinner = String(winnerId) === String(myId);
 
     const overlay = document.getElementById('game-result-overlay');
     const text = document.getElementById('result-text');
     const btn = document.getElementById('return-lobby-btn');
-    overlay.classList.remove('hidden');
-    text.textContent = message;
-    btn.disabled = true;
-    const enableBtnTimeout = setTimeout(() => {
-      btn.disabled = false;
-    }, 2000);
-    const redirectTimeout = setTimeout(() => {
-      window.location.replace('#lobby');
-    }, 10000);
 
-    btn.onclick = () => {
-      clearTimeout(enableBtnTimeout);
-      clearTimeout(redirectTimeout);
-      window.location.replace('#lobby');
-    };
-    teardownBattle({ emitSurrender: false });
-  };
+    if (overlay && text && btn) {
+      overlay.classList.remove('hidden');
+      text.textContent = isWinner ? 'You won!' : 'You lost!';
+      btn.disabled = true;
 
-  const handleHashChange = () => {
-    if (window.location.hash !== '#battle') {
-      teardownBattle({ emitSurrender: true });
-    }
-  };
+      setTimeout(() => {
+        btn.disabled = false;
+      }, 2000);
+      const redirectTimeout = setTimeout(() => {
+        window.location.hash = '#lobby';
+      }, 10000);
 
-  battleHandlers = {
-    handleMatchFound,
-    handleGameState,
-    handleGameOver,
-    handleError,
-    handleMouseUp,
-    handleMouseMove,
-    handleHashChange,
-    handleEndTurnClick,
-    handleSurrenderClick,
-  };
-
-  socket.on('error', handleError);
-  socket.on('match_found', handleMatchFound);
-  socket.on('game_state', handleGameState);
-  socket.on('game_over', handleGameOver);
-
-  if (endTurnBtn) {
-    endTurnBtn.addEventListener('click', handleEndTurnClick);
-  }
-
-  if (surrenderBtn) {
-    surrenderBtn.addEventListener('click', handleSurrenderClick);
-  }
-
-  window.addEventListener('mouseup', handleMouseUp);
-  window.addEventListener('mousemove', handleMouseMove);
-  window.addEventListener('hashchange', handleHashChange);
-
-  const pendingStateStr = sessionStorage.getItem('pendingMatchState');
-  if (pendingStateStr) {
-    sessionStorage.removeItem('pendingMatchState');
-    const state = JSON.parse(pendingStateStr);
-
-    if (socket.connected) {
-      handleMatchFound(state);
+      btn.onclick = () => {
+        clearTimeout(redirectTimeout);
+        window.location.hash = '#lobby';
+      };
     } else {
-      socket.on('connect', () => {
-        handleMatchFound(state);
-      });
+      window.location.hash = '#lobby';
     }
-  }
+  },
+
+  onOpponentDisconnected: (payload) => {
+    const attempts = payload.attemptsLeft ?? 0;
+    const max = payload.maxAttempts ?? 3;
+    const wait = payload.graceSeconds ?? 30;
+    BattleUI.setFrozen(true, '', battleState.elements);
+    BattleUI.showStatus(
+      `Opponent disconnected. Waiting ${wait}s. Attempts left: ${attempts} / ${max}.`,
+      battleState.elements
+    );
+  },
+
+  onOpponentReconnected: (payload) => {
+    const attempts = payload.attemptsLeft ?? 0;
+    const max = payload.maxAttempts ?? 3;
+    BattleUI.setFrozen(false, '', battleState.elements);
+    BattleUI.showStatus(
+      `Opponent reconnected. Attempts left: ${attempts} / ${max}.`,
+      battleState.elements
+    );
+
+    if (battleState.timers.opponentStatus) clearTimeout(battleState.timers.opponentStatus);
+    battleState.timers.opponentStatus = setTimeout(() => {
+      BattleUI.hideStatus(battleState.elements);
+    }, 2500);
+  },
+
+  onError: (msg) => {
+    BattleUI.showMessage(msg, battleState.elements);
+  },
+
+  onFatalError: (msg) => {
+    BattleUI.showMessage(msg, battleState.elements);
+    store.clearMatchState();
+    window.location.replace('#lobby');
+  },
+};
+
+// ==========================================
+// ЖИЗНЕННЫЙ ЦИКЛ (Экспорт для Router)
+// ==========================================
+
+export function mount() {
+  if (battleState.isMounted) return;
+  battleState.setMounted(true);
+  console.log('%c[BATTLE MODULE] mount()', 'background: #440000; color: #ffaaaa');
+
+  battleState.elements = {
+    loader: document.getElementById('battle-loader'),
+    battleContainer: document.querySelector('.battle-container'),
+    coinOverlay: document.getElementById('coin-toss-overlay'),
+    coin: document.querySelector('.coin'),
+    endTurnBtn: document.getElementById('end-turn-btn'),
+    surrenderBtn: document.getElementById('surrender-btn'),
+    opponentStatus: document.getElementById('opponent-connection-status'),
+    opponentStatusText: document.getElementById('opponent-connection-text'),
+    battleMessage: document.getElementById('battle-message'),
+    timerDisplay: document.getElementById('info-timer'),
+  };
+
+  if (battleState.elements.loader) battleState.elements.loader.classList.remove('hidden');
+  if (battleState.elements.coinOverlay) battleState.elements.coinOverlay.style.display = 'none';
+
+  // Связываем модули
+  BattleNetwork.init(networkCallbacks);
+
+  BattleInput.init({
+    endTurn: () => BattleNetwork.endTurn(),
+    surrender: (roomId) => BattleNetwork.surrender(roomId),
+    attackTarget: (payload) => BattleNetwork.attackTarget(payload),
+    playCard: (payload) => BattleNetwork.playCard(payload),
+  });
 }
 
-function updateBattleUI(state, socket) {
-  const { myPlayerId, me, opponent } = resolvePlayers(state, socket);
+export function unmount() {
+  if (!battleState.isMounted) return;
+  battleState.setMounted(false);
+  console.log('%c[BATTLE MODULE] unmount()', 'background: #440000; color: #ffaaaa');
 
-  if (!myPlayerId || !me || !opponent) {
-    return;
-  }
+  BattleInput.cleanup();
+  BattleNetwork.cleanup();
 
-  const isMyTurn = String(state.activeTurn) === String(myPlayerId);
-
-  const turn = document.getElementById('info-turn');
-  document.getElementById('info-round').textContent = state.round ?? 1;
-
-  if (isMyTurn) {
-    turn.textContent = 'YOUR TURN';
-  } else {
-    turn.textContent = "OPPONENT'S TURN";
-  }
-
-  document.getElementById('opp-hp').textContent = opponent.hp;
-  document.getElementById('player-hp').textContent = me.hp;
-  document.getElementById('opp-mana').textContent = `${opponent.mana} / ${opponent.maxMana}`;
-  document.getElementById('player-mana').textContent = `${me.mana} / ${me.maxMana}`;
-
-  document.getElementById('opp-field-count').textContent = opponent.table.length;
-  document.getElementById('player-field-count').textContent = me.table.length;
-  document.getElementById('player-hand-count').textContent = me.hand.length;
-
-  const playerDeck = document.getElementById('player-deck');
-  const oppDeck = document.getElementById('opp-deck');
-
-  playerDeck.textContent = me.deckCount;
-  oppDeck.textContent = opponent.deckCount;
-
-  const fatigueInfo = document.getElementById('fatigue-info');
-  const fatigueValue = document.getElementById('fatigue-value');
-
-  if (me.fatigue > 0) {
-    fatigueInfo.classList.remove('hidden');
-    fatigueValue.textContent = me.fatigue;
-    playerDeck.classList.add('deck-fatigue');
-  } else {
-    fatigueInfo.classList.add('hidden');
-    playerDeck.classList.remove('deck-fatigue');
-  }
-
-  if (opponent.fatigue > 0) {
-    oppDeck.classList.add('deck-fatigue');
-  } else {
-    oppDeck.classList.remove('deck-fatigue');
-  }
-
-  const myTable = document.getElementById('my-table');
-  const oppTable = document.getElementById('opp-table');
-
-  myTable.innerHTML = '';
-  oppTable.innerHTML = '';
-
-  me.table.forEach((card) => {
-    const div = document.createElement('div');
-    div.className = 'card-slot';
-    div.textContent = `${card.name} | attack ${card.attack} | defense ${card.defense} | cost ${card.cost}`;
-
-    if (card.canAttack && isMyTurn) {
-      div.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        draggingAttackId = card.instanceId;
-        console.log('Dragging:', draggingAttackId);
-      });
-    }
-
-    myTable.appendChild(div);
+  // Очистка DOM (чтобы не было призраков при следующем заходе)
+  [
+    'opp-hp',
+    'player-hp',
+    'opp-mana-zone',
+    'player-mana-zone',
+    'player-table-zone',
+    'opp-table-zone',
+    'opp-hand-zone',
+    'player-hand-zone',
+    'info-turn',
+    'info-timer',
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
   });
 
-  opponent.table.forEach((card) => {
-    const div = document.createElement('div');
-    div.className = 'card-slot enemy-card';
-    div.dataset.instanceId = card.instanceId;
-    div.textContent = `${card.name} | attack ${card.attack} | defense ${card.defense} | cost ${card.cost}`;
-    oppTable.appendChild(div);
-  });
-
-  const oppHand = document.getElementById('opp-hand');
-  oppHand.innerHTML = '';
-  for (let i = 0; i < opponent.handCount; i++) {
-    const back = document.createElement('div');
-    back.className = 'card-back';
-    back.textContent = 'Card back';
-    oppHand.appendChild(back);
-  }
-
-  const handDisplay = document.getElementById('hand-display');
-  handDisplay.innerHTML = '';
-
-  me.hand.forEach((card) => {
-    const cardUI = renderCard({ label: card.name });
-
-    cardUI.addEventListener('click', () => {
-      if (isMyTurn) {
-        socket.emit('play_card', {
-          roomId: state.roomId,
-          cardInstanceId: card.instanceId,
-        });
-      } else {
-        showBattleMessage('Wait for your turn!');
-      }
-    });
-
-    handDisplay.appendChild(cardUI);
-  });
+  battleState.reset();
 }

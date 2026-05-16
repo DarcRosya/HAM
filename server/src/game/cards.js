@@ -1,5 +1,14 @@
 export const CARDS = [
-  { id: 1, name: 'Gunter', description: 'Wenk!', attack: 1, defense: 1, cost: 1, traits: [] },
+  {
+    id: 1,
+    name: 'Gunter',
+    description: 'Wenk!',
+    attack: 1,
+    defense: 1,
+    cost: 1,
+    traits: [],
+    art: '/assets/cards-art/bubblegum.png',
+  },
   {
     id: 2,
     name: 'Snail',
@@ -8,6 +17,7 @@ export const CARDS = [
     defense: 1,
     cost: 1,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 3,
@@ -17,8 +27,8 @@ export const CARDS = [
     defense: 2,
     cost: 1,
     traits: ['taunt'],
+    art: '/assets/cards-art/bubblegum.png',
   },
-
   {
     id: 4,
     name: 'BMO',
@@ -27,6 +37,7 @@ export const CARDS = [
     defense: 3,
     cost: 2,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 5,
@@ -36,6 +47,7 @@ export const CARDS = [
     defense: 1,
     cost: 2,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 6,
@@ -45,6 +57,7 @@ export const CARDS = [
     defense: 2,
     cost: 2,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 7,
@@ -54,6 +67,7 @@ export const CARDS = [
     defense: 4,
     cost: 2,
     traits: ['taunt'],
+    art: '/assets/cards-art/bubblegum.png',
   },
 
   {
@@ -64,6 +78,7 @@ export const CARDS = [
     defense: 4,
     cost: 3,
     traits: [],
+    art: '/assets/cards-art/finn.png',
   },
   {
     id: 9,
@@ -73,6 +88,7 @@ export const CARDS = [
     defense: 4,
     cost: 3,
     traits: ['taunt'],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 10,
@@ -82,6 +98,7 @@ export const CARDS = [
     defense: 2,
     cost: 3,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 11,
@@ -91,16 +108,18 @@ export const CARDS = [
     defense: 5,
     cost: 3,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
 
   {
     id: 12,
     name: 'Jake the Dog',
-    description: 'Bacon pancakes, makin bacon pancakes.',
+    description: 'A magical dog with the power to stretch, shrink, and change his shape.',
     attack: 4,
     defense: 5,
     cost: 4,
     traits: ['taunt'],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 13,
@@ -110,6 +129,7 @@ export const CARDS = [
     defense: 3,
     cost: 4,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 14,
@@ -119,6 +139,7 @@ export const CARDS = [
     defense: 2,
     cost: 4,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 15,
@@ -128,25 +149,28 @@ export const CARDS = [
     defense: 3,
     cost: 4,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
 
   {
     id: 16,
     name: 'Princess Bubblegum',
-    description: 'Science is my life.',
+    description: 'The highly intelligent ruler of the Candy Kingdom.',
     attack: 2,
     defense: 7,
     cost: 5,
     traits: ['taunt'],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 17,
     name: 'Ice King',
-    description: 'Where are my princesses?!',
+    description: 'A wizard corrupted by a magical crown that grants him ice powers.',
     attack: 4,
     defense: 5,
     cost: 5,
     traits: [],
+    art: '/assets/cards-art/iceking.png',
   },
   {
     id: 18,
@@ -156,6 +180,7 @@ export const CARDS = [
     defense: 2,
     cost: 5,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 19,
@@ -165,16 +190,18 @@ export const CARDS = [
     defense: 5,
     cost: 5,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
 
   {
     id: 20,
     name: 'Marceline',
-    description: 'The Vampire Queen.',
+    description: 'A thousand-year-old vampire queen who loves playing her bass axe.',
     attack: 6,
     defense: 4,
     cost: 6,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 21,
@@ -184,6 +211,7 @@ export const CARDS = [
     defense: 4,
     cost: 6,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
 
   {
@@ -194,6 +222,7 @@ export const CARDS = [
     defense: 10,
     cost: 7,
     traits: ['taunt'],
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 23,
@@ -203,9 +232,19 @@ export const CARDS = [
     defense: 7,
     cost: 8,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
 
-  { id: 24, name: 'The Lich', description: 'Fall.', attack: 8, defense: 8, cost: 9, traits: [] },
+  {
+    id: 24,
+    name: 'The Lich',
+    description: 'Fall.',
+    attack: 8,
+    defense: 8,
+    cost: 9,
+    traits: [],
+    art: '/assets/cards-art/bubblegum.png',
+  },
   {
     id: 25,
     name: 'GOLB',
@@ -214,5 +253,6 @@ export const CARDS = [
     defense: 10,
     cost: 10,
     traits: [],
+    art: '/assets/cards-art/bubblegum.png',
   },
 ];

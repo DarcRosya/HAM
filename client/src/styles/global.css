@@ -10,3 +10,20 @@ body {
   background: #f6f4ef;
   color: #1a1a1a;
 }
+
+#main-container {
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: center;
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+#main-container.route-fade-out {
+  opacity: 0;
+  transform: scale(0.985);
+}
+
+#main-container.route-fade-in {
+  opacity: 1;
+  transform: scale(1);
+}
