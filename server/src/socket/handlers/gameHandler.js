@@ -33,6 +33,17 @@ export function registerGameHandlers(io, socket) {
     try {
       const game = gameService.getGame(roomId);
       if (game) {
+        const opponentKey = Object.keys(game.players).find(
+          (id) => String(id) !== String(socket.user.id)
+        );
+        const opponent = opponentKey ? game.players[opponentKey] : null;
+        if (opponent && opponent.socketId) {
+          io.to(opponent.socketId).emit('opponent_attack', {
+            attackerInstanceId,
+            targetId,
+            targetType,
+          });
+        }
         game.attackTarget(socket.user.id, attackerInstanceId, targetId, targetType);
 
         if (game.status === 'finished') {
