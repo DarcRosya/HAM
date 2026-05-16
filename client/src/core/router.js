@@ -60,7 +60,7 @@ const routes = {
     path: 'src/pages/lobby.html',
     mount: mountLobby,
     unmount: unmountLobby,
-    guards: [requireAuth, blockLobbyIfInBattle],
+    guards: [requireAuth],
   },
   '#battle': {
     path: 'src/pages/battle.html',
