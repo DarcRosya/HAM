@@ -1,0 +1,279 @@
+/* =========================================
+   ФУНДАМЕНТ И РАЗМЕТКА (LAYOUT)
+========================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.game-board {
+  width: 1414px;
+  height: 780px;
+  position: relative; /* Все absolute внутри отсчитываются отсюда */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* =========================================
+   ЦЕНТРАЛЬНЫЙ СТОЛБЕЦ (ЗОНЫ)
+========================================= */
+.battle-center-column {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* Пропускает клики сквозь пустые места */
+}
+
+.battle-center-column > * {
+  pointer-events: auto;
+}
+
+.row-table {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  min-height: 130px; /* Фикс схлопывания для приема drop-событий */
+  z-index: 10;
+}
+
+#opp-table-zone {
+  top: 256px;
+}
+#player-table-zone {
+  bottom: 245px;
+}
+
+.row-hand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#opp-hand-zone {
+  top: -63px;
+}
+#player-hand-zone {
+  bottom: -60px;
+}
+
+/* =========================================
+   БОКОВЫЕ ПАНЕЛИ
+========================================= */
+.sidebar-right {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  width: 300px;
+}
+
+.sidebar-left {
+  position: absolute;
+  left: 110px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 10;
+}
+
+.turn-info-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 15px 0;
+}
+
+.flask-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.flask-container.opp-flask {
+  margin-bottom: 20px;
+}
+.flask-container.player-flask {
+  margin-top: 20px;
+}
+
+/* =========================================
+   ПОЗИЦИОНИРОВАНИЕ ПРОФИЛЕЙ (АВАТАРЫ, ХП, НИКИ)
+========================================= */
+/* Враг */
+#opp-username-zone {
+  position: absolute;
+  top: 145px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: -175px;
+  width: 160px;
+  height: 45px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 15px;
+  box-sizing: border-box;
+}
+
+#opp-avatar-zone {
+  position: absolute;
+  top: 139px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 65px;
+  height: 65px;
+  z-index: 10;
+}
+
+#opp-health-zone {
+  position: absolute;
+  top: 45px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#opp-mana-zone {
+  position: absolute;
+  top: -57px;
+  left: -21%;
+  transform: translateX(-50%);
+  margin-left: 170px;
+  width: 200px;
+  height: 45px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+/* Игрок */
+#player-avatar-zone {
+  position: absolute;
+  bottom: 115px;
+  left: 29%;
+  transform: translateX(-50%);
+  width: 65px;
+  height: 65px;
+  z-index: 10;
+}
+
+#player-health-zone {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#player-mana-zone {
+  position: absolute;
+  bottom: -66px;
+  left: -16%;
+  transform: translateX(-50%);
+  margin-left: 170px;
+  width: 200px;
+  height: 45px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+#player-username-zone {
+  position: absolute;
+  bottom: 125px; /* Высота над столом (рядом с аватаром) */
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: -175px; /* Сдвиг влево от центра, как у оппонента */
+
+  width: 160px;
+  height: 45px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 15px;
+  box-sizing: border-box;
+}
+
+/* =========================================
+   СТРУКТУРА КОЛБЫ МАНЫ
+========================================= */
+.flask-wrapper {
+  position: relative;
+  width: 260px;
+  height: 51px;
+}
+
+.flask-glass-overlay {
+  position: absolute;
+  width: 60px;
+  height: 260px;
+  left: 68%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  z-index: 5;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+.flask-liquid-track {
+  position: absolute;
+  top: 14px;
+  bottom: 15px;
+  left: 16px;
+  right: -43px;
+  z-index: 2;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.flask-liquid,
+.flask-preview {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 10px 14px 14px 2px;
+}

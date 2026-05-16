@@ -1,47 +1,219 @@
-import { socketService } from '../services/socket.js';
-import { renderCard } from '../components/Card.js';
 import { store } from '../core/store.js';
-
-// --- Глобальное состояние компонента ---
-let isMounted = false;
-let isMatchStarted = false;
-
-let draggingAttackId = null;
-let draggingPlayCardId = null;
-let dragGhostElement = null;
-
-let latestState = null;
-let battleSocket = null;
-let turnInterval = null;
-
-let opponentStatusTimeout = null;
-let battleMessageTimeout = null;
-let tooltipTimeout = null;
-
-let elements = {};
-
-let activeTooltipElement = null;
-
-let watchdogTimer = null;
-
-let hoveredCardCost = 0;
+import { battleState } from './battle/state.js';
+import { BattleUI } from './battle/ui.js';
+import { BattleInput } from './battle/input.js';
+import { BattleNetwork } from './battle/network.js';
 
 const COIN_TOSS_DURATION_MS = 7500;
 
-const TRAITS_DESC = {
-  taunt: { title: 'Taunt', desc: 'Enemies must attack this unit first.' },
-  charge: { title: 'Charge', desc: 'Can attack the same turn it is played.' },
-  // Сюда будешь добавлять новые механики по мере развития игры
+// ==========================================
+// ЛОКАЛЬНАЯ БИЗНЕС-ЛОГИКА (Таймеры и Монетка)
+// ==========================================
+
+function startLocalTimer(seconds) {
+  if (battleState.timers.turn) clearInterval(battleState.timers.turn);
+
+  let remaining = seconds;
+  const display = battleState.elements.timerDisplay;
+  if (!display) return;
+
+  display.textContent = remaining;
+  battleState.timers.turn = setInterval(() => {
+    remaining--;
+    display.textContent = Math.max(0, remaining);
+    if (remaining <= 0) {
+      clearInterval(battleState.timers.turn);
+      battleState.timers.turn = null;
+    }
+  }, 1000);
+}
+
+async function startMatch(state) {
+  battleState.isMatchStarted = true;
+  battleState.setMatch(state);
+  store.setMatchState(state);
+
+  BattleUI.reveal(battleState.elements);
+
+  const isFresh = localStorage.getItem('matchIsFresh') === 'true';
+  const alreadyTossed = store.hasObservedCoinToss(state.roomId);
+
+  if (isFresh) localStorage.removeItem('matchIsFresh');
+
+  if (
+    !battleState.elements.coinOverlay ||
+    !battleState.elements.coin ||
+    alreadyTossed ||
+    !isFresh
+  ) {
+    BattleUI.resetCoin(battleState.elements);
+    startLocalTimer(state.turnTimer);
+    BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
+    store.markCoinTossObserved(state.roomId);
+    return;
+  }
+
+  // Анимация монетки
+  const myId = getMyPlayerId();
+  if (!myId) {
+    BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
+    return;
+  }
+
+  battleState.elements.coinOverlay.style.display = '';
+  battleState.elements.coinOverlay.classList.add('is-active');
+  battleState.elements.coinOverlay.setAttribute('aria-hidden', 'false');
+  battleState.elements.coin.classList.remove('coin--you', 'coin--opp');
+
+  // Рефлоу для запуска CSS анимации
+  void battleState.elements.coin.offsetWidth;
+
+  const isMyTurn = String(state.activeTurn) === String(myId);
+  battleState.elements.coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
+
+  await new Promise((resolve) => setTimeout(resolve, COIN_TOSS_DURATION_MS));
+  if (!battleState.isMounted) return;
+
+  if (!store.isInBattle()) {
+    BattleUI.resetCoin(battleState.elements);
+    return;
+  }
+
+  store.markCoinTossObserved(state.roomId);
+  BattleUI.resetCoin(battleState.elements);
+
+  startLocalTimer(battleState.match.turnTimer);
+  BattleUI.updateBoard(battleState.match, BattleNetwork.socket?.id, battleState.drag);
+}
+
+function getMyPlayerId() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const entries = Object.entries(battleState.match?.players ?? {});
+  const myEntry = entries.find(([id]) => String(id) === String(user.id));
+  return myEntry ? myEntry[0] : null;
+}
+
+// ==========================================
+// КОЛЛБЭКИ ДЛЯ СЕТИ (Реакция на сервер)
+// ==========================================
+
+const networkCallbacks = {
+  onMatchFound: (state) => {
+    if (!battleState.isMatchStarted) startMatch(state);
+    else networkCallbacks.onGameState(state);
+  },
+
+  onForceReconnect: (state) => {
+    if (!battleState.isMatchStarted) startMatch(state);
+    else networkCallbacks.onGameState(state);
+  },
+
+  onGameState: (state) => {
+    if (!store.isInBattle()) return;
+    battleState.setMatch(state);
+    store.setMatchState(state);
+    BattleUI.reveal(battleState.elements);
+
+    if (state.turnTimer !== undefined) startLocalTimer(state.turnTimer);
+
+    // Проверка статуса оппонента
+    const entries = Object.entries(state.players || {});
+    const myId = getMyPlayerId();
+    const opponentEntry = entries.find(([id]) => String(id) !== String(myId));
+    const opponent = opponentEntry ? opponentEntry[1] : null;
+
+    if (opponent && opponent.isConnected === false) {
+      BattleUI.setFrozen(
+        true,
+        'Opponent disconnected...<br>Waiting for reconnect.',
+        battleState.elements
+      );
+    } else {
+      BattleUI.setFrozen(false, '', battleState.elements);
+    }
+
+    BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
+  },
+
+  onGameOver: ({ winnerId }) => {
+    BattleUI.hideStatus(battleState.elements);
+    store.clearMatchState();
+
+    const myId = getMyPlayerId();
+    const isWinner = String(winnerId) === String(myId);
+
+    const overlay = document.getElementById('game-result-overlay');
+    const text = document.getElementById('result-text');
+    const btn = document.getElementById('return-lobby-btn');
+
+    if (overlay && text && btn) {
+      overlay.classList.remove('hidden');
+      text.textContent = isWinner ? 'You won!' : 'You lost!';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        btn.disabled = false;
+      }, 2000);
+      const redirectTimeout = setTimeout(() => {
+        window.location.hash = '#lobby';
+      }, 10000);
+
+      btn.onclick = () => {
+        clearTimeout(redirectTimeout);
+        window.location.hash = '#lobby';
+      };
+    } else {
+      window.location.hash = '#lobby';
+    }
+  },
+
+  onOpponentDisconnected: (payload) => {
+    const attempts = payload.attemptsLeft ?? 0;
+    const max = payload.maxAttempts ?? 3;
+    const wait = payload.graceSeconds ?? 30;
+    BattleUI.setFrozen(true, '', battleState.elements);
+    BattleUI.showStatus(
+      `Opponent disconnected. Waiting ${wait}s. Attempts left: ${attempts} / ${max}.`,
+      battleState.elements
+    );
+  },
+
+  onOpponentReconnected: (payload) => {
+    const attempts = payload.attemptsLeft ?? 0;
+    const max = payload.maxAttempts ?? 3;
+    BattleUI.setFrozen(false, '', battleState.elements);
+    BattleUI.showStatus(
+      `Opponent reconnected. Attempts left: ${attempts} / ${max}.`,
+      battleState.elements
+    );
+
+    if (battleState.timers.opponentStatus) clearTimeout(battleState.timers.opponentStatus);
+    battleState.timers.opponentStatus = setTimeout(() => {
+      BattleUI.hideStatus(battleState.elements);
+    }, 2500);
+  },
+
+  onError: (msg) => {
+    BattleUI.showMessage(msg, battleState.elements);
+  },
+
+  onFatalError: (msg) => {
+    BattleUI.showMessage(msg, battleState.elements);
+    store.clearMatchState();
+    window.location.replace('#lobby');
+  },
 };
 
-// --- Жизненный цикл ---
+// ==========================================
+// ЖИЗНЕННЫЙ ЦИКЛ (Экспорт для Router)
+// ==========================================
 
 export function mount() {
-  if (isMounted) return;
-  isMounted = true;
-  console.log('%c[BATTLE] mount() вызван', 'background: #440000; color: #ffaaaa');
+  if (battleState.isMounted) return;
+  battleState.setMounted(true);
+  console.log('%c[BATTLE MODULE] mount()', 'background: #440000; color: #ffaaaa');
 
-  elements = {
+  battleState.elements = {
     loader: document.getElementById('battle-loader'),
     battleContainer: document.querySelector('.battle-container'),
     coinOverlay: document.getElementById('coin-toss-overlay'),
@@ -54,995 +226,44 @@ export function mount() {
     timerDisplay: document.getElementById('info-timer'),
   };
 
-  if (elements.loader) elements.loader.classList.remove('hidden');
-  if (elements.coinOverlay) elements.coinOverlay.style.display = 'none';
+  if (battleState.elements.loader) battleState.elements.loader.classList.remove('hidden');
+  if (battleState.elements.coinOverlay) battleState.elements.coinOverlay.style.display = 'none';
 
-  battleSocket = socketService.connect();
-  attachSocketListeners();
+  // Связываем модули
+  BattleNetwork.init(networkCallbacks);
 
-  if (elements.endTurnBtn) elements.endTurnBtn.addEventListener('click', handleEndTurnClick);
-  if (elements.surrenderBtn) elements.surrenderBtn.addEventListener('click', handleSurrenderClick);
-  window.addEventListener('mouseup', handleMouseUp);
-  window.addEventListener('mousemove', handleMouseMove);
-
-  const pendingStateStr = store.getPendingMatchState();
-  if (pendingStateStr) {
-    const cachedState = JSON.parse(pendingStateStr);
-
-    startMatch(cachedState);
-
-    watchdogTimer = setTimeout(() => {
-      console.warn('Сервер не ответил. Бой мертв.');
-      store.clearMatchState();
-      window.location.replace('#lobby');
-    }, 3000);
-
-    if (battleSocket.connected) {
-      battleSocket.emit('join-lobby');
-    } else {
-      battleSocket.once('connect', () => battleSocket.emit('join-lobby'));
-    }
-  }
+  BattleInput.init({
+    endTurn: () => BattleNetwork.endTurn(),
+    surrender: (roomId) => BattleNetwork.surrender(roomId),
+    attackTarget: (payload) => BattleNetwork.attackTarget(payload),
+    playCard: (payload) => BattleNetwork.playCard(payload),
+  });
 }
 
 export function unmount() {
-  if (!isMounted) return;
-  isMounted = false;
-  isMatchStarted = false;
+  if (!battleState.isMounted) return;
+  battleState.setMounted(false);
+  console.log('%c[BATTLE MODULE] unmount()', 'background: #440000; color: #ffaaaa');
 
-  if (watchdogTimer) clearTimeout(watchdogTimer);
-  if (turnInterval) clearInterval(turnInterval);
-  if (opponentStatusTimeout) clearTimeout(opponentStatusTimeout);
-  if (battleMessageTimeout) clearTimeout(battleMessageTimeout);
+  BattleInput.cleanup();
+  BattleNetwork.cleanup();
 
-  window.removeEventListener('mouseup', handleMouseUp);
-  window.removeEventListener('mousemove', handleMouseMove);
-  if (elements.endTurnBtn) elements.endTurnBtn.removeEventListener('click', handleEndTurnClick);
-  if (elements.surrenderBtn)
-    elements.surrenderBtn.removeEventListener('click', handleSurrenderClick);
-
-  // 3. Отписываемся от сокет-событий боя
-  detachSocketListeners();
-  socketService.disconnect();
-
+  // Очистка DOM (чтобы не было призраков при следующем заходе)
   [
     'opp-hp',
     'player-hp',
-    'opp-mana',
-    'player-mana',
-    'opp-field-count',
-    'player-field-count',
-    'player-hand-count',
-    'player-deck',
-    'opp-deck',
-    'player-table',
-    'opp-table',
-    'opp-hand',
-    'hand-display',
+    'opp-mana-zone',
+    'player-mana-zone',
+    'player-table-zone',
+    'opp-table-zone',
+    'opp-hand-zone',
+    'player-hand-zone',
     'info-turn',
-    'info-round',
     'info-timer',
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
   });
 
-  // 4. Зачищаем ссылки
-  watchdogTimer = null;
-  turnInterval = null;
-  opponentStatusTimeout = null;
-  draggingAttackId = null;
-  latestState = null;
-  elements = {};
-}
-
-// --- Обработчики Сокетов ---
-
-function attachSocketListeners() {
-  detachSocketListeners(); // Защита от дублей
-  battleSocket.on('error', handleError);
-  battleSocket.on('match_found', handleMatchFound);
-  battleSocket.on('force-reconnect', handleForceReconnect);
-  battleSocket.on('game_state', handleGameState);
-  battleSocket.on('game_over', handleGameOver);
-  battleSocket.on('opponent-disconnected', handleOpponentDisconnected);
-  battleSocket.on('opponent-reconnected', handleOpponentReconnected);
-  battleSocket.on('match_not_found', handleMatchNotFound);
-}
-
-function detachSocketListeners() {
-  if (!battleSocket) return;
-  battleSocket.off('error', handleError);
-  battleSocket.off('match_found', handleMatchFound);
-  battleSocket.off('force-reconnect', handleForceReconnect);
-  battleSocket.off('game_state', handleGameState);
-  battleSocket.off('game_over', handleGameOver);
-  battleSocket.off('opponent-disconnected', handleOpponentDisconnected);
-  battleSocket.off('opponent-reconnected', handleOpponentReconnected);
-  battleSocket.off('match_not_found', handleMatchNotFound);
-}
-
-// --- Логика Боя ---
-
-const resolvePlayers = (state, socket) => {
-  const entries = Object.entries(state?.players ?? {});
-  if (entries.length === 0) return { myPlayerId: null, me: null, opponentId: null, opponent: null };
-
-  const user = store.getUser();
-  const normalizedLocalId = user?.id ? String(user.id) : null;
-
-  const myEntry =
-    (normalizedLocalId ? entries.find(([id]) => String(id) === normalizedLocalId) : null) ||
-    entries.find(([, player]) => player.socketId === socket.id) ||
-    entries.find(([id]) => String(id) === String(socket.id));
-
-  if (!myEntry) return { myPlayerId: null, me: null, opponentId: null, opponent: null };
-
-  const [myPlayerId, me] = myEntry;
-  const opponentEntry = entries.find(([id]) => String(id) !== String(myPlayerId));
-  const [opponentId, opponent] = opponentEntry ?? [];
-
-  return { myPlayerId, me, opponentId, opponent };
-};
-
-const startLocalTimer = (seconds) => {
-  if (turnInterval) clearInterval(turnInterval);
-  let remaining = seconds;
-  if (!elements.timerDisplay) return;
-
-  elements.timerDisplay.textContent = remaining;
-  turnInterval = setInterval(() => {
-    remaining--;
-    elements.timerDisplay.textContent = Math.max(0, remaining);
-    if (remaining <= 0) {
-      clearInterval(turnInterval);
-      turnInterval = null;
-    }
-  }, 1000);
-};
-
-function revealBattleUI() {
-  if (elements.loader) {
-    elements.loader.classList.add('hidden');
-  }
-  if (elements.battleContainer) {
-    elements.battleContainer.classList.add('is-visible');
-    elements.battleContainer.style.opacity = '1';
-    elements.battleContainer.style.pointerEvents = 'auto';
-  }
-}
-
-const resetCoinOverlay = () => {
-  if (!elements.coinOverlay) return;
-  elements.coinOverlay.classList.remove('is-active');
-  elements.coinOverlay.setAttribute('aria-hidden', 'true');
-  elements.coinOverlay.style.display = 'none';
-  setTimeout(() => {
-    if (elements.coin) elements.coin.classList.remove('coin--you', 'coin--opp');
-  }, 300);
-};
-
-function setBattleFrozenState(isFrozen, message) {
-  const overlay = document.getElementById('freeze-overlay');
-  const freezeText = document.getElementById('freeze-text');
-
-  if (isFrozen) {
-    if (turnInterval) {
-      clearInterval(turnInterval);
-      turnInterval = null;
-    }
-    if (overlay && freezeText) {
-      freezeText.innerHTML = message || 'Opponent disconnected...<br>Waiting for reconnect.';
-      overlay.classList.remove('hidden');
-    }
-  } else {
-    if (overlay) {
-      overlay.classList.add('hidden');
-    }
-  }
-}
-
-const showBattleMessage = (text) => {
-  if (!elements.battleMessage) return;
-
-  const msgEl = elements.battleMessage;
-
-  if (battleMessageTimeout) {
-    clearTimeout(battleMessageTimeout);
-  }
-
-  // Если текст тот же самый и плашка УЖЕ висит -> слабая встряска
-  if (msgEl.textContent === text && msgEl.classList.contains('show')) {
-    msgEl.classList.remove('shake', 'strong-pop');
-    void msgEl.offsetWidth; // Жесткий рефлоу для перезапуска анимации
-    msgEl.classList.add('shake');
-  } else {
-    // Новая ошибка -> сильный вылет (pop)
-    msgEl.classList.remove('shake', 'strong-pop');
-    msgEl.textContent = text;
-    void msgEl.offsetWidth;
-    msgEl.classList.add('show', 'strong-pop');
-  }
-
-  battleMessageTimeout = setTimeout(() => {
-    msgEl.classList.remove('show', 'shake', 'strong-pop');
-    battleMessageTimeout = null;
-  }, 2500);
-};
-
-const showOpponentStatus = (message, { autoHideMs = 0 } = {}) => {
-  if (!elements.opponentStatus || !elements.opponentStatusText) return;
-  if (opponentStatusTimeout) clearTimeout(opponentStatusTimeout);
-
-  elements.opponentStatusText.textContent = message;
-  elements.opponentStatus.classList.remove('hidden');
-
-  if (autoHideMs > 0) {
-    opponentStatusTimeout = setTimeout(() => {
-      elements.opponentStatus?.classList.add('hidden');
-    }, autoHideMs);
-  }
-};
-
-const hideOpponentStatus = () => {
-  if (opponentStatusTimeout) clearTimeout(opponentStatusTimeout);
-  elements.opponentStatus?.classList.add('hidden');
-};
-
-// --- Обработчики игровых событий ---
-
-const startMatch = async (state, { skipCoinToss = false } = {}) => {
-  isMatchStarted = true;
-  latestState = state;
-  store.setMatchState(state);
-
-  if (watchdogTimer) {
-    clearTimeout(watchdogTimer);
-    watchdogTimer = null;
-  }
-
-  revealBattleUI();
-
-  const isFresh = localStorage.getItem('matchIsFresh') === 'true';
-  const alreadyTossed = store.hasObservedCoinToss(state.roomId);
-
-  if (isFresh) {
-    localStorage.removeItem('matchIsFresh'); // Сжигаем билет, вторая вкладка его уже не получит
-  }
-
-  const shouldSkip = alreadyTossed || !isFresh;
-
-  console.log('%c[BATTLE] Старт матча:', 'color: yellow', { alreadyTossed, isFresh, shouldSkip });
-
-  if (!elements.coinOverlay || !elements.coin || shouldSkip) {
-    console.log('%c[BATTLE] Пропуск анимации монетки!', 'color: yellow');
-    resetCoinOverlay();
-    startLocalTimer(state.turnTimer);
-    updateBattleUI(state, battleSocket);
-    store.markCoinTossObserved(state.roomId);
-    return;
-  }
-
-  console.log('%c[BATTLE] Запуск честной анимации монетки!', 'color: yellow');
-
-  const { myPlayerId, me, opponent } = resolvePlayers(state, battleSocket);
-  if (!myPlayerId || !me || !opponent) {
-    updateBattleUI(state, battleSocket);
-    return;
-  }
-
-  // Возвращаем видимость по CSS (убираем инлайн display: none) и стартуем
-  elements.coinOverlay.style.display = '';
-  elements.coinOverlay.classList.add('is-active');
-  elements.coinOverlay.setAttribute('aria-hidden', 'false');
-  elements.coin.classList.remove('coin--you', 'coin--opp');
-  void elements.coin.offsetWidth;
-
-  const isMyTurn = String(state.activeTurn) === String(myPlayerId);
-  elements.coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
-
-  await new Promise((resolve) => setTimeout(resolve, COIN_TOSS_DURATION_MS));
-  if (!isMounted) return;
-
-  if (!store.isInBattle()) {
-    console.warn(
-      '%c[BATTLE] Матч отменен во время анимации монетки. Остановка рендера.',
-      'color: #ffaa00'
-    );
-    resetCoinOverlay();
-    return;
-  }
-
-  store.markCoinTossObserved(state.roomId);
-  resetCoinOverlay();
-
-  startLocalTimer(latestState.turnTimer);
-  updateBattleUI(latestState, battleSocket);
-};
-
-const handleMatchFound = (state) => {
-  if (watchdogTimer) {
-    clearTimeout(watchdogTimer);
-    watchdogTimer = null;
-  }
-  if (!isMatchStarted) {
-    startMatch(state);
-  } else {
-    handleGameState(state);
-  }
-};
-
-function handleMatchNotFound() {
-  if (watchdogTimer) {
-    clearTimeout(watchdogTimer);
-    watchdogTimer = null;
-  }
-  store.clearMatchState();
-  window.location.replace('#lobby');
-}
-
-const handleForceReconnect = (state) => {
-  if (watchdogTimer) {
-    clearTimeout(watchdogTimer);
-    watchdogTimer = null;
-  }
-  if (!isMatchStarted) {
-    startMatch(state);
-  } else {
-    handleGameState(state);
-  }
-};
-
-const handleError = (data) => {
-  if (watchdogTimer) {
-    clearTimeout(watchdogTimer);
-    watchdogTimer = null;
-  }
-  showBattleMessage(data.message);
-  if (
-    typeof data.message === 'string' &&
-    (data.message.toLowerCase().includes('not found') ||
-      data.message.toLowerCase().includes('over'))
-  ) {
-    store.clearMatchState();
-    window.location.replace('#lobby');
-  }
-};
-
-const handleGameState = (state) => {
-  if (!store.isInBattle()) return;
-
-  if (watchdogTimer) {
-    clearTimeout(watchdogTimer);
-    watchdogTimer = null;
-  }
-  latestState = state;
-  store.setMatchState(state);
-  revealBattleUI();
-
-  if (state.turnTimer !== undefined) startLocalTimer(state.turnTimer);
-
-  const { opponent } = resolvePlayers(state, battleSocket);
-  if (opponent && opponent.isConnected === false) {
-    setBattleFrozenState(true, 'Opponent disconnected...<br>Waiting for reconnect.');
-  } else {
-    setBattleFrozenState(false);
-  }
-
-  updateBattleUI(state, battleSocket);
-};
-
-const handleOpponentDisconnected = (payload = {}) => {
-  const remainingAttempts = Number(payload.remainingAttempts ?? payload.attemptsLeft ?? 0);
-  const maxAttempts = Number(payload.maxAttempts ?? 3);
-  const waitText = Number.isFinite(payload.graceSeconds) ? payload.graceSeconds : 30;
-
-  setBattleFrozenState(true);
-  showOpponentStatus(
-    `Opponent disconnected. Waiting ${waitText}s. Attempts left: ${remainingAttempts} / ${maxAttempts}.`
-  );
-};
-
-const handleOpponentReconnected = (payload = {}) => {
-  const remainingAttempts = Number(payload.remainingAttempts ?? payload.attemptsLeft ?? 0);
-  const maxAttempts = Number(payload.maxAttempts ?? 3);
-
-  setBattleFrozenState(false);
-  showOpponentStatus(
-    `Opponent reconnected. Attempts left: ${remainingAttempts} / ${maxAttempts}.`,
-    { autoHideMs: 2500 }
-  );
-};
-
-const handleGameOver = ({ winnerId }) => {
-  hideOpponentStatus();
-  store.clearMatchState();
-
-  const { myPlayerId } = resolvePlayers(latestState, battleSocket);
-  const myId = myPlayerId ?? battleSocket.id;
-  const message = String(winnerId) === String(myId) ? 'You won!' : 'You lost!';
-
-  const overlay = document.getElementById('game-result-overlay');
-  const text = document.getElementById('result-text');
-  const btn = document.getElementById('return-lobby-btn');
-
-  if (overlay && text && btn) {
-    overlay.classList.remove('hidden');
-    text.textContent = message;
-    btn.disabled = true;
-
-    setTimeout(() => {
-      btn.disabled = false;
-    }, 2000);
-    const redirectTimeout = setTimeout(() => {
-      window.location.hash = '#lobby';
-    }, 10000);
-
-    btn.onclick = () => {
-      clearTimeout(redirectTimeout);
-      window.location.hash = '#lobby';
-    };
-  } else {
-    // Резервный переход, если DOM не загружен
-    window.location.hash = '#lobby';
-  }
-};
-
-// --- Взаимодействие игрока (Кнопки и мышь) ---
-
-const handleEndTurnClick = () => {
-  if (!latestState) return;
-  const { myPlayerId } = resolvePlayers(latestState, battleSocket);
-  const myId = myPlayerId ?? battleSocket.id;
-
-  if (String(latestState.activeTurn) === String(myId)) {
-    battleSocket.emit('end_turn');
-  } else {
-    showBattleMessage('Not your turn!');
-  }
-};
-
-const handleSurrenderClick = () => {
-  if (!latestState) return;
-  battleSocket.emit('surrender', { roomId: latestState.roomId });
-};
-
-const handleMouseUp = (e) => {
-  // === 1. Логика отпускания стрелки атаки (твой старый код) ===
-  if (draggingAttackId) {
-    const svg = document.getElementById('attack-arrow-svg');
-    if (svg) {
-      svg.style.display = 'none';
-      svg.style.pointerEvents = 'none';
-    }
-
-    document.querySelectorAll('.taunt-target-glow').forEach((el) => {
-      el.classList.remove('taunt-target-glow');
-    });
-
-    if (latestState) {
-      const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
-      const cardTarget = elementBelow?.closest('.enemy-card');
-      const avatarTarget = elementBelow?.closest(
-        '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
-      );
-      const selfTarget = elementBelow?.closest(
-        '#player-avatar, #player-hp, #player-username-zone, #player-table-zone .card-slot, #player-mana-zone'
-      );
-
-      if (selfTarget) {
-        showBattleMessage("You can't attack yourself!");
-      } else if (cardTarget) {
-        battleSocket.emit('attack_target', {
-          roomId: latestState.roomId,
-          attackerInstanceId: draggingAttackId,
-          targetId: cardTarget.dataset.instanceId,
-          targetType: 'card',
-        });
-      } else if (avatarTarget) {
-        battleSocket.emit('attack_target', {
-          roomId: latestState.roomId,
-          attackerInstanceId: draggingAttackId,
-          targetId: null,
-          targetType: 'avatar',
-        });
-      }
-    }
-    draggingAttackId = null;
-  }
-
-  // === 2. НОВАЯ ЛОГИКА: Отпускание карты из руки на стол ===
-  if (draggingPlayCardId && latestState) {
-    const tableZone = document.getElementById('player-table-zone');
-    const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
-
-    // Проверяем, входит ли мышка в область размещения на столе
-    const isOverTable =
-      dropTarget?.closest('#player-table-zone') || dropTarget?.closest('.player-table');
-
-    if (isOverTable && tableZone) {
-      // ФИКС СЕЛЕКТОРА: Раньше мы искали card-slot, а теперь у нас токены card-board
-      const existingCards = Array.from(tableZone.querySelectorAll('.card-board'));
-      let targetIndex = existingCards.length; // По умолчанию в самый конец
-
-      // ВЫЧИСЛЯЕМ ПОЗИЦИЮ
-      for (let i = 0; i < existingCards.length; i++) {
-        const rect = existingCards[i].getBoundingClientRect();
-        const cardCenter = rect.left + rect.width / 2;
-        if (e.clientX < cardCenter) {
-          targetIndex = i;
-          break; // Нашли место!
-        }
-      }
-
-      // Отправляем на сервер команду розыгрыша
-      battleSocket.emit('play_card', {
-        roomId: latestState.roomId,
-        cardInstanceId: draggingPlayCardId,
-        targetIndex: targetIndex,
-      });
-    } else {
-      console.log('Card dropped outside table zone. Returning to hand.');
-    }
-
-    // В любом случае уничтожаем летающего призрака
-    if (dragGhostElement) {
-      dragGhostElement.remove();
-      dragGhostElement = null;
-    }
-
-    draggingPlayCardId = null;
-
-    // Мгновенный принудительный ререндер.
-    // Поскольку стейт на сервере не изменился (если промахнулись),
-    // функция просто перерисует руку, вернув карте opacity = 1 и её законное место в веере.
-    updateBattleUI(latestState, battleSocket);
-  }
-};
-
-const handleMouseMove = (e) => {
-  if (draggingAttackId) {
-    const board = document.querySelector('.game-board');
-    const line = document.getElementById('attack-line');
-    if (board && line) {
-      const boardRect = board.getBoundingClientRect();
-      line.setAttribute('x2', e.clientX - boardRect.left);
-      line.setAttribute('y2', e.clientY - boardRect.top);
-    }
-  }
-
-  if (draggingPlayCardId && dragGhostElement) {
-    dragGhostElement.style.left = e.clientX + 'px';
-    dragGhostElement.style.top = e.clientY + 'px';
-  }
-};
-
-function renderMana(containerId, currentMana, maxMana) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  const isMyMana = containerId === 'player-mana-zone';
-  const MAX_SEGMENTS = 10;
-
-  // 1. Создаем универсальную колбу 1 раз
-  let wrapper = container.querySelector('.flask-wrapper');
-  if (!wrapper) {
-    container.innerHTML = `
-      <div class="flask-wrapper">
-        <div class="flask-liquid-track">
-          <div class="flask-liquid"></div>
-          <div class="flask-preview"></div>
-        </div>
-        <img src="/assets/images/vertical-flask.png" class="flask-glass-overlay" alt="Mana Flask">
-        <div class="mana-text-badge">0/0</div>
-      </div>
-    `;
-    wrapper = container.querySelector('.flask-wrapper');
-  }
-
-  const textEl = container.querySelector('.mana-text-badge');
-  const liquidEl = container.querySelector('.flask-liquid');
-  const previewEl = container.querySelector('.flask-preview');
-
-  textEl.textContent = `${currentMana}/${maxMana}`;
-
-  // Высчитываем ширину
-  const fillPercent = (currentMana / MAX_SEGMENTS) * 100;
-  let previewPercent = 0;
-
-  if (isMyMana && hoveredCardCost > 0 && currentMana >= hoveredCardCost) {
-    previewPercent = (hoveredCardCost / MAX_SEGMENTS) * 100;
-  }
-
-  // Анимация налива и траты
-  const currentWidth = parseFloat(liquidEl.style.width) || 0;
-  if (fillPercent > currentWidth) {
-    liquidEl.style.transition = 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)';
-  } else {
-    liquidEl.style.transition = 'width 0.25s ease-out';
-  }
-
-  liquidEl.style.width = `${fillPercent}%`;
-
-  // Позиционируем красную зону сгорания над синей жидкостью
-  if (previewPercent > 0) {
-    previewEl.style.width = `${previewPercent}%`;
-    // Отступ слева = (текущая мана - сгораемая мана) в процентах
-    previewEl.style.left = `${fillPercent - previewPercent}%`;
-    previewEl.style.display = 'block';
-  } else {
-    previewEl.style.display = 'none';
-  }
-}
-
-function hideTooltip() {
-  if (tooltipTimeout) {
-    clearTimeout(tooltipTimeout);
-    tooltipTimeout = null;
-  }
-  if (activeTooltipElement) {
-    activeTooltipElement.remove();
-    activeTooltipElement = null;
-  }
-}
-
-function showTooltip(e, cardData, isBoard) {
-  hideTooltip(); // На всякий случай чистим старый
-
-  activeTooltipElement = document.createElement('div');
-  activeTooltipElement.className = 'card-tooltip-container';
-
-  let hasContent = false;
-
-  // 1. Если мы на столе -> рисуем полноразмерную карту
-  if (isBoard) {
-    // Используем твой же renderCard, но просим вариант 'hand', чтобы нарисовало карту целиком
-    const fullCard = renderCard({ ...cardData, variant: 'hand' });
-    fullCard.style.position = 'relative';
-    fullCard.style.margin = '0';
-    fullCard.style.transform = 'none'; // Отключаем веерные стили
-    activeTooltipElement.appendChild(fullCard);
-    hasContent = true;
-  }
-
-  // 2. Если у карты есть traits -> рисуем плашки сбоку
-  if (cardData.traits && cardData.traits.length > 0) {
-    const traitsPanel = document.createElement('div');
-    traitsPanel.className = 'traits-panel';
-
-    cardData.traits.forEach((trait) => {
-      const traitInfo = TRAITS_DESC[trait.toLowerCase()];
-      if (traitInfo) {
-        traitsPanel.innerHTML += `
-          <div class="trait-item">
-            <div class="trait-title">${traitInfo.title}</div>
-            <div class="trait-desc">${traitInfo.desc}</div>
-          </div>
-        `;
-        hasContent = true;
-      }
-    });
-    activeTooltipElement.appendChild(traitsPanel);
-  }
-
-  // Если нечего показывать (например, в руке карта без трейтов) - отмена
-  if (!hasContent) return;
-
-  document.body.appendChild(activeTooltipElement); // Рендерим в DOM, чтобы получить реальные размеры окна
-
-  const rect = e.target.closest('.card').getBoundingClientRect();
-  const tooltipWidth = activeTooltipElement.offsetWidth;
-  const tooltipHeight = activeTooltipElement.offsetHeight;
-
-  if (isBoard) {
-    // ДЛЯ СТОЛА: Строго по центру НАД картой
-    const centerX = rect.left + rect.width / 2 - tooltipWidth / 2;
-    const topY = rect.top - tooltipHeight - 15; // 15px зазор
-    activeTooltipElement.style.left = `${centerX}px`;
-    activeTooltipElement.style.top = `${topY}px`;
-  } else {
-    // ДЛЯ РУКИ: Сбоку, с защитой от вылета за экран
-    const offsetX = 30;
-    const offsetY = 10;
-    const isTooFarRight = rect.right + tooltipWidth + offsetX > window.innerWidth;
-
-    if (isTooFarRight) {
-      activeTooltipElement.style.left = `${rect.left - tooltipWidth - offsetX}px`;
-    } else {
-      activeTooltipElement.style.left = `${rect.right + offsetX}px`;
-    }
-    activeTooltipElement.style.top = `${rect.top + offsetY}px`;
-  }
-}
-
-// Функция-биндилка, которую мы будем вешать на карты
-function bindTooltipEvents(cardUI, cardData, isBoard) {
-  cardUI.addEventListener('mouseenter', (e) => {
-    // Защита: если мы сейчас тащим карту или натягиваем стрелку атаки — тултипы не показываем!
-    if (draggingPlayCardId || draggingAttackId) return;
-
-    tooltipTimeout = setTimeout(() => {
-      showTooltip(e, cardData, isBoard);
-    }, 500); // 500мс задержка
-  });
-
-  cardUI.addEventListener('mouseleave', () => {
-    hideTooltip();
-  });
-
-  cardUI.addEventListener('mousedown', () => {
-    hideTooltip(); // Мгновенно прячем, если игрок решил схватить карту
-  });
-}
-
-function applyFanMath(cardUI, index, total, isMyHand, isMyTurn) {
-  // Карты по струнке не в наш ход
-  if (isMyHand && !isMyTurn) {
-    cardUI.style.setProperty('--fan-rot', '0deg');
-    cardUI.style.setProperty('--fan-y', '0px');
-    cardUI.style.setProperty('--fan-x', '0px');
-    return;
-  }
-
-  // Симметричная математика для обеих рук
-  const mid = (total - 1) / 2;
-  const offset = index - mid;
-
-  if (isMyHand) {
-    // НАША РУКА (Крутим от низа, провисание вниз)
-    const angleStep = 4.5; // Угол наклона каждой карты от центра
-    const yStep = 4; // Провисание (насколько края ниже/выше центра)
-    const xStep = 2; // Насколько сильно карты раздвигаются влево-вправо от центра
-    // ==================================
-
-    cardUI.style.setProperty('--fan-rot', `${offset * angleStep}deg`);
-    cardUI.style.setProperty('--fan-y', `${Math.pow(Math.abs(offset), 2) * yStep}px`);
-    cardUI.style.setProperty('--fan-x', `${offset * xStep}px`);
-  } else {
-    // РУКА ВРАГА (Крутим от верха, провисание вверх - отрицательный Y)
-    const angleStep = -10.5;
-    const yStep = -10; // Края уходят ВВЕРХ, создавая дугу
-    const xStep = -45;
-
-    cardUI.style.setProperty('--fan-rot', `${offset * angleStep}deg`);
-    cardUI.style.setProperty('--fan-y', `${Math.pow(Math.abs(offset), 2) * yStep}px`);
-    cardUI.style.setProperty('--fan-x', `${offset * xStep}px`);
-  }
-}
-
-// --- Рендер UI ---
-
-function updateBattleUI(state, socket) {
-  const { myPlayerId, me, opponent } = resolvePlayers(state, socket);
-  if (!myPlayerId || !me || !opponent) return;
-
-  const isMyTurn = String(state.activeTurn) === String(myPlayerId);
-
-  const safeSetText = (id, text) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  };
-
-  safeSetText('info-turn', isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN");
-
-  // === ИМЕНА И ХП ===
-  // Изменено: opp-username -> opp-username-zone
-  safeSetText('opp-username-zone', opponent.displayedName || opponent.username || 'Opponent');
-  safeSetText('opp-hp', opponent.hp);
-
-  // Изменено: player-username -> player-username-zone
-  safeSetText('player-username-zone', me.displayedName || me.username || 'You');
-  safeSetText('player-hp', me.hp);
-
-  // === МАНА ===
-  // Изменено на новые контейнеры
-  renderMana('opp-mana-zone', opponent.mana, opponent.maxMana);
-  renderMana('player-mana-zone', me.mana, me.maxMana);
-
-  // === КОЛОДЫ И АВАТАРЫ (Оставлена твоя логика) ===
-  safeSetText('opp-deck', opponent.deckCount);
-  const oppAvatar = document.getElementById('opp-avatar');
-  if (oppAvatar && opponent.avatar) oppAvatar.src = opponent.avatar;
-
-  const playerDeck = document.getElementById('player-deck');
-  if (playerDeck) playerDeck.dataset.count = me.deckCount;
-
-  const playerAvatar = document.getElementById('player-avatar');
-  if (playerAvatar && me.avatar) playerAvatar.src = me.avatar;
-
-  // === УСТАЛОСТЬ (Оставлена твоя логика) ===
-  const fatigueInfo = document.getElementById('fatigue-info');
-  if (fatigueInfo) {
-    if (me.fatigue > 0) {
-      fatigueInfo.classList.remove('hidden');
-      safeSetText('fatigue-value', me.fatigue);
-      if (playerDeck) playerDeck.style.filter = 'sepia(1) hue-rotate(300deg)';
-    } else {
-      fatigueInfo.classList.add('hidden');
-      if (playerDeck) playerDeck.style.filter = 'none';
-    }
-  }
-
-  // === РЕНДЕР СТОЛА ===
-  // Изменено на новые контейнеры стола
-  const myTable = document.getElementById('player-table-zone');
-  const oppTable = document.getElementById('opp-table-zone');
-  if (myTable) myTable.innerHTML = '';
-  if (oppTable) oppTable.innerHTML = '';
-
-  // Мои карты на столе
-  me.table.forEach((card) => {
-    if (!myTable) return;
-    const cardUI = renderCard({ ...card, variant: 'board' });
-    cardUI.classList.add('card-slot');
-    cardUI.dataset.instanceId = card.instanceId;
-
-    bindTooltipEvents(cardUI, card, true);
-
-    if (card.canAttack && isMyTurn) {
-      cardUI.classList.add('can-attack');
-      cardUI.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        draggingAttackId = card.instanceId;
-        const board = document.querySelector('.game-board');
-        const svg = document.getElementById('attack-arrow-svg');
-        const line = document.getElementById('attack-line');
-
-        const oppTableZone = document.getElementById('opp-table-zone');
-        if (oppTableZone && opponent && opponent.table) {
-          opponent.table.forEach((oppCard) => {
-            if (oppCard.traits?.includes('taunt')) {
-              const oppUI = oppTableZone.querySelector(
-                `[data-instance-id="${oppCard.instanceId}"]`
-              );
-              if (oppUI) oppUI.classList.add('taunt-target-glow');
-            }
-          });
-        }
-
-        if (board && svg && line) {
-          const boardRect = board.getBoundingClientRect();
-          const cardRect = cardUI.getBoundingClientRect();
-
-          const startX = cardRect.left - boardRect.left + cardRect.width / 2;
-          const startY = cardRect.top - boardRect.top + cardRect.height / 2;
-
-          svg.style.display = 'block';
-          line.setAttribute('x1', startX);
-          line.setAttribute('y1', startY);
-          line.setAttribute('x2', e.clientX - boardRect.left);
-          line.setAttribute('y2', e.clientY - boardRect.top);
-        }
-      });
-    } else {
-      cardUI.classList.add('exhausted'); // Болезнь призыва или уже била
-    }
-    myTable.appendChild(cardUI);
-  });
-
-  // Карты противника на столе
-  opponent.table.forEach((card) => {
-    if (!oppTable) return;
-    const cardUI = renderCard({ ...card, variant: 'board' });
-    cardUI.classList.add('card-slot', 'enemy-card');
-    cardUI.dataset.instanceId = card.instanceId;
-
-    bindTooltipEvents(cardUI, card, true);
-
-    oppTable.appendChild(cardUI);
-  });
-
-  // === РУКИ ===
-  // Изменено на новые контейнеры рук
-  const oppHand = document.getElementById('opp-hand-zone');
-  if (oppHand) {
-    const existingOpp = Array.from(oppHand.children);
-    while (existingOpp.length > opponent.handCount) existingOpp.pop().remove();
-    while (existingOpp.length < opponent.handCount) {
-      // Строго добавляем рубашкой вверх
-      const newCard = renderCard({ faceDown: true });
-      oppHand.appendChild(newCard);
-      existingOpp.push(newCard);
-    }
-    existingOpp.forEach((cardUI, index) => {
-      applyFanMath(cardUI, index, opponent.handCount, false, !isMyTurn);
-    });
-  }
-
-  const handDisplay = document.getElementById('player-hand-zone');
-  if (handDisplay) {
-    const existingNodes = Array.from(handDisplay.children);
-    const newIds = me.hand.map((c) => c.instanceId);
-
-    existingNodes.forEach((node) => {
-      if (!newIds.includes(node.dataset.instanceId)) node.remove();
-    });
-
-    me.hand.forEach((card, index) => {
-      let cardUI = handDisplay.querySelector(`[data-instance-id="${card.instanceId}"]`);
-
-      if (!cardUI) {
-        cardUI = renderCard(card);
-        cardUI.dataset.instanceId = card.instanceId;
-        handDisplay.appendChild(cardUI);
-        bindTooltipEvents(cardUI, card, false);
-      }
-
-      // БИНДИНГ СОБЫТИЙ С АКТУАЛЬНЫМ STATE
-      cardUI.onmouseenter = () => {
-        if (isMyTurn && me.mana >= card.cost) {
-          hoveredCardCost = card.cost;
-          renderMana('player-mana-zone', me.mana, me.maxMana);
-        }
-      };
-
-      cardUI.onmouseleave = () => {
-        hoveredCardCost = 0;
-        renderMana('player-mana-zone', me.mana, me.maxMana);
-      };
-
-      cardUI.onmousedown = (e) => {
-        e.preventDefault();
-
-        if (!isMyTurn) {
-          showBattleMessage('Wait for your turn!');
-          return;
-        }
-        if (me.mana < card.cost) {
-          showBattleMessage('Not enough mana!');
-          return;
-        }
-        if (me.table.length >= 7) {
-          showBattleMessage('Table is full!');
-          return;
-        }
-
-        e.preventDefault();
-        draggingPlayCardId = card.instanceId;
-        hoveredCardCost = 0;
-        renderMana('player-mana-zone', me.mana, me.maxMana);
-
-        // Создаем призрака для переноса
-        dragGhostElement = cardUI.cloneNode(true);
-        dragGhostElement.style.position = 'fixed';
-        dragGhostElement.style.pointerEvents = 'none';
-        dragGhostElement.style.zIndex = 10000;
-
-        // Сбрасываем эффекты ховера руки, центрируем карту строго по курсору
-        // Добавляем легкий наклон (rotate(2deg)), как будто карту несут рукой
-        dragGhostElement.style.transform = 'translate(-50%, -50%) scale(0.85) rotate(2deg)';
-        dragGhostElement.style.boxShadow = '0 15px 30px rgba(0,0,0,0.5)';
-        dragGhostElement.style.transition = 'none';
-        dragGhostElement.style.left = e.clientX + 'px';
-        dragGhostElement.style.top = e.clientY + 'px';
-
-        // Убираем зеленую ауру с призрака во время таскания, чтобы не мешала
-        dragGhostElement.classList.remove('playable');
-
-        document.body.appendChild(dragGhostElement);
-
-        // ЖЕСТКИЙ UX: Полностью скрываем карту в руке, имитируя, что мы её "взяли"
-        cardUI.style.opacity = '0';
-        cardUI.style.pointerEvents = 'none';
-      };
-
-      // Проверка при отрисовке: если карту сейчас тащат, она должна оставаться невидимой в руке
-      if (card.instanceId === draggingPlayCardId) {
-        cardUI.style.opacity = '0';
-        cardUI.style.pointerEvents = 'none';
-      } else {
-        cardUI.style.opacity = '1';
-        cardUI.style.pointerEvents = 'auto';
-      }
-
-      // Аура играбельности
-      if (isMyTurn && me.mana >= card.cost) {
-        cardUI.classList.add('playable');
-      } else {
-        cardUI.classList.remove('playable');
-      }
-
-      applyFanMath(cardUI, index, me.hand.length, true, isMyTurn);
-    });
-  }
+  battleState.reset();
 }
