@@ -672,3 +672,72 @@ html {
 .ui-locked #auth-modal {
   pointer-events: auto;
 }
+
+.top-right-actions {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.logout-icon-btn {
+  width: 70px;
+  height: 70px;
+  background: url('/assets/images/logout-btn.png') no-repeat center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+}
+
+.logout-icon-btn:hover {
+  transform: scale(1.1);
+}
+
+#auth-modal:has(#logout-view:not(.is-hidden)) .wooden-board {
+  display: none;
+}
+
+.logout-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.logout-question-sign {
+  position: relative;
+  width: 340px;
+  height: 170px;
+  background: url('../../assets/images/green_board.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 45px;
+  margin-top: 20px;
+}
+
+.logout-question-sign span {
+  color: #f8f8f8;
+  font-size: 22px;
+  text-align: center;
+  line-height: 1.2;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+  margin-top: 40px;
+}
+
+.logout-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 35px;
+}
+
+.small-action {
+  background: url('../../assets/images/red-btn.png');
+  background-size: 100% 100%;
+  width: 140px;
+  height: 60px;
+  margin-top: 0;
+  font-size: 18px;
+}

@@ -20,7 +20,14 @@ export function mount() {
     cancelBtn: document.getElementById('cancel-search-btn'),
     matchFrame: document.getElementById('match-frame'),
     historyList: document.getElementById('history-list'),
+    returnBtn: document.getElementById('return-btn'),
   };
+
+  if (elements.returnBtn) {
+    elements.returnBtn.addEventListener('click', () => {
+      window.location.hash = '#menu';
+    });
+  }
 
   renderUserProfile();
   initHistory(elements.historyList);
@@ -33,6 +40,10 @@ export function mount() {
   socket.on('match_found', handleMatchFound);
   socket.on('force-reconnect', handleForceReconnect);
   socket.on('server-shutdown', handleServerShutdown);
+  socket.on('profile_sync', (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    renderUserProfile();
+  });
 
   if (socket.connected) {
     socket.emit('join-lobby');

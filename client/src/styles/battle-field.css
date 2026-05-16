@@ -19,34 +19,11 @@ body {
   background-image: url('/assets/images/battle-bg3.PNG');
   background-size: cover;
   background-position: center;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-}
-
-.hand {
-  display: flex;
-  justify-content: center;
-}
-
-.hand .card {
-  margin: 0;
-  height: 95px;
-  width: 68px;
-  transition: transform 0.2s ease-in-out;
-  margin-left: -15px;
-}
-
-.my-hand {
-  margin-bottom: 7px;
-}
-
-.my-hand .card:hover {
-  transform: translateY(-20px) scale(1.05);
-  z-index: 10;
-  cursor: pointer;
+  position: relative; /* ФУНДАМЕНТ: все absolute внутри будут отсчитываться от этой доски */
+  overflow: none; /* Карты смогут вылезать за края доски! */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 
 .player-info {
@@ -145,14 +122,6 @@ body {
   background-image: url('/assets/images/mana-empty.png');
 }
 
-.battlefield {
-  flex-grow: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 40px;
-}
-
 .decks-column {
   display: flex;
   flex-direction: column;
@@ -161,7 +130,7 @@ body {
 }
 
 .his-deck,
-.my-deck {
+.player-deck {
   margin-left: 40px;
   width: 130px;
   height: 170px;
@@ -176,12 +145,12 @@ body {
   transform: rotate(180deg);
 }
 
-.my-deck {
+.player-deck {
   position: relative;
   cursor: pointer;
 }
 
-.my-deck::after {
+.player-deck::after {
   content: attr(data-count);
   position: absolute;
   bottom: -35px;
@@ -202,7 +171,7 @@ body {
     transform 0.2s ease-in-out;
 }
 
-.my-deck:hover::after {
+.player-deck:hover::after {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(5px);
@@ -288,12 +257,537 @@ body {
   transform: scale(0.95);
 }
 
-.bottom-zone {
-  position: relative;
+.card.playable {
+  /* Плотный зеленый бордер + жесткое внешнее и внутреннее неоновое свечение */
+  border: 3px solid #33ff33 !important;
+  box-shadow:
+    0 0 10px 3px #1aff1a,
+    0 0 25px 8px rgba(0, 255, 0, 0.6),
+    inset 0 0 15px 3px rgba(26, 255, 26, 0.9) !important;
+  border-radius: 12px;
+}
+
+.card-slot.can-attack {
+  box-shadow: 0 0 15px 5px rgba(0, 255, 0, 0.7);
+  cursor: grab;
+}
+
+.card-slot.can-attack:active {
+  cursor: grabbing;
+}
+
+.card-slot.exhausted {
+  filter: grayscale(0.8) brightness(0.6);
+  pointer-events: none;
+}
+
+/* =========================================
+   ЦЕНТРАЛЬНЫЙ ФУНДАМЕНТ
+========================================= */
+.battle-center-column {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Пропускает клики сквозь пустые места */
+}
+
+.battle-center-column > * {
+  pointer-events: auto;
+}
+
+/* =========================================
+   1. ПРОФИЛЬ ВРАГА (Настраивай каждую деталь)
+========================================= */
+#opp-username-zone {
+  position: absolute;
+  top: 145px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: -175px; /* Сдвинули чуть в сторону, как ты просил */
+
+  /* Стили свитка */
+  width: 160px; /* Ширина свитка */
+  height: 45px; /* Высота свитка */
+  background-image: url('/assets/images/scroll-name.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  /* Выравнивание текста и защита от длинных ников */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 15px; /* Отступы от закрученных краев свитка */
+  box-sizing: border-box;
+
+  font-size: 18px;
+  color: #3e2723; /* Темно-коричневый цвет чернил */
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 20;
+}
+
+#opp-avatar-zone {
+  position: absolute;
+  top: 139px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-top: 0px;
+  width: 65px;
+  height: 65px;
   z-index: 10;
-  margin-top: -7px;
+}
+
+#opp-health-zone {
+  position: absolute;
+  top: 45px; /* Настроено независимо от аватара! */
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-top: 0px;
+  width: 40px;
+  height: 40px;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#opp-mana-zone {
+  position: absolute;
+  top: -57px;
+  left: -21%;
+  transform: translateX(-50%);
+  margin-left: 170px; /* Сдвинули в другую сторону */
+
+  /* Стили свитка для маны */
+  width: 200px;
+  height: 45px;
+  background-image: url('/assets/images/scroll-mana.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
+  z-index: 20;
+}
+/* =========================================
+   2. НАШ ПРОФИЛЬ (Настраивай каждую деталь)
+========================================= */
+
+#player-avatar-zone {
+  position: absolute;
+  bottom: 115px;
+  left: 29%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-bottom: 0px;
+  width: 65px;
+  height: 65px;
+  z-index: 10;
+}
+
+#player-health-zone {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-bottom: 0px;
+  width: 40px;
+  height: 40px;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#player-mana-zone {
+  position: absolute;
+  bottom: -66px;
+  left: -16%;
+  transform: translateX(-50%);
+  margin-left: 170px;
+
+  /* Стили свитка для маны */
+  width: 200px;
+  height: 45px;
+  background-image: url('/assets/images/scroll-mana.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+/* =========================================
+   3. ИГРОВОЙ СТОЛ (Ряды оторваны друг от друга)
+========================================= */
+.row-table {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px; /* Увеличили расстояние для круглых токенов */
+  width: 100%;
+
+  /* НОВОЕ: Фикс схлопывания пустой зоны. Теперь стол всегда имеет высоту 130px для приема мыши */
+  min-height: 130px;
+  z-index: 10;
+}
+
+#opp-table-zone {
+  top: 256px; /* ВЫСОТА РЯДА ВРАГА */
+  margin-left: 0px;
+}
+
+#player-table-zone {
+  bottom: 245px; /* ВЫСОТА ТВОЕГО РЯДА */
+  margin-left: 0px;
+}
+
+/* =========================================
+   4. РУКИ (Отвязаны и могут вылезать за экран)
+========================================= */
+.row-hand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  z-index: 50;
+  pointer-events: none; /* Пропускаем клики между картами */
+}
+
+#opp-hand-zone {
+  top: -63px;
+}
+
+#player-hand-zone {
+  bottom: -60px;
+}
+
+/* Карты противника */
+#opp-hand-zone .card {
+  margin: 0 -35px; /* Плотность стягивания */
+  transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg)) scale(0.5);
+  transform-origin: center top; /* ВАЖНО: Вращаем от верхней точки! */
+  transition: transform 0.3s ease-out;
+  pointer-events: auto;
+}
+/* Наши карты */
+#player-hand-zone .card {
+  margin: 0 -55px; /* Жестко стягиваем наши карты */
+  transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg))
+    scale(0.65);
+  transform-origin: center bottom;
+  transition:
+    transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    z-index 0s;
+  pointer-events: auto;
+}
+
+/* Зумирование нашей карты при наведении */
+#player-hand-zone .card:hover {
+  transform: translate(var(--fan-x, 0px), -60px) rotate(0deg) scale(0.9) !important;
+  z-index: 100 !important;
+  cursor: pointer;
+}
+
+/* =========================================
+   АНИМАЦИЯ ПРЕДПРОСМОТРА МАНЫ
+========================================= */
+.flask-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.flask-container.opp-flask {
+  margin-bottom: 20px; /* Отступ вражеской колбы от индикатора хода */
+}
+
+.flask-container.player-flask {
+  margin-top: 20px; /* Отступ твоей колбы от кнопки End Turn */
+}
+
+.mana-text-badge {
+  position: absolute;
+  right: -20px;
+  top: -25px;
+  background: rgba(22, 25, 43, 0.95);
+  border: 2px solid #5c7cb3;
+  border-radius: 8px;
+  padding: 4px 14px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+.flask-wrapper {
+  position: relative;
+  width: 260px; /* Ширина горизонтальной колбы */
+  height: 51px; /* Высота горизонтальной колбы */
+  /* Убираем flex, внутри всё будет на absolute */
+}
+
+.flask-glass-overlay {
+  position: absolute;
+  /* Задаем обратные размеры (высота стала шириной) */
+  width: 60px;
+  height: 260px;
+  /* Центрируем перед поворотом, чтобы оно никуда не уехало */
+  left: 68%;
+  top: 50%;
+  /* Поворот на 90deg (донышко слева, крышка справа) */
+  transform: translate(-50%, -50%) rotate(90deg);
+  z-index: 5;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+/* Настройки неоновой жидкости под стеклом */
+.flask-liquid-track {
+  position: absolute;
+  /* НАСТРОЙКИ ДЛЯ ТЕБЯ: 
+     Крути left и right, чтобы обрезать трек ровно по внутренним краям золотых крышек! */
+  top: 14px; /* Отступ сверху */
+  bottom: 15px; /* Отступ снизу */
+  left: 16px; /* Отступ от левой крышки (донышка) */
+  right: -43px; /* Отступ от правой крышки (горлышка) */
+
+  z-index: 2;
+  border-radius: 8px; /* Закругление краев самой жидкости */
+  /* Обязательно скрываем всё, что может вылезти при 100% заполнении */
+  overflow: hidden;
+}
+
+/* Сама жидкость теперь занимает 100% высоты трека и не требует отступов */
+.flask-liquid,
+.flask-preview {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  /* НОВОЕ: Острый левый край (у дна), и сильно закругленный правый (движущийся) край */
+  border-radius: 10px 14px 14px 2px;
+}
+
+.flask-liquid {
+  background: linear-gradient(to right, #00aaff, #00ffff);
+  /* НОВОЕ: inset тень создает красивый белый блик (мениск) на самом закруглении жидкости */
+  box-shadow:
+    inset -6px 0 8px rgba(255, 255, 255, 0.6),
+    0 0 15px 4px rgba(0, 255, 255, 0.5);
+}
+
+.flask-preview {
+  background: rgba(255, 50, 50, 0.9);
+  /* У превью траты маны тоже делаем блик, но красноватый */
+  box-shadow:
+    inset -6px 0 8px rgba(255, 150, 150, 0.6),
+    0 0 20px 5px rgba(255, 0, 0, 0.8);
+  animation: flash-spend-horiz 0.5s infinite alternate;
+}
+@keyframes flash-spend-horiz {
+  from {
+    opacity: 0.6;
+    filter: brightness(1);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1.5);
+  }
+}
+
+/* =========================================
+   ОБЩИЕ ВНУТРЕННИЕ СТИЛИ 
+========================================= */
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid #202560;
+  object-fit: cover;
+}
+
+.heart-img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.health-text {
+  position: relative;
+  z-index: 2;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  text-shadow: 1px 1px 0 #000;
+  margin-top: -3px;
+}
+
+.crystal {
+  width: 18px;
+  height: 18px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.crystal.active {
+  background-image: url('/assets/images/mana-full.png');
+}
+.crystal.empty {
+  background-image: url('/assets/images/mana-empty.png');
+}
+
+/* =========================================
+   СТАРЫЕ БОКОВЫЕ ПАНЕЛИ (ОСТАВЛЯЕМ КАК БЫЛИ)
+========================================= */
+.sidebar-right {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  width: 100%;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  width: 300px; /* Фиксируем ширину всей правой колонки */
+}
+
+.turn-info-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 15px 0; /* Фиксированный отступ вокруг центральной кнопки */
+}
+
+.sidebar-left {
+  position: absolute;
+  left: 110px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 10;
+}
+.turn-indicator {
+  font-size: 24px;
+  color: #f8e274;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.timer-display {
+  font-size: 54px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 20px;
+}
+
+/* =========================================
+   СИСТЕМА УМНЫХ ТУЛТИПОВ
+========================================= */
+.card-tooltip-container {
+  /* ТВОЯ ПAНЕЛЬ НАСТРОЕК — КРУТИ ЭТИ ПAРAМЕТРЫ ДЛЯ ВЫРAВНИВAНИЯ */
+  --tooltip-scale: 0.95; /* Общий масштаб всплывающего окна */
+  --tooltip-blur: 6px; /* Размытие заднего фона под тултипом */
+  --tooltip-bg: rgba(13, 17, 28, 0.93); /* Фон плашек с трейтами */
+  --tooltip-border-color: #ffd700; /* Цвет рамки плашек (золотой) */
+  --text-primary-color: #ffffff; /* Основной цвет текста */
+  --text-secondary-color: #a6c7ff; /* Цвет описания трейтов */
+
+  position: fixed;
+  z-index: 12000; /* Поднимаем максимально высоко поверх всех элементов */
+  display: flex;
+  gap: 20px;
+  align-items: center; /* Центрируем карту и трейты по вертикали друг относительно друга */
+
+  /* Блокируем перехват курсора самим тултипом, чтобы не было дерганий */
+  pointer-events: none;
+
+  /* Применяем кастомные настройки */
+  transform: scale(var(--tooltip-scale));
+  animation: fade-in-smooth 0.22s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes fade-in-smooth {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(calc(var(--tooltip-scale) - 0.05));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(var(--tooltip-scale));
+  }
+}
+
+.traits-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 240px;
+}
+
+.trait-item {
+  background: var(--tooltip-bg);
+  border: 2px solid var(--tooltip-border-color);
+  backdrop-filter: blur(var(--tooltip-blur));
+  -webkit-backdrop-filter: blur(var(--tooltip-blur));
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.85),
+    inset 0 0 15px rgba(0, 0, 0, 0.6);
+  color: var(--text-primary-color);
+  transition: all 0.2s ease;
+}
+
+.trait-title {
+  font-family: 'Londrina Solid', sans-serif;
+  font-size: 26px;
+  color: var(--tooltip-border-color);
+  text-shadow: 1px 1px 2px #000;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.trait-desc {
+  font-family: 'Georgia', serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-secondary-color);
+}
+
+.card-slot,
+.card-board,
+.card-slot.exhausted {
+  /* Гарантируем, что браузер будет регистрировать наведение мыши на ЛЮБОЙ токен, 
+     даже если он спит, устал или заблокирован */
+  pointer-events: auto !important;
+  cursor: pointer;
 }

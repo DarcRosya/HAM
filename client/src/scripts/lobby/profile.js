@@ -1,6 +1,8 @@
 import { store } from '../../core/store.js';
 import { userService } from '../../services/userService.js';
 
+let initialProfileValues = {};
+
 export function renderUserProfile() {
   const user = store.getUser();
   if (!user) return;
@@ -8,10 +10,12 @@ export function renderUserProfile() {
   const avatar = document.querySelector('.player-info .avatar');
   const name = document.querySelector('.display-name');
   const username = document.querySelector('.username');
+  const mmrValue = document.querySelector('.mmr-value');
 
   if (avatar) avatar.src = user.avatar || '/assets/avatars/avatar.png';
   if (name) name.textContent = user.displayedName || 'Unknown';
   if (username) username.textContent = user.username ? `@${user.username}` : '@user';
+  if (mmrValue) mmrValue.textContent = user.rating || 500;
 }
 
 export function initProfileUI(onProfileUpdated) {

@@ -5,16 +5,34 @@ import { store } from '../core/store.js';
 // --- Глобальное состояние компонента ---
 let isMounted = false;
 let isMatchStarted = false;
+
 let draggingAttackId = null;
+let draggingPlayCardId = null;
+let dragGhostElement = null;
+
 let latestState = null;
 let battleSocket = null;
 let turnInterval = null;
+
 let opponentStatusTimeout = null;
+let battleMessageTimeout = null;
+let tooltipTimeout = null;
+
 let elements = {};
+
+let activeTooltipElement = null;
 
 let watchdogTimer = null;
 
+let hoveredCardCost = 0;
+
 const COIN_TOSS_DURATION_MS = 7500;
+
+const TRAITS_DESC = {
+  taunt: { title: 'Taunt', desc: 'Enemies must attack this unit first.' },
+  charge: { title: 'Charge', desc: 'Can attack the same turn it is played.' },
+  // Сюда будешь добавлять новые механики по мере развития игры
+};
 
 // --- Жизненный цикл ---
 
@@ -75,6 +93,7 @@ export function unmount() {
   if (watchdogTimer) clearTimeout(watchdogTimer);
   if (turnInterval) clearInterval(turnInterval);
   if (opponentStatusTimeout) clearTimeout(opponentStatusTimeout);
+  if (battleMessageTimeout) clearTimeout(battleMessageTimeout);
 
   window.removeEventListener('mouseup', handleMouseUp);
   window.removeEventListener('mousemove', handleMouseMove);
@@ -96,7 +115,7 @@ export function unmount() {
     'player-hand-count',
     'player-deck',
     'opp-deck',
-    'my-table',
+    'player-table',
     'opp-table',
     'opp-hand',
     'hand-display',
@@ -204,36 +223,51 @@ const resetCoinOverlay = () => {
 };
 
 function setBattleFrozenState(isFrozen, message) {
-  const playerSection = document.getElementById('player-section');
-  let overlay = document.getElementById('freeze-overlay');
+  const overlay = document.getElementById('freeze-overlay');
+  const freezeText = document.getElementById('freeze-text');
 
   if (isFrozen) {
-    if (playerSection) {
-      playerSection.style.pointerEvents = 'none';
-      playerSection.style.opacity = '0.5';
-    }
     if (turnInterval) {
       clearInterval(turnInterval);
       turnInterval = null;
     }
-    if (overlay) {
-      overlay.innerHTML = message || 'Opponent disconnected...<br>Waiting for reconnect.';
-      overlay.style.display = 'block';
+    if (overlay && freezeText) {
+      freezeText.innerHTML = message || 'Opponent disconnected...<br>Waiting for reconnect.';
+      overlay.classList.remove('hidden');
     }
   } else {
-    if (playerSection) {
-      playerSection.style.pointerEvents = 'auto';
-      playerSection.style.opacity = '1';
+    if (overlay) {
+      overlay.classList.add('hidden');
     }
-    if (overlay) overlay.style.display = 'none';
   }
 }
 
 const showBattleMessage = (text) => {
   if (!elements.battleMessage) return;
-  elements.battleMessage.textContent = text;
-  elements.battleMessage.classList.remove('hidden');
-  setTimeout(() => elements.battleMessage.classList.add('hidden'), 2000);
+
+  const msgEl = elements.battleMessage;
+
+  if (battleMessageTimeout) {
+    clearTimeout(battleMessageTimeout);
+  }
+
+  // Если текст тот же самый и плашка УЖЕ висит -> слабая встряска
+  if (msgEl.textContent === text && msgEl.classList.contains('show')) {
+    msgEl.classList.remove('shake', 'strong-pop');
+    void msgEl.offsetWidth; // Жесткий рефлоу для перезапуска анимации
+    msgEl.classList.add('shake');
+  } else {
+    // Новая ошибка -> сильный вылет (pop)
+    msgEl.classList.remove('shake', 'strong-pop');
+    msgEl.textContent = text;
+    void msgEl.offsetWidth;
+    msgEl.classList.add('show', 'strong-pop');
+  }
+
+  battleMessageTimeout = setTimeout(() => {
+    msgEl.classList.remove('show', 'shake', 'strong-pop');
+    battleMessageTimeout = null;
+  }, 2500);
 };
 
 const showOpponentStatus = (message, { autoHideMs = 0 } = {}) => {
@@ -474,36 +508,307 @@ const handleSurrenderClick = () => {
 };
 
 const handleMouseUp = (e) => {
-  if (!draggingAttackId || !latestState) return;
+  // === 1. Логика отпускания стрелки атаки (твой старый код) ===
+  if (draggingAttackId) {
+    const svg = document.getElementById('attack-arrow-svg');
+    if (svg) {
+      svg.style.display = 'none';
+      svg.style.pointerEvents = 'none';
+    }
 
-  const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
-  const cardTarget = elementBelow?.closest('.enemy-card');
-  const avatarTarget = elementBelow?.closest('#opp-avatar');
+    document.querySelectorAll('.taunt-target-glow').forEach((el) => {
+      el.classList.remove('taunt-target-glow');
+    });
 
-  if (cardTarget) {
-    battleSocket.emit('attack_target', {
-      roomId: latestState.roomId,
-      attackerInstanceId: draggingAttackId,
-      targetId: cardTarget.dataset.instanceId,
-      targetType: 'card',
-    });
-  } else if (avatarTarget) {
-    battleSocket.emit('attack_target', {
-      roomId: latestState.roomId,
-      attackerInstanceId: draggingAttackId,
-      targetId: null,
-      targetType: 'avatar',
-    });
+    if (latestState) {
+      const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+      const cardTarget = elementBelow?.closest('.enemy-card');
+      const avatarTarget = elementBelow?.closest(
+        '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
+      );
+      const selfTarget = elementBelow?.closest(
+        '#player-avatar, #player-hp, #player-username-zone, #player-table-zone .card-slot, #player-mana-zone'
+      );
+
+      if (selfTarget) {
+        showBattleMessage("You can't attack yourself!");
+      } else if (cardTarget) {
+        battleSocket.emit('attack_target', {
+          roomId: latestState.roomId,
+          attackerInstanceId: draggingAttackId,
+          targetId: cardTarget.dataset.instanceId,
+          targetType: 'card',
+        });
+      } else if (avatarTarget) {
+        battleSocket.emit('attack_target', {
+          roomId: latestState.roomId,
+          attackerInstanceId: draggingAttackId,
+          targetId: null,
+          targetType: 'avatar',
+        });
+      }
+    }
+    draggingAttackId = null;
   }
 
-  draggingAttackId = null;
+  // === 2. НОВАЯ ЛОГИКА: Отпускание карты из руки на стол ===
+  if (draggingPlayCardId && latestState) {
+    const tableZone = document.getElementById('player-table-zone');
+    const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+
+    // Проверяем, входит ли мышка в область размещения на столе
+    const isOverTable =
+      dropTarget?.closest('#player-table-zone') || dropTarget?.closest('.player-table');
+
+    if (isOverTable && tableZone) {
+      // ФИКС СЕЛЕКТОРА: Раньше мы искали card-slot, а теперь у нас токены card-board
+      const existingCards = Array.from(tableZone.querySelectorAll('.card-board'));
+      let targetIndex = existingCards.length; // По умолчанию в самый конец
+
+      // ВЫЧИСЛЯЕМ ПОЗИЦИЮ
+      for (let i = 0; i < existingCards.length; i++) {
+        const rect = existingCards[i].getBoundingClientRect();
+        const cardCenter = rect.left + rect.width / 2;
+        if (e.clientX < cardCenter) {
+          targetIndex = i;
+          break; // Нашли место!
+        }
+      }
+
+      // Отправляем на сервер команду розыгрыша
+      battleSocket.emit('play_card', {
+        roomId: latestState.roomId,
+        cardInstanceId: draggingPlayCardId,
+        targetIndex: targetIndex,
+      });
+    } else {
+      console.log('Card dropped outside table zone. Returning to hand.');
+    }
+
+    // В любом случае уничтожаем летающего призрака
+    if (dragGhostElement) {
+      dragGhostElement.remove();
+      dragGhostElement = null;
+    }
+
+    draggingPlayCardId = null;
+
+    // Мгновенный принудительный ререндер.
+    // Поскольку стейт на сервере не изменился (если промахнулись),
+    // функция просто перерисует руку, вернув карте opacity = 1 и её законное место в веере.
+    updateBattleUI(latestState, battleSocket);
+  }
 };
 
 const handleMouseMove = (e) => {
   if (draggingAttackId) {
-    // В будущем здесь можно добавить визуальную линию атаки
+    const board = document.querySelector('.game-board');
+    const line = document.getElementById('attack-line');
+    if (board && line) {
+      const boardRect = board.getBoundingClientRect();
+      line.setAttribute('x2', e.clientX - boardRect.left);
+      line.setAttribute('y2', e.clientY - boardRect.top);
+    }
+  }
+
+  if (draggingPlayCardId && dragGhostElement) {
+    dragGhostElement.style.left = e.clientX + 'px';
+    dragGhostElement.style.top = e.clientY + 'px';
   }
 };
+
+function renderMana(containerId, currentMana, maxMana) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const isMyMana = containerId === 'player-mana-zone';
+  const MAX_SEGMENTS = 10;
+
+  // 1. Создаем универсальную колбу 1 раз
+  let wrapper = container.querySelector('.flask-wrapper');
+  if (!wrapper) {
+    container.innerHTML = `
+      <div class="flask-wrapper">
+        <div class="flask-liquid-track">
+          <div class="flask-liquid"></div>
+          <div class="flask-preview"></div>
+        </div>
+        <img src="/assets/images/vertical-flask.png" class="flask-glass-overlay" alt="Mana Flask">
+        <div class="mana-text-badge">0/0</div>
+      </div>
+    `;
+    wrapper = container.querySelector('.flask-wrapper');
+  }
+
+  const textEl = container.querySelector('.mana-text-badge');
+  const liquidEl = container.querySelector('.flask-liquid');
+  const previewEl = container.querySelector('.flask-preview');
+
+  textEl.textContent = `${currentMana}/${maxMana}`;
+
+  // Высчитываем ширину
+  const fillPercent = (currentMana / MAX_SEGMENTS) * 100;
+  let previewPercent = 0;
+
+  if (isMyMana && hoveredCardCost > 0 && currentMana >= hoveredCardCost) {
+    previewPercent = (hoveredCardCost / MAX_SEGMENTS) * 100;
+  }
+
+  // Анимация налива и траты
+  const currentWidth = parseFloat(liquidEl.style.width) || 0;
+  if (fillPercent > currentWidth) {
+    liquidEl.style.transition = 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)';
+  } else {
+    liquidEl.style.transition = 'width 0.25s ease-out';
+  }
+
+  liquidEl.style.width = `${fillPercent}%`;
+
+  // Позиционируем красную зону сгорания над синей жидкостью
+  if (previewPercent > 0) {
+    previewEl.style.width = `${previewPercent}%`;
+    // Отступ слева = (текущая мана - сгораемая мана) в процентах
+    previewEl.style.left = `${fillPercent - previewPercent}%`;
+    previewEl.style.display = 'block';
+  } else {
+    previewEl.style.display = 'none';
+  }
+}
+
+function hideTooltip() {
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout);
+    tooltipTimeout = null;
+  }
+  if (activeTooltipElement) {
+    activeTooltipElement.remove();
+    activeTooltipElement = null;
+  }
+}
+
+function showTooltip(e, cardData, isBoard) {
+  hideTooltip(); // На всякий случай чистим старый
+
+  activeTooltipElement = document.createElement('div');
+  activeTooltipElement.className = 'card-tooltip-container';
+
+  let hasContent = false;
+
+  // 1. Если мы на столе -> рисуем полноразмерную карту
+  if (isBoard) {
+    // Используем твой же renderCard, но просим вариант 'hand', чтобы нарисовало карту целиком
+    const fullCard = renderCard({ ...cardData, variant: 'hand' });
+    fullCard.style.position = 'relative';
+    fullCard.style.margin = '0';
+    fullCard.style.transform = 'none'; // Отключаем веерные стили
+    activeTooltipElement.appendChild(fullCard);
+    hasContent = true;
+  }
+
+  // 2. Если у карты есть traits -> рисуем плашки сбоку
+  if (cardData.traits && cardData.traits.length > 0) {
+    const traitsPanel = document.createElement('div');
+    traitsPanel.className = 'traits-panel';
+
+    cardData.traits.forEach((trait) => {
+      const traitInfo = TRAITS_DESC[trait.toLowerCase()];
+      if (traitInfo) {
+        traitsPanel.innerHTML += `
+          <div class="trait-item">
+            <div class="trait-title">${traitInfo.title}</div>
+            <div class="trait-desc">${traitInfo.desc}</div>
+          </div>
+        `;
+        hasContent = true;
+      }
+    });
+    activeTooltipElement.appendChild(traitsPanel);
+  }
+
+  // Если нечего показывать (например, в руке карта без трейтов) - отмена
+  if (!hasContent) return;
+
+  document.body.appendChild(activeTooltipElement); // Рендерим в DOM, чтобы получить реальные размеры окна
+
+  const rect = e.target.closest('.card').getBoundingClientRect();
+  const tooltipWidth = activeTooltipElement.offsetWidth;
+  const tooltipHeight = activeTooltipElement.offsetHeight;
+
+  if (isBoard) {
+    // ДЛЯ СТОЛА: Строго по центру НАД картой
+    const centerX = rect.left + rect.width / 2 - tooltipWidth / 2;
+    const topY = rect.top - tooltipHeight - 15; // 15px зазор
+    activeTooltipElement.style.left = `${centerX}px`;
+    activeTooltipElement.style.top = `${topY}px`;
+  } else {
+    // ДЛЯ РУКИ: Сбоку, с защитой от вылета за экран
+    const offsetX = 30;
+    const offsetY = 10;
+    const isTooFarRight = rect.right + tooltipWidth + offsetX > window.innerWidth;
+
+    if (isTooFarRight) {
+      activeTooltipElement.style.left = `${rect.left - tooltipWidth - offsetX}px`;
+    } else {
+      activeTooltipElement.style.left = `${rect.right + offsetX}px`;
+    }
+    activeTooltipElement.style.top = `${rect.top + offsetY}px`;
+  }
+}
+
+// Функция-биндилка, которую мы будем вешать на карты
+function bindTooltipEvents(cardUI, cardData, isBoard) {
+  cardUI.addEventListener('mouseenter', (e) => {
+    // Защита: если мы сейчас тащим карту или натягиваем стрелку атаки — тултипы не показываем!
+    if (draggingPlayCardId || draggingAttackId) return;
+
+    tooltipTimeout = setTimeout(() => {
+      showTooltip(e, cardData, isBoard);
+    }, 500); // 500мс задержка
+  });
+
+  cardUI.addEventListener('mouseleave', () => {
+    hideTooltip();
+  });
+
+  cardUI.addEventListener('mousedown', () => {
+    hideTooltip(); // Мгновенно прячем, если игрок решил схватить карту
+  });
+}
+
+function applyFanMath(cardUI, index, total, isMyHand, isMyTurn) {
+  // Карты по струнке не в наш ход
+  if (isMyHand && !isMyTurn) {
+    cardUI.style.setProperty('--fan-rot', '0deg');
+    cardUI.style.setProperty('--fan-y', '0px');
+    cardUI.style.setProperty('--fan-x', '0px');
+    return;
+  }
+
+  // Симметричная математика для обеих рук
+  const mid = (total - 1) / 2;
+  const offset = index - mid;
+
+  if (isMyHand) {
+    // НАША РУКА (Крутим от низа, провисание вниз)
+    const angleStep = 4.5; // Угол наклона каждой карты от центра
+    const yStep = 4; // Провисание (насколько края ниже/выше центра)
+    const xStep = 2; // Насколько сильно карты раздвигаются влево-вправо от центра
+    // ==================================
+
+    cardUI.style.setProperty('--fan-rot', `${offset * angleStep}deg`);
+    cardUI.style.setProperty('--fan-y', `${Math.pow(Math.abs(offset), 2) * yStep}px`);
+    cardUI.style.setProperty('--fan-x', `${offset * xStep}px`);
+  } else {
+    // РУКА ВРАГА (Крутим от верха, провисание вверх - отрицательный Y)
+    const angleStep = -10.5;
+    const yStep = -10; // Края уходят ВВЕРХ, создавая дугу
+    const xStep = -45;
+
+    cardUI.style.setProperty('--fan-rot', `${offset * angleStep}deg`);
+    cardUI.style.setProperty('--fan-y', `${Math.pow(Math.abs(offset), 2) * yStep}px`);
+    cardUI.style.setProperty('--fan-x', `${offset * xStep}px`);
+  }
+}
 
 // --- Рендер UI ---
 
@@ -513,85 +818,231 @@ function updateBattleUI(state, socket) {
 
   const isMyTurn = String(state.activeTurn) === String(myPlayerId);
 
-  document.getElementById('info-turn').textContent = isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN";
-  document.getElementById('info-round').textContent = state.round ?? 1;
+  const safeSetText = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
 
-  document.getElementById('opp-hp').textContent = opponent.hp;
-  document.getElementById('player-hp').textContent = me.hp;
-  document.getElementById('opp-mana').textContent = `${opponent.mana} / ${opponent.maxMana}`;
-  document.getElementById('player-mana').textContent = `${me.mana} / ${me.maxMana}`;
-  document.getElementById('opp-field-count').textContent = opponent.table.length;
-  document.getElementById('player-field-count').textContent = me.table.length;
-  document.getElementById('player-hand-count').textContent = me.hand.length;
+  safeSetText('info-turn', isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN");
+
+  // === ИМЕНА И ХП ===
+  // Изменено: opp-username -> opp-username-zone
+  safeSetText('opp-username-zone', opponent.displayedName || opponent.username || 'Opponent');
+  safeSetText('opp-hp', opponent.hp);
+
+  // Изменено: player-username -> player-username-zone
+  safeSetText('player-username-zone', me.displayedName || me.username || 'You');
+  safeSetText('player-hp', me.hp);
+
+  // === МАНА ===
+  // Изменено на новые контейнеры
+  renderMana('opp-mana-zone', opponent.mana, opponent.maxMana);
+  renderMana('player-mana-zone', me.mana, me.maxMana);
+
+  // === КОЛОДЫ И АВАТАРЫ (Оставлена твоя логика) ===
+  safeSetText('opp-deck', opponent.deckCount);
+  const oppAvatar = document.getElementById('opp-avatar');
+  if (oppAvatar && opponent.avatar) oppAvatar.src = opponent.avatar;
 
   const playerDeck = document.getElementById('player-deck');
-  const oppDeck = document.getElementById('opp-deck');
-  playerDeck.textContent = me.deckCount;
-  oppDeck.textContent = opponent.deckCount;
+  if (playerDeck) playerDeck.dataset.count = me.deckCount;
 
+  const playerAvatar = document.getElementById('player-avatar');
+  if (playerAvatar && me.avatar) playerAvatar.src = me.avatar;
+
+  // === УСТАЛОСТЬ (Оставлена твоя логика) ===
   const fatigueInfo = document.getElementById('fatigue-info');
-  const fatigueValue = document.getElementById('fatigue-value');
-
-  if (me.fatigue > 0) {
-    fatigueInfo.classList.remove('hidden');
-    fatigueValue.textContent = me.fatigue;
-    playerDeck.classList.add('deck-fatigue');
-  } else {
-    fatigueInfo.classList.add('hidden');
-    playerDeck.classList.remove('deck-fatigue');
+  if (fatigueInfo) {
+    if (me.fatigue > 0) {
+      fatigueInfo.classList.remove('hidden');
+      safeSetText('fatigue-value', me.fatigue);
+      if (playerDeck) playerDeck.style.filter = 'sepia(1) hue-rotate(300deg)';
+    } else {
+      fatigueInfo.classList.add('hidden');
+      if (playerDeck) playerDeck.style.filter = 'none';
+    }
   }
 
-  opponent.fatigue > 0
-    ? oppDeck.classList.add('deck-fatigue')
-    : oppDeck.classList.remove('deck-fatigue');
+  // === РЕНДЕР СТОЛА ===
+  // Изменено на новые контейнеры стола
+  const myTable = document.getElementById('player-table-zone');
+  const oppTable = document.getElementById('opp-table-zone');
+  if (myTable) myTable.innerHTML = '';
+  if (oppTable) oppTable.innerHTML = '';
 
-  const myTable = document.getElementById('my-table');
-  const oppTable = document.getElementById('opp-table');
-  myTable.innerHTML = '';
-  oppTable.innerHTML = '';
-
+  // Мои карты на столе
   me.table.forEach((card) => {
-    const div = document.createElement('div');
-    div.className = 'card-slot';
-    div.textContent = `${card.name} | atk ${card.attack} | def ${card.defense} | cost ${card.cost}`;
+    if (!myTable) return;
+    const cardUI = renderCard({ ...card, variant: 'board' });
+    cardUI.classList.add('card-slot');
+    cardUI.dataset.instanceId = card.instanceId;
+
+    bindTooltipEvents(cardUI, card, true);
 
     if (card.canAttack && isMyTurn) {
-      div.addEventListener('mousedown', (e) => {
+      cardUI.classList.add('can-attack');
+      cardUI.addEventListener('mousedown', (e) => {
         e.preventDefault();
         draggingAttackId = card.instanceId;
+        const board = document.querySelector('.game-board');
+        const svg = document.getElementById('attack-arrow-svg');
+        const line = document.getElementById('attack-line');
+
+        const oppTableZone = document.getElementById('opp-table-zone');
+        if (oppTableZone && opponent && opponent.table) {
+          opponent.table.forEach((oppCard) => {
+            if (oppCard.traits?.includes('taunt')) {
+              const oppUI = oppTableZone.querySelector(
+                `[data-instance-id="${oppCard.instanceId}"]`
+              );
+              if (oppUI) oppUI.classList.add('taunt-target-glow');
+            }
+          });
+        }
+
+        if (board && svg && line) {
+          const boardRect = board.getBoundingClientRect();
+          const cardRect = cardUI.getBoundingClientRect();
+
+          const startX = cardRect.left - boardRect.left + cardRect.width / 2;
+          const startY = cardRect.top - boardRect.top + cardRect.height / 2;
+
+          svg.style.display = 'block';
+          line.setAttribute('x1', startX);
+          line.setAttribute('y1', startY);
+          line.setAttribute('x2', e.clientX - boardRect.left);
+          line.setAttribute('y2', e.clientY - boardRect.top);
+        }
       });
+    } else {
+      cardUI.classList.add('exhausted'); // Болезнь призыва или уже била
     }
-    myTable.appendChild(div);
+    myTable.appendChild(cardUI);
   });
 
+  // Карты противника на столе
   opponent.table.forEach((card) => {
-    const div = document.createElement('div');
-    div.className = 'card-slot enemy-card';
-    div.dataset.instanceId = card.instanceId;
-    div.textContent = `${card.name} | atk ${card.attack} | def ${card.defense} | cost ${card.cost}`;
-    oppTable.appendChild(div);
+    if (!oppTable) return;
+    const cardUI = renderCard({ ...card, variant: 'board' });
+    cardUI.classList.add('card-slot', 'enemy-card');
+    cardUI.dataset.instanceId = card.instanceId;
+
+    bindTooltipEvents(cardUI, card, true);
+
+    oppTable.appendChild(cardUI);
   });
 
-  const oppHand = document.getElementById('opp-hand');
-  oppHand.innerHTML = '';
-  for (let i = 0; i < opponent.handCount; i++) {
-    const back = document.createElement('div');
-    back.className = 'card-back';
-    back.textContent = 'Card back';
-    oppHand.appendChild(back);
+  // === РУКИ ===
+  // Изменено на новые контейнеры рук
+  const oppHand = document.getElementById('opp-hand-zone');
+  if (oppHand) {
+    const existingOpp = Array.from(oppHand.children);
+    while (existingOpp.length > opponent.handCount) existingOpp.pop().remove();
+    while (existingOpp.length < opponent.handCount) {
+      // Строго добавляем рубашкой вверх
+      const newCard = renderCard({ faceDown: true });
+      oppHand.appendChild(newCard);
+      existingOpp.push(newCard);
+    }
+    existingOpp.forEach((cardUI, index) => {
+      applyFanMath(cardUI, index, opponent.handCount, false, !isMyTurn);
+    });
   }
 
-  const handDisplay = document.getElementById('hand-display');
-  handDisplay.innerHTML = '';
-  me.hand.forEach((card) => {
-    const cardUI = renderCard({ label: card.name });
-    cardUI.addEventListener('click', () => {
-      if (isMyTurn) {
-        socket.emit('play_card', { roomId: state.roomId, cardInstanceId: card.instanceId });
-      } else {
-        showBattleMessage('Wait for your turn!');
-      }
+  const handDisplay = document.getElementById('player-hand-zone');
+  if (handDisplay) {
+    const existingNodes = Array.from(handDisplay.children);
+    const newIds = me.hand.map((c) => c.instanceId);
+
+    existingNodes.forEach((node) => {
+      if (!newIds.includes(node.dataset.instanceId)) node.remove();
     });
-    handDisplay.appendChild(cardUI);
-  });
+
+    me.hand.forEach((card, index) => {
+      let cardUI = handDisplay.querySelector(`[data-instance-id="${card.instanceId}"]`);
+
+      if (!cardUI) {
+        cardUI = renderCard(card);
+        cardUI.dataset.instanceId = card.instanceId;
+        handDisplay.appendChild(cardUI);
+        bindTooltipEvents(cardUI, card, false);
+      }
+
+      // БИНДИНГ СОБЫТИЙ С АКТУАЛЬНЫМ STATE
+      cardUI.onmouseenter = () => {
+        if (isMyTurn && me.mana >= card.cost) {
+          hoveredCardCost = card.cost;
+          renderMana('player-mana-zone', me.mana, me.maxMana);
+        }
+      };
+
+      cardUI.onmouseleave = () => {
+        hoveredCardCost = 0;
+        renderMana('player-mana-zone', me.mana, me.maxMana);
+      };
+
+      cardUI.onmousedown = (e) => {
+        e.preventDefault();
+
+        if (!isMyTurn) {
+          showBattleMessage('Wait for your turn!');
+          return;
+        }
+        if (me.mana < card.cost) {
+          showBattleMessage('Not enough mana!');
+          return;
+        }
+        if (me.table.length >= 7) {
+          showBattleMessage('Table is full!');
+          return;
+        }
+
+        e.preventDefault();
+        draggingPlayCardId = card.instanceId;
+        hoveredCardCost = 0;
+        renderMana('player-mana-zone', me.mana, me.maxMana);
+
+        // Создаем призрака для переноса
+        dragGhostElement = cardUI.cloneNode(true);
+        dragGhostElement.style.position = 'fixed';
+        dragGhostElement.style.pointerEvents = 'none';
+        dragGhostElement.style.zIndex = 10000;
+
+        // Сбрасываем эффекты ховера руки, центрируем карту строго по курсору
+        // Добавляем легкий наклон (rotate(2deg)), как будто карту несут рукой
+        dragGhostElement.style.transform = 'translate(-50%, -50%) scale(0.85) rotate(2deg)';
+        dragGhostElement.style.boxShadow = '0 15px 30px rgba(0,0,0,0.5)';
+        dragGhostElement.style.transition = 'none';
+        dragGhostElement.style.left = e.clientX + 'px';
+        dragGhostElement.style.top = e.clientY + 'px';
+
+        // Убираем зеленую ауру с призрака во время таскания, чтобы не мешала
+        dragGhostElement.classList.remove('playable');
+
+        document.body.appendChild(dragGhostElement);
+
+        // ЖЕСТКИЙ UX: Полностью скрываем карту в руке, имитируя, что мы её "взяли"
+        cardUI.style.opacity = '0';
+        cardUI.style.pointerEvents = 'none';
+      };
+
+      // Проверка при отрисовке: если карту сейчас тащат, она должна оставаться невидимой в руке
+      if (card.instanceId === draggingPlayCardId) {
+        cardUI.style.opacity = '0';
+        cardUI.style.pointerEvents = 'none';
+      } else {
+        cardUI.style.opacity = '1';
+        cardUI.style.pointerEvents = 'auto';
+      }
+
+      // Аура играбельности
+      if (isMyTurn && me.mana >= card.cost) {
+        cardUI.classList.add('playable');
+      } else {
+        cardUI.classList.remove('playable');
+      }
+
+      applyFanMath(cardUI, index, me.hand.length, true, isMyTurn);
+    });
+  }
 }
