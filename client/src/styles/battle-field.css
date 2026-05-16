@@ -1,0 +1,1218 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Londrina Solid', serif;
+}
+
+body {
+  background-color: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.game-board {
+  width: 1414px;
+  height: 780px;
+  background-image: url('/assets/images/battle-bg3.PNG');
+  background-size: cover;
+  background-position: center;
+  position: relative; /* ФУНДАМЕНТ: все absolute внутри будут отсчитываться от этой доски */
+  overflow: none; /* Карты смогут вылезать за края доски! */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+.player-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin: 10px 0;
+  width: 100%;
+}
+
+.username {
+  font-size: 18px;
+  font-weight: 300;
+  color: black;
+  justify-self: end;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #161945;
+  object-fit: cover;
+}
+
+.health-indicator {
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.heart-img {
+  background-image: url('/assets/images/heart.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.health-text {
+  position: relative;
+  z-index: 2;
+  color: white;
+  font-weight: 300;
+  font-size: 16px;
+}
+
+.mana-bar {
+  background: radial-gradient(#9aa7c1, #26314b);
+  border-radius: 20px;
+  padding: 2px 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid #202560;
+  justify-self: start;
+}
+
+.mana-text {
+  color: #e8f0ff;
+  font-weight: 300;
+  font-size: 18px;
+}
+
+.mana-crystals {
+  display: flex;
+  gap: 3px;
+}
+
+.crystal {
+  width: 20px;
+  height: 20px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.crystal.active {
+  background-image: url('/assets/images/mana-full.png');
+}
+.crystal.empty {
+  background-image: url('/assets/images/mana-empty.png');
+}
+
+.decks-column {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-left: 20px;
+}
+
+.his-deck,
+.player-deck {
+  margin-left: 40px;
+  width: 130px;
+  height: 170px;
+  background-image: url('/assets/images/card-back.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 5px;
+}
+
+.his-deck {
+  transform: rotate(180deg);
+}
+
+.player-deck {
+  position: relative;
+  cursor: pointer;
+}
+
+.player-deck::after {
+  content: attr(data-count);
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #733873;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 18px;
+  font-weight: 300;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
+}
+
+.player-deck:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(5px);
+}
+
+.active-cards-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  gap: 70px;
+}
+
+.active-group {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 15px;
+}
+
+.overlap-up {
+  margin-top: -10px;
+  z-index: 2;
+  position: relative;
+}
+
+.active-card {
+  width: 50px;
+  height: 80px;
+  background-color: wheat;
+  object-fit: contain;
+  filter: drop-shadow(0px 5px 5px rgba(0, 0, 0, 0.5));
+}
+
+.actions-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 38px;
+  width: 200px;
+  transform: translateX(-40px);
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: #422415;
+  font-size: 28px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  font-family: 'Diediedie', sans-serif;
+  font-weight: lighter;
+  opacity: 0.8;
+}
+
+.text-btn:hover {
+  color: #ba9e8f;
+  opacity: 1;
+}
+
+.end-turn-btn {
+  background: url('/assets/images/edit-bg.png') no-repeat center;
+  background-size: contain;
+  border: none;
+  cursor: pointer;
+  height: 170px;
+  width: 220px;
+  color: white;
+  font-size: 22px;
+  font-weight: 300;
+  transition: transform 0.1s;
+  padding-bottom: 5px;
+}
+
+.end-turn-btn:hover {
+  filter: brightness(1.2);
+  transform: scale(1.03);
+}
+
+.end-turn-btn:active {
+  transform: scale(0.95);
+}
+
+.card.playable {
+  /* Плотный зеленый бордер + жесткое внешнее и внутреннее неоновое свечение */
+  border: 3px solid #33ff33 !important;
+  box-shadow:
+    0 0 10px 3px #1aff1a,
+    0 0 25px 8px rgba(0, 255, 0, 0.6),
+    inset 0 0 15px 3px rgba(26, 255, 26, 0.9) !important;
+  border-radius: 12px;
+}
+
+.card-slot.can-attack {
+  box-shadow: 0 0 15px 5px rgba(0, 255, 0, 0.7);
+  cursor: grab;
+}
+
+.card-slot.can-attack:active {
+  cursor: grabbing;
+}
+
+.card-slot.exhausted {
+  filter: grayscale(0.8) brightness(0.6);
+  pointer-events: none;
+}
+
+/* =========================================
+   ЦЕНТРАЛЬНЫЙ ФУНДАМЕНТ
+========================================= */
+.battle-center-column {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Пропускает клики сквозь пустые места */
+}
+
+.battle-center-column > * {
+  pointer-events: auto;
+}
+
+/* =========================================
+   1. ПРОФИЛЬ ВРАГА (Настраивай каждую деталь)
+========================================= */
+#opp-username-zone {
+  position: absolute;
+  top: 145px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: -175px; /* Сдвинули чуть в сторону, как ты просил */
+
+  /* Стили свитка */
+  width: 160px; /* Ширина свитка */
+  height: 45px; /* Высота свитка */
+  background-image: url('/assets/images/scroll-name.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  /* Выравнивание текста и защита от длинных ников */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 15px; /* Отступы от закрученных краев свитка */
+  box-sizing: border-box;
+
+  font-size: 18px;
+  color: #3e2723; /* Темно-коричневый цвет чернил */
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 20;
+}
+
+#opp-avatar-zone {
+  position: absolute;
+  top: 139px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-top: 0px;
+  width: 65px;
+  height: 65px;
+  z-index: 10;
+}
+
+#opp-health-zone {
+  position: absolute;
+  top: 45px; /* Настроено независимо от аватара! */
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-top: 0px;
+  width: 40px;
+  height: 40px;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#opp-mana-zone {
+  position: absolute;
+  top: -57px;
+  left: -21%;
+  transform: translateX(-50%);
+  margin-left: 170px; /* Сдвинули в другую сторону */
+
+  /* Стили свитка для маны */
+  width: 200px;
+  height: 45px;
+  background-image: url('/assets/images/scroll-mana.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
+  z-index: 20;
+}
+/* =========================================
+   2. НАШ ПРОФИЛЬ (Настраивай каждую деталь)
+========================================= */
+
+#player-avatar-zone {
+  position: absolute;
+  bottom: 115px;
+  left: 29%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-bottom: 0px;
+  width: 65px;
+  height: 65px;
+  z-index: 10;
+}
+
+#player-health-zone {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-bottom: 0px;
+  width: 40px;
+  height: 40px;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#player-mana-zone {
+  position: absolute;
+  bottom: -66px;
+  left: -16%;
+  transform: translateX(-50%);
+  margin-left: 170px;
+
+  /* Стили свитка для маны */
+  width: 200px;
+  height: 45px;
+  background-image: url('/assets/images/scroll-mana.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+/* =========================================
+   3. ИГРОВОЙ СТОЛ (Ряды оторваны друг от друга)
+========================================= */
+.row-table {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px; /* Увеличили расстояние для круглых токенов */
+  width: 100%;
+
+  /* НОВОЕ: Фикс схлопывания пустой зоны. Теперь стол всегда имеет высоту 130px для приема мыши */
+  min-height: 130px;
+  z-index: 10;
+}
+
+#opp-table-zone {
+  top: 256px; /* ВЫСОТА РЯДА ВРАГА */
+  margin-left: 0px;
+}
+
+#player-table-zone {
+  bottom: 245px; /* ВЫСОТА ТВОЕГО РЯДА */
+  margin-left: 0px;
+}
+
+/* =========================================
+   4. РУКИ (Отвязаны и могут вылезать за экран)
+========================================= */
+.row-hand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  z-index: 50;
+  pointer-events: none; /* Пропускаем клики между картами */
+}
+
+#opp-hand-zone {
+  top: -63px;
+}
+
+#player-hand-zone {
+  bottom: -60px;
+}
+
+/* Карты противника */
+#opp-hand-zone .card {
+  margin: 0 -35px; /* Плотность стягивания */
+  transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg)) scale(0.5);
+  transform-origin: center top; /* ВАЖНО: Вращаем от верхней точки! */
+  transition: transform 0.3s ease-out;
+  pointer-events: auto;
+}
+/* Наши карты */
+#player-hand-zone .card {
+  margin: 0 -55px; /* Жестко стягиваем наши карты */
+  transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg))
+    scale(0.65);
+  transform-origin: center bottom;
+  transition:
+    transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    z-index 0s;
+  pointer-events: auto;
+}
+
+/* Зумирование нашей карты при наведении */
+#player-hand-zone .card:hover {
+  transform: translate(var(--fan-x, 0px), -60px) rotate(0deg) scale(0.9) !important;
+  z-index: 100 !important;
+  cursor: pointer;
+}
+
+/* =========================================
+   АНИМАЦИЯ ПРЕДПРОСМОТРА МАНЫ
+========================================= */
+.flask-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.flask-container.opp-flask {
+  margin-bottom: 20px; /* Отступ вражеской колбы от индикатора хода */
+}
+
+.flask-container.player-flask {
+  margin-top: 20px; /* Отступ твоей колбы от кнопки End Turn */
+}
+
+.mana-text-badge {
+  position: absolute;
+  right: -20px;
+  top: -25px;
+  background: rgba(22, 25, 43, 0.95);
+  border: 2px solid #5c7cb3;
+  border-radius: 8px;
+  padding: 4px 14px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+.flask-wrapper {
+  position: relative;
+  width: 260px; /* Ширина горизонтальной колбы */
+  height: 51px; /* Высота горизонтальной колбы */
+  /* Убираем flex, внутри всё будет на absolute */
+}
+
+.flask-glass-overlay {
+  position: absolute;
+  /* Задаем обратные размеры (высота стала шириной) */
+  width: 60px;
+  height: 260px;
+  /* Центрируем перед поворотом, чтобы оно никуда не уехало */
+  left: 68%;
+  top: 50%;
+  /* Поворот на 90deg (донышко слева, крышка справа) */
+  transform: translate(-50%, -50%) rotate(90deg);
+  z-index: 5;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+/* Настройки неоновой жидкости под стеклом */
+.flask-liquid-track {
+  position: absolute;
+  /* НАСТРОЙКИ ДЛЯ ТЕБЯ: 
+     Крути left и right, чтобы обрезать трек ровно по внутренним краям золотых крышек! */
+  top: 14px; /* Отступ сверху */
+  bottom: 15px; /* Отступ снизу */
+  left: 16px; /* Отступ от левой крышки (донышка) */
+  right: -43px; /* Отступ от правой крышки (горлышка) */
+
+  z-index: 2;
+  border-radius: 8px; /* Закругление краев самой жидкости */
+  /* Обязательно скрываем всё, что может вылезти при 100% заполнении */
+  overflow: hidden;
+}
+
+/* Сама жидкость теперь занимает 100% высоты трека и не требует отступов */
+.flask-liquid,
+.flask-preview {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  /* НОВОЕ: Острый левый край (у дна), и сильно закругленный правый (движущийся) край */
+  border-radius: 10px 14px 14px 2px;
+}
+
+.flask-liquid {
+  background: linear-gradient(to right, #00aaff, #00ffff);
+  /* НОВОЕ: inset тень создает красивый белый блик (мениск) на самом закруглении жидкости */
+  box-shadow:
+    inset -6px 0 8px rgba(255, 255, 255, 0.6),
+    0 0 15px 4px rgba(0, 255, 255, 0.5);
+}
+
+.flask-preview {
+  background: rgba(255, 50, 50, 0.9);
+  /* У превью траты маны тоже делаем блик, но красноватый */
+  box-shadow:
+    inset -6px 0 8px rgba(255, 150, 150, 0.6),
+    0 0 20px 5px rgba(255, 0, 0, 0.8);
+  animation: flash-spend-horiz 0.5s infinite alternate;
+}
+@keyframes flash-spend-horiz {
+  from {
+    opacity: 0.6;
+    filter: brightness(1);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1.5);
+  }
+}
+
+/* =========================================
+   ОБЩИЕ ВНУТРЕННИЕ СТИЛИ 
+========================================= */
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid #202560;
+  object-fit: cover;
+}
+
+.heart-img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.health-text {
+  position: relative;
+  z-index: 2;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  text-shadow: 1px 1px 0 #000;
+  margin-top: -3px;
+}
+
+.crystal {
+  width: 18px;
+  height: 18px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.crystal.active {
+  background-image: url('/assets/images/mana-full.png');
+}
+.crystal.empty {
+  background-image: url('/assets/images/mana-empty.png');
+}
+
+/* =========================================
+   СТАРЫЕ БОКОВЫЕ ПАНЕЛИ (ОСТАВЛЯЕМ КАК БЫЛИ)
+========================================= */
+.sidebar-right {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  width: 300px; /* Фиксируем ширину всей правой колонки */
+}
+
+.turn-info-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 15px 0; /* Фиксированный отступ вокруг центральной кнопки */
+}
+
+.sidebar-left {
+  position: absolute;
+  left: 110px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 10;
+}
+.turn-indicator {
+  font-size: 24px;
+  color: #f8e274;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.timer-display {
+  font-size: 54px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 20px;
+}
+
+/* =========================================
+   СИСТЕМА УМНЫХ ТУЛТИПОВ
+========================================= */
+.card-tooltip-container {
+  /* ТВОЯ ПAНЕЛЬ НАСТРОЕК — КРУТИ ЭТИ ПAРAМЕТРЫ ДЛЯ ВЫРAВНИВAНИЯ */
+  --tooltip-scale: 0.95; /* Общий масштаб всплывающего окна */
+  --tooltip-blur: 6px; /* Размытие заднего фона под тултипом */
+  --tooltip-bg: rgba(13, 17, 28, 0.93); /* Фон плашек с трейтами */
+  --tooltip-border-color: #ffd700; /* Цвет рамки плашек (золотой) */
+  --text-primary-color: #ffffff; /* Основной цвет текста */
+  --text-secondary-color: #a6c7ff; /* Цвет описания трейтов */
+
+  position: fixed;
+  z-index: 12000; /* Поднимаем максимально высоко поверх всех элементов */
+  display: flex;
+  gap: 20px;
+  align-items: center; /* Центрируем карту и трейты по вертикали друг относительно друга */
+
+  /* Блокируем перехват курсора самим тултипом, чтобы не было дерганий */
+  pointer-events: none;
+
+  /* Применяем кастомные настройки */
+  transform: scale(var(--tooltip-scale));
+  animation: fade-in-smooth 0.22s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes fade-in-smooth {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(calc(var(--tooltip-scale) - 0.05));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(var(--tooltip-scale));
+  }
+}
+
+.traits-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 240px;
+}
+
+.trait-item {
+  background: var(--tooltip-bg);
+  border: 2px solid var(--tooltip-border-color);
+  backdrop-filter: blur(var(--tooltip-blur));
+  -webkit-backdrop-filter: blur(var(--tooltip-blur));
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.85),
+    inset 0 0 15px rgba(0, 0, 0, 0.6);
+  color: var(--text-primary-color);
+  transition: all 0.2s ease;
+}
+
+.trait-title {
+  font-family: 'Londrina Solid', sans-serif;
+  font-size: 26px;
+  color: var(--tooltip-border-color);
+  text-shadow: 1px 1px 2px #000;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.trait-desc {
+  font-family: 'Georgia', serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-secondary-color);
+}
+
+.card-slot,
+.card-board,
+.card-slot.exhausted {
+  /* Гарантируем, что браузер будет регистрировать наведение мыши на ЛЮБОЙ токен, 
+     даже если он спит, устал или заблокирован */
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+
+.epic-spawn-flying {
+  position: absolute !important;
+  z-index: 10001;
+  pointer-events: none;
+  transition:
+    left 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translate(-50%, -50%) scale(0.75);
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 12px rgba(255, 255, 255, 0.15));
+  will-change: transform, left, top;
+}
+
+.epic-spawn-glowing {
+  position: absolute !important;
+  z-index: 10000;
+  pointer-events: none;
+  animation: cardWhiteScan 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  will-change: transform, filter;
+}
+
+.epic-spawn-glowing::before {
+  content: '';
+  position: absolute;
+  left: -5%;
+  width: 110%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.6),
+    0 0 18px rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  z-index: 10;
+  animation: scanLaserWhite 0.85s ease-in-out forwards;
+  pointer-events: none;
+}
+
+.epic-spawn-glowing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(100, 255, 130, 0) 0%,
+    rgba(100, 255, 130, 0.3) 80%,
+    rgba(180, 255, 180, 0.6) 100%
+  );
+  background-size: 100% 200%;
+  mix-blend-mode: overlay;
+  z-index: 9;
+  animation: scanHologram 0.9s ease-in-out forwards;
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+@keyframes cardWhiteScan {
+  0% {
+    transform: translate(-50%, -50%) scale(0.75);
+    filter: brightness(1);
+  }
+  40% {
+    transform: translate(-50%, -52%) scale(0.78);
+    filter: brightness(1.1);
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(0.74);
+    filter: brightness(1.15);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.5);
+    filter: brightness(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes scanLaserWhite {
+  0% {
+    top: -10%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    top: 110%;
+    opacity: 1;
+  }
+  100% {
+    top: 50%;
+    opacity: 0;
+  }
+}
+
+@keyframes scanHologram {
+  0% {
+    background-position: 0% -100%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  75% {
+    background-position: 0% 100%;
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.epic-spawn-token {
+  animation: tokenWhiteSettle 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes tokenWhiteSettle {
+  0% {
+    transform: scale(0.75) translateY(-6px);
+  }
+  40% {
+    transform: scale(1.03) translateY(2px);
+  }
+  70% {
+    transform: scale(0.98) translateY(-1px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+.board-shake {
+  animation: earthquake 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes earthquake {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-2px, 2px) rotate(-0.2deg);
+  }
+  40% {
+    transform: translate(2px, -1px) rotate(0.2deg);
+  }
+  60% {
+    transform: translate(-1px, 1px) rotate(-0.15deg);
+  }
+  80% {
+    transform: translate(1px, -0.5px) rotate(0.1deg);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.epic-spawn-shockwave {
+  position: absolute;
+  width: 100px;
+  height: 40px;
+  background: transparent;
+  border: 4px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.2);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  animation: shockwaveExpand 0.4s ease-out forwards;
+}
+@keyframes shockwaveExpand {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 1;
+    border-width: 6px;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+.anim-attacking {
+  z-index: 10000 !important;
+  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 0 30px 10px rgba(255, 50, 50, 0.6) !important;
+  pointer-events: none;
+}
+
+.anim-attack-return {
+  z-index: 10000 !important;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+
+.anim-target-hit {
+  animation: targetShakeMargin 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes targetShakeMargin {
+  0% {
+    filter: brightness(2) drop-shadow(0 0 20px red);
+    margin-left: 0;
+    margin-top: 0;
+  }
+  20% {
+    filter: brightness(1);
+    margin-left: -6px;
+    margin-top: 6px;
+  }
+  40% {
+    margin-left: 5px;
+    margin-top: -4px;
+  }
+  60% {
+    margin-left: -3px;
+    margin-top: 3px;
+  }
+  80% {
+    margin-left: 2px;
+    margin-top: -2px;
+  }
+  100% {
+    filter: none;
+    margin-left: 0;
+    margin-top: 0;
+  }
+}
+
+.anim-card-evaporate {
+  pointer-events: none !important;
+  z-index: 9999 !important;
+  animation: cardEvaporate 0.5s ease-out forwards;
+}
+
+@keyframes cardEvaporate {
+  0% {
+    transform: scale(1);
+    filter: brightness(1) blur(0px);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1.04);
+    filter: brightness(1.6) blur(1px) drop-shadow(0 0 15px rgba(120, 220, 255, 0.6));
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.7);
+    filter: brightness(0.4) blur(4px);
+    opacity: 0;
+  }
+}
+
+.anim-card-evaporate::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(120, 220, 255, 0.4) 50%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  animation: dissolveSmoke 0.5s ease-out forwards;
+}
+
+@keyframes dissolveSmoke {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.damage-number {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: #ff3333;
+  font-size: 55px;
+  font-weight: 900;
+  font-family: 'Londrina Solid', sans-serif;
+  text-align: center;
+  text-shadow:
+    -3px -3px 0 #2b0000,
+    3px -3px 0 #2b0000,
+    -3px 3px 0 #2b0000,
+    3px 3px 0 #2b0000,
+    0px 6px 15px rgba(0, 0, 0, 0.9);
+  z-index: 15000;
+  pointer-events: none;
+  animation: floatUpDamage 1s ease-out forwards;
+}
+
+@keyframes floatUpDamage {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+  10% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 1;
+    filter: brightness(1.5);
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  80% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+.is-attacking-active {
+  transform: scale(1.15) translateY(-15px) !important;
+  box-shadow: 0 15px 30px 10px rgba(0, 255, 0, 0.6) !important;
+  z-index: 10005 !important;
+  transition:
+    transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.1s !important;
+}
+
+.attack-reticle {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 50, 50, 0.8);
+  border-radius: 50%;
+  box-shadow:
+    0 0 15px rgba(255, 0, 0, 0.8),
+    inset 0 0 10px rgba(255, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 10010;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+  transition:
+    width 0.15s,
+    height 0.15s,
+    transform 0.1s,
+    opacity 0.15s;
+}
+
+.attack-reticle.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.attack-reticle.snapped {
+  width: 90px;
+  height: 90px;
+  border-width: 8px;
+  background: rgba(255, 0, 0, 0.15);
+  transform: translate(-50%, -50%) scale(1.05);
+  animation: pulse-reticle 1.5s infinite;
+}
+
+.attack-reticle::after {
+  content: '';
+  font-size: 45px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 6px black);
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 0.2s,
+    transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.attack-reticle.snapped::after {
+  content: '❓';
+  opacity: 1;
+  transform: scale(1);
+}
+
+.attack-reticle.lethal::after {
+  content: '';
+  width: 40px;
+  height: 40px;
+  background-image: url('/assets/images/scull.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 1;
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px rgba(120, 0, 0, 0.9));
+}
+
+@keyframes pulse-reticle {
+  0% {
+    box-shadow:
+      0 0 15px rgba(255, 0, 0, 0.8),
+      inset 0 0 10px rgba(255, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(255, 0, 0, 1),
+      inset 0 0 20px rgba(255, 0, 0, 0.8);
+  }
+  100% {
+    box-shadow:
+      0 0 15px rgba(255, 0, 0, 0.8),
+      inset 0 0 10px rgba(255, 0, 0, 0.5);
+  }
+}
+
+.card-board.forbidden-target:hover {
+  transform: none;
+}
