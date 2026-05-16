@@ -255,8 +255,11 @@ body {
 }
 
 .card.playable {
-  box-shadow: 0 0 15px 5px rgba(0, 255, 255, 0.7);
-  cursor: pointer;
+  /* Двойная тень: внешняя жесткая и внутренняя для объема */
+  box-shadow:
+    0 0 6px 3px #1aff1a,
+    inset 0 0 15px 2px rgba(26, 255, 26, 0.8) !important;
+  border-radius: 12px; /* Убеждаемся, что тень огибает углы карты */
 }
 
 .card-slot.can-attack {
@@ -298,13 +301,31 @@ body {
 ========================================= */
 #opp-username-zone {
   position: absolute;
-  top: 158px;
+  top: 145px;
   left: 50%;
   transform: translateX(-50%);
-  margin-left: -80px; /* КРУТИ ЭТО ДЛЯ СДВИГА ВЛЕВО/ВПРАВО */
-  margin-top: 0px; /* КРУТИ ЭТО ДЛЯ ТОНКОГО СДВИГА ВВЕРХ/ВНИЗ */
-  font-size: 16px;
-  color: black;
+  margin-left: -175px; /* Сдвинули чуть в сторону, как ты просил */
+
+  /* Стили свитка */
+  width: 160px; /* Ширина свитка */
+  height: 45px; /* Высота свитка */
+  background-image: url('/assets/images/scroll-name.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  /* Выравнивание текста и защита от длинных ников */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 15px; /* Отступы от закрученных краев свитка */
+  box-sizing: border-box;
+
+  font-size: 18px;
+  color: #3e2723; /* Темно-коричневый цвет чернил */
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   z-index: 20;
 }
 
@@ -337,36 +358,33 @@ body {
 
 #opp-mana-zone {
   position: absolute;
-  top: 160px; /* Ищи красную рамку здесь! */
+  top: 145px;
   left: 50%;
   transform: translateX(-50%);
-  margin-left: 155px;
-  margin-top: 0px;
-  display: flex;
-  gap: 3px;
-  z-index: 20;
-  height: 20px; /* Даем высоту, чтобы контейнер не схлопнулся */
-}
+  margin-left: 170px; /* Сдвинули в другую сторону */
 
+  /* Стили свитка для маны */
+  width: 200px;
+  height: 45px;
+  background-image: url('/assets/images/scroll-mana.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
+  z-index: 20;
+}
 /* =========================================
    2. НАШ ПРОФИЛЬ (Настраивай каждую деталь)
 ========================================= */
-#my-username-zone {
-  position: absolute;
-  bottom: 139px;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-left: -73px;
-  margin-bottom: 0px; /* КРУТИ ДЛЯ ТОНКОЙ НАСТРОЙКИ */
-  font-size: 16px;
-  color: black;
-  z-index: 20;
-}
 
 #my-avatar-zone {
   position: absolute;
   bottom: 115px;
-  left: 50%;
+  left: 29%;
   transform: translateX(-50%);
   margin-left: 0px;
   margin-bottom: 0px;
@@ -392,15 +410,24 @@ body {
 
 #my-mana-zone {
   position: absolute;
-  bottom: 136px;
+  bottom: 128px;
   left: 50%;
   transform: translateX(-50%);
-  margin-left: 155px;
-  margin-bottom: 0px;
+  margin-left: 170px;
+
+  /* Стили свитка для маны */
+  width: 200px;
+  height: 45px;
+  background-image: url('/assets/images/scroll-mana.png'); /* ВПИШИ СВОЙ ПУТЬ */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+
   display: flex;
-  gap: 3px;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
   z-index: 20;
-  height: 20px;
 }
 
 /* =========================================
@@ -438,33 +465,143 @@ body {
   justify-content: center;
   align-items: center;
   width: 100%;
-  z-index: 50; /* Поверх всего */
-  pointer-events: none;
+  z-index: 50;
+  pointer-events: none; /* Пропускаем клики между картами */
 }
 
 #opp-hand-zone {
-  top: -63px; /* УЛЕТАЕТ ЗА ВЕРХНИЙ КРАЙ ДОСКИ */
-  margin-left: 0px;
+  top: -63px;
 }
 
 #my-hand-zone {
-  bottom: -173px; /* УЛЕТАЕТ ЗА НИЖНИЙ КРАЙ ДОСКИ */
-  margin-left: 0px;
+  bottom: -60px;
 }
 
-.row-hand .card {
-  transform: scale(0.6);
-  margin: 0 -36px; /* ПЛОТНОСТЬ КАРТ В РУКЕ */
+/* Карты противника */
+#opp-hand-zone .card {
+  margin: 0 -35px; /* Плотность стягивания */
+  transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg)) scale(0.5);
+  transform-origin: center top; /* ВАЖНО: Вращаем от верхней точки! */
+  transition: transform 0.3s ease-out;
+  pointer-events: auto;
+}
+/* Наши карты */
+#my-hand-zone .card {
+  margin: 0 -55px; /* Жестко стягиваем наши карты */
+  transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg))
+    scale(0.65);
+  transform-origin: center bottom;
   transition:
-    transform 0.2s,
+    transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     z-index 0s;
   pointer-events: auto;
 }
 
+/* Зумирование нашей карты при наведении */
 #my-hand-zone .card:hover {
-  transform: scale(0.8) translateY(-20px);
-  z-index: 100;
+  transform: translate(var(--fan-x, 0px), -60px) rotate(0deg) scale(0.9) !important;
+  z-index: 100 !important;
   cursor: pointer;
+}
+
+/* =========================================
+   АНИМАЦИЯ ПРЕДПРОСМОТРА МАНЫ
+========================================= */
+.mana-flask {
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 15, 30, 0.85); /* 2. Потраченная мана (темно-синее дно) */
+  border: 2px solid #5c7cb3;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.9);
+}
+
+/* 1. Актуальная мана (светящаяся жидкость) */
+.flask-liquid {
+  height: 100%;
+  background: linear-gradient(90deg, #1a75ff, #00ffff);
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+  /* transition управляется из JS! */
+}
+
+/* Эффект блика и переливания */
+.flask-wave {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: mana-slosh 2s infinite linear;
+}
+
+@keyframes mana-slosh {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/* Красный предпросмотр траты */
+.flask-spend-preview {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(255, 50, 50, 0.85);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 1);
+  animation: flash-spend 0.6s infinite alternate;
+  z-index: 2; /* Поверх жидкости */
+}
+
+@keyframes flash-spend {
+  from {
+    opacity: 0.7;
+    filter: brightness(1);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1.5);
+  }
+}
+
+/* Сетка отсеков поверх всего */
+.flask-segments-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.flask-segment {
+  flex: 1;
+  border-right: 2px solid rgba(10, 15, 30, 0.95); /* Жесткие перегородки */
+  transition: background-color 0.3s ease;
+}
+
+.flask-segment:last-child {
+  border-right: none;
+}
+
+/* 3. Заблокированные отсеки */
+.flask-segment.locked {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.8),
+    rgba(0, 0, 0, 0.8) 4px,
+    rgba(30, 30, 30, 0.8) 4px,
+    rgba(30, 30, 30, 0.8) 8px
+  );
 }
 
 /* =========================================

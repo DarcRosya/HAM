@@ -15,6 +15,8 @@ let elements = {};
 
 let watchdogTimer = null;
 
+let hoveredCardCost = 0;
+
 const COIN_TOSS_DURATION_MS = 7500;
 
 // --- Жизненный цикл ---
@@ -555,14 +557,113 @@ const handleMouseMove = (e) => {
   }
 };
 
-function renderManaCrystals(containerId, currentMana, maxMana) {
+function renderMana(containerId, currentMana, maxMana) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = '';
-  for (let i = 0; i < maxMana; i++) {
-    const crystal = document.createElement('div');
-    crystal.className = `crystal ${i < currentMana ? 'active' : 'empty'}`;
-    container.appendChild(crystal);
+
+  const isMyMana = containerId === 'my-mana-zone';
+  const MAX_SEGMENTS = 10;
+
+  // 1. SMART RENDER: Создаем колбу только 1 раз, если её еще нет
+  let wrapper = container.querySelector('.mana-flask-wrapper');
+  if (!wrapper) {
+    let segmentsHtml = '';
+    for (let i = 0; i < MAX_SEGMENTS; i++) {
+      segmentsHtml += `<div class="flask-segment"></div>`;
+    }
+
+    container.innerHTML = `
+      <span class="mana-text" style="color: white; font-size: 20px; font-weight: bold; margin-right: 12px; text-shadow: 1px 1px 0 #000;"></span>
+      <div class="mana-flask-wrapper" style="position: relative; width: 180px; height: 26px;">
+        <div class="mana-flask">
+          <div class="flask-liquid"><div class="flask-wave"></div></div>
+          <div class="flask-spend-preview"></div>
+          <div class="flask-segments-overlay">${segmentsHtml}</div>
+        </div>
+      </div>
+    `;
+    wrapper = container.querySelector('.mana-flask-wrapper');
+  }
+
+  // 2. Получаем постоянные DOM-узлы
+  const textEl = container.querySelector('.mana-text');
+  const liquidEl = container.querySelector('.flask-liquid');
+  const previewEl = container.querySelector('.flask-spend-preview');
+  const segments = container.querySelectorAll('.flask-segment');
+
+  // 3. Обновляем текст
+  textEl.textContent = `${currentMana}/${maxMana}`;
+
+  // 4. Математика процентов (ширина берется от родителя-колбы)
+  const fillPercent = (currentMana / MAX_SEGMENTS) * 100;
+  let previewPercent = 0;
+
+  if (isMyMana && hoveredCardCost > 0 && currentMana >= hoveredCardCost) {
+    previewPercent = (hoveredCardCost / MAX_SEGMENTS) * 100;
+  }
+
+  // 5. ДИНАМИЧЕСКАЯ АНИМАЦИЯ: Медленно наливаем (1.2s), быстро тратим (0.25s)
+  const currentWidth = parseFloat(liquidEl.style.width) || 0;
+  if (fillPercent > currentWidth) {
+    liquidEl.style.transition = 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)';
+  } else {
+    liquidEl.style.transition = 'width 0.25s ease-out';
+  }
+
+  // Применяем новую ширину (браузер сам запустит анимацию)
+  liquidEl.style.width = `${fillPercent}%`;
+
+  // 6. Позиционируем красную зону сгорания прямо перед краем актуальной маны
+  if (previewPercent > 0) {
+    previewEl.style.width = `${previewPercent}%`;
+    previewEl.style.left = `${fillPercent - previewPercent}%`;
+    previewEl.style.display = 'block';
+  } else {
+    previewEl.style.display = 'none';
+  }
+
+  // 7. Отрисовываем заблокированные отсеки
+  segments.forEach((seg, index) => {
+    if (index >= maxMana) {
+      seg.classList.add('locked');
+    } else {
+      seg.classList.remove('locked');
+    }
+  });
+}
+
+function applyFanMath(cardUI, index, total, isMyHand, isMyTurn) {
+  // Карты по струнке не в наш ход
+  if (isMyHand && !isMyTurn) {
+    cardUI.style.setProperty('--fan-rot', '0deg');
+    cardUI.style.setProperty('--fan-y', '0px');
+    cardUI.style.setProperty('--fan-x', '0px');
+    return;
+  }
+
+  // Симметричная математика для обеих рук
+  const mid = (total - 1) / 2;
+  const offset = index - mid;
+
+  if (isMyHand) {
+    // НАША РУКА (Крутим от низа, провисание вниз)
+    const angleStep = 4.5; // Угол наклона каждой карты от центра
+    const yStep = 4; // Провисание (насколько края ниже/выше центра)
+    const xStep = 2; // Насколько сильно карты раздвигаются влево-вправо от центра
+    // ==================================
+
+    cardUI.style.setProperty('--fan-rot', `${offset * angleStep}deg`);
+    cardUI.style.setProperty('--fan-y', `${Math.pow(Math.abs(offset), 2) * yStep}px`);
+    cardUI.style.setProperty('--fan-x', `${offset * xStep}px`);
+  } else {
+    // РУКА ВРАГА (Крутим от верха, провисание вверх - отрицательный Y)
+    const angleStep = -10.5;
+    const yStep = -10; // Края уходят ВВЕРХ, создавая дугу
+    const xStep = -45;
+
+    cardUI.style.setProperty('--fan-rot', `${offset * angleStep}deg`);
+    cardUI.style.setProperty('--fan-y', `${Math.pow(Math.abs(offset), 2) * yStep}px`);
+    cardUI.style.setProperty('--fan-x', `${offset * xStep}px`);
   }
 }
 
@@ -592,8 +693,8 @@ function updateBattleUI(state, socket) {
 
   // === МАНА ===
   // Изменено на новые контейнеры
-  renderManaCrystals('opp-mana-zone', opponent.mana, opponent.maxMana);
-  renderManaCrystals('my-mana-zone', me.mana, me.maxMana);
+  renderMana('opp-mana-zone', opponent.mana, opponent.maxMana);
+  renderMana('my-mana-zone', me.mana, me.maxMana);
 
   // === КОЛОДЫ И АВАТАРЫ (Оставлена твоя логика) ===
   safeSetText('opp-deck', opponent.deckCount);
@@ -679,23 +780,51 @@ function updateBattleUI(state, socket) {
   // Изменено на новые контейнеры рук
   const oppHand = document.getElementById('opp-hand-zone');
   if (oppHand) {
-    oppHand.innerHTML = '';
-    for (let i = 0; i < opponent.handCount; i++) {
-      oppHand.appendChild(renderCard({ faceDown: true }));
+    const existingOpp = Array.from(oppHand.children);
+    while (existingOpp.length > opponent.handCount) existingOpp.pop().remove();
+    while (existingOpp.length < opponent.handCount) {
+      // Строго добавляем рубашкой вверх
+      const newCard = renderCard({ faceDown: true });
+      oppHand.appendChild(newCard);
+      existingOpp.push(newCard);
     }
+    existingOpp.forEach((cardUI, index) => {
+      applyFanMath(cardUI, index, opponent.handCount, false, !isMyTurn);
+    });
   }
 
   const handDisplay = document.getElementById('my-hand-zone');
   if (handDisplay) {
-    handDisplay.innerHTML = '';
-    me.hand.forEach((card) => {
-      const cardUI = renderCard(card);
+    const existingNodes = Array.from(handDisplay.children);
+    const newIds = me.hand.map((c) => c.instanceId);
 
-      if (isMyTurn && me.mana >= card.cost) {
-        cardUI.classList.add('playable');
+    existingNodes.forEach((node) => {
+      if (!newIds.includes(node.dataset.instanceId)) node.remove();
+    });
+
+    me.hand.forEach((card, index) => {
+      let cardUI = handDisplay.querySelector(`[data-instance-id="${card.instanceId}"]`);
+
+      if (!cardUI) {
+        cardUI = renderCard(card);
+        cardUI.dataset.instanceId = card.instanceId;
+        handDisplay.appendChild(cardUI);
       }
 
-      cardUI.addEventListener('click', () => {
+      // БИНДИНГ СОБЫТИЙ С АКТУАЛЬНЫМ STATE
+      cardUI.onmouseenter = () => {
+        if (isMyTurn && me.mana >= card.cost) {
+          hoveredCardCost = card.cost;
+          renderMana('my-mana-zone', me.mana, me.maxMana);
+        }
+      };
+
+      cardUI.onmouseleave = () => {
+        hoveredCardCost = 0;
+        renderMana('my-mana-zone', me.mana, me.maxMana);
+      };
+
+      cardUI.onclick = () => {
         if (isMyTurn) {
           if (me.mana < card.cost) {
             showBattleMessage('Not enough mana!');
@@ -706,12 +835,22 @@ function updateBattleUI(state, socket) {
             return;
           }
           cardUI.style.pointerEvents = 'none';
+          hoveredCardCost = 0;
+          renderMana('my-mana-zone', me.mana, me.maxMana);
           socket.emit('play_card', { roomId: state.roomId, cardInstanceId: card.instanceId });
         } else {
           showBattleMessage('Wait for your turn!');
         }
-      });
-      handDisplay.appendChild(cardUI);
+      };
+
+      // Аура играбельности
+      if (isMyTurn && me.mana >= card.cost) {
+        cardUI.classList.add('playable');
+      } else {
+        cardUI.classList.remove('playable');
+      }
+
+      applyFanMath(cardUI, index, me.hand.length, true, isMyTurn);
     });
   }
 }
