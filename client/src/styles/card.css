@@ -107,3 +107,40 @@
   font-weight: 400;
   color: #2b7c99;
 }
+
+.card.card-board {
+  width: 65px; /* Было 86px, делаем еще меньше */
+  height: 90px; /* Было 117px */
+  border-radius: 6px;
+  margin: 0;
+}
+
+.card.card-board .card-art {
+  top: 5px;
+  left: 4px;
+  width: 57px;
+  height: 48px;
+}
+
+.card.card-board .card-title {
+  top: 4px;
+  font-size: 7px;
+}
+
+.card.card-board .card-cost {
+  top: 1px;
+  left: 4px;
+  font-size: 12px;
+}
+
+.card.card-board .card-attack {
+  bottom: 0px;
+  left: 6px;
+  font-size: 12px;
+}
+
+.card.card-board .card-defense {
+  bottom: 0px;
+  right: 4px;
+  font-size: 12px;
+}

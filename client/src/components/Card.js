@@ -8,10 +8,15 @@ export function renderCard(props = {}) {
     description = '',
     art = '/assets/cards-art/bubblegum.png',
     faceDown = false,
+    variant = 'hand', // 'hand' или 'board'
   } = props;
 
   const cardDiv = document.createElement('div');
   cardDiv.classList.add('card');
+
+  if (variant === 'board') {
+    cardDiv.classList.add('card-board');
+  }
 
   if (faceDown) {
     cardDiv.classList.add('face-down');
@@ -19,14 +24,18 @@ export function renderCard(props = {}) {
     return cardDiv;
   }
 
+  // Для стола убираем лишние элементы разметки
+  const descHtml = variant === 'board' ? '' : `<div class="card-description">${description}</div>`;
+  const typeHtml = variant === 'board' ? '' : `<div class="card-type">${type}</div>`;
+
   cardDiv.innerHTML = `
     <div class="card-art" style="background-image: url('${art}');"></div>
     <img src="/assets/images/card-frame.png" class="card-frame">
 
     <div class="card-title">${name}</div>
     <div class="card-cost">${cost}</div>
-    <div class="card-type">${type}</div>
-    <div class="card-description">${description}</div>
+    ${typeHtml}
+    ${descHtml}
 
     <div class="card-attack">${attack}</div>
     <div class="card-defense">${defense}</div>

@@ -42,65 +42,77 @@
     </div>
   </div>
 
-  <div class="game-board">
+  <div class="game-board" id="player-section">
 
-    <div class="top-zone">
-      <div class="hand enemy-hand" id="opp-hand">
+    <div
+      style="position: absolute; top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 50; pointer-events: none;">
+      <div id="opponent-connection-status" class="opponent-connection-status hidden">
+        <span id="opponent-connection-text"></span>
       </div>
-      <div class="player-info">
-        <div class="username">12345678901234567890</div>
-        <div class="avatar-wrapper">
-          <img src="/assets/images/avatar-enemy.png" alt="Enemy Avatar" class="avatar" id="opp-avatar">
-          <div class="health-indicator">
-            <img src="/assets/images/heart.png" alt="HP" class="heart-img">
-            <span class="health-text" id="opp-hp">20</span>
-          </div>
-        </div>
-        <div class="mana-bar">
-          <span class="mana-text" id="opp-mana">3 / 3</span>
-        </div>
-      </div>
+      <div id="battle-message" class="hidden"
+        style="color: #ff4d4d; font-size: 28px; text-shadow: 2px 2px 0 black; margin-top: 10px;"></div>
     </div>
 
-    <div class="battlefield">
-      <div class="decks-column">
-        <div class="his-deck" id="opp-deck">30</div>
-        <div class="my-deck" id="player-deck" data-count="30"></div>
-        <div id="fatigue-info" class="hidden">Fatigue: <span id="fatigue-value">0</span></div>
-      </div>
-
-      <div class="active-cards-column">
-        <div class="active-group enemy-active-group" id="opp-table">
-        </div>
-
-        <div class="active-group my-active-group" id="my-table">
-        </div>
-      </div>
-
-      <div class="actions-column">
-        <button class="text-btn" id="surrender-btn">SURRENDER</button>
-        <button class="end-turn-btn" id="end-turn-btn">end of the turn</button>
-      </div>
+    <div class="sidebar-right">
+      <div id="info-turn" class="turn-indicator"></div>
+      <div id="info-timer" class="timer-display">0</div>
+      <button class="end-turn-btn" id="end-turn-btn">END TURN</button>
+      <button class="text-btn" id="surrender-btn" style="margin-top: 20px;">SURRENDER</button>
     </div>
 
-    <div class="bottom-zone">
-      <div class="player-info">
-        <div class="username">12345678901234567890</div>
-        <div class="avatar-wrapper">
-          <img src="/assets/images/avatar-my.png" alt="My Avatar" class="avatar">
-          <div class="health-indicator">
-            <img src="/assets/images/heart.png" alt="HP" class="heart-img">
-            <span class="health-text" id="player-hp">20</span>
-          </div>
-        </div>
-        <div class="mana-bar">
-          <span class="mana-text" id="player-mana">3 / 3</span>
-        </div>
-      </div>
-      <div class="hand my-hand" id="hand-display">
-      </div>
+    <div class="sidebar-left">
+      <div class="his-deck" id="opp-deck">30</div>
+      <div class="my-deck" id="player-deck" data-count="30"></div>
+      <div id="fatigue-info" class="hidden" style="color: red; font-weight: bold; text-align: center;">Fatigue: <span
+          id="fatigue-value">0</span></div>
     </div>
 
+    <div class="battle-center-column">
+
+      <div class="row-hand enemy-hand" id="opp-hand-zone"></div>
+      <div class="row-hand my-hand" id="my-hand-zone"></div>
+
+      <div class="username" id="opp-username-zone">Opponent</div>
+      <div class="avatar-container" id="opp-avatar-zone">
+        <img src="/assets/images/avatar-enemy.png" alt="Enemy" class="avatar" id="opp-avatar">
+        <div class="health-badge" id="opp-health-zone">
+          <img src="/assets/images/heart.png" alt="HP" class="heart-img">
+          <span class="health-text" id="opp-hp">20</span>
+        </div>
+      </div>
+      <div class="mana-container" id="opp-mana-zone"></div>
+
+      <div class="row-table enemy-table" id="opp-table-zone"></div>
+      <div class="row-table my-table" id="my-table-zone"></div>
+
+      <div class="username" id="my-username-zone">You</div>
+      <div class="avatar-container" id="my-avatar-zone">
+        <img src="/assets/images/avatar-my.png" alt="Me" class="avatar" id="player-avatar">
+        <div class="health-badge" id="my-health-zone">
+          <img src="/assets/images/heart.png" alt="HP" class="heart-img">
+          <span class="health-text" id="player-hp">20</span>
+        </div>
+      </div>
+      <div class="mana-container" id="my-mana-zone"></div>
+
+    </div>
+
+    <div class="hand-wrapper my-hand-zone">
+      <div class="row-hand my-hand" id="hand-display"></div>
+    </div>
+
+    <svg id="attack-arrow-svg"
+      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; display: none;">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="rgba(255, 50, 50, 0.9)" />
+        </marker>
+      </defs>
+      <line id="attack-line" x1="0" y1="0" x2="0" y2="0" stroke="rgba(255, 50, 50, 0.9)" stroke-width="6"
+        stroke-dasharray="10,10" marker-end="url(#arrowhead)" />
+    </svg>
+
+  </div>
   </div>
 
 </body>

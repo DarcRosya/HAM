@@ -474,13 +474,35 @@ const handleSurrenderClick = () => {
 };
 
 const handleMouseUp = (e) => {
+  // Прячем стрелочку при отпускании мыши
+  if (draggingAttackId) {
+    const svg = document.getElementById('attack-arrow-svg');
+    if (svg) {
+      svg.style.display = 'none';
+      // Перестраховка: если pointer-events слетел, он мог перекрывать клик
+      svg.style.pointerEvents = 'none';
+    }
+  }
+
   if (!draggingAttackId || !latestState) return;
 
+  // Берем элемент строго под острием курсора
   const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+
+  console.log('=== [DEBUG ATTACK] ===');
+  console.log('1. Курсор отпущен на:', e.clientX, e.clientY);
+  console.log('2. Элемент под курсором:', elementBelow);
+
   const cardTarget = elementBelow?.closest('.enemy-card');
-  const avatarTarget = elementBelow?.closest('#opp-avatar');
+  const avatarTarget = elementBelow?.closest(
+    '#opp-avatar-zone, #opp-avatar, .avatar-container, #opp-health-zone'
+  );
+
+  console.log('3. Попали в КАРТУ врага?', !!cardTarget);
+  console.log('4. Попали в АВАТАР врага?', !!avatarTarget);
 
   if (cardTarget) {
+    console.log('🚀 ИТОГ: Отправляем на бэкенд атаку по КАРТЕ');
     battleSocket.emit('attack_target', {
       roomId: latestState.roomId,
       attackerInstanceId: draggingAttackId,
@@ -488,22 +510,44 @@ const handleMouseUp = (e) => {
       targetType: 'card',
     });
   } else if (avatarTarget) {
+    console.log('🚀 ИТОГ: Отправляем на бэкенд атаку по АВАТАРУ');
     battleSocket.emit('attack_target', {
       roomId: latestState.roomId,
       attackerInstanceId: draggingAttackId,
       targetId: null,
       targetType: 'avatar',
     });
+  } else {
+    console.warn('❌ ИТОГ: Промах. Мышка отпущена в пустую зону.');
   }
+  console.log('======================');
 
   draggingAttackId = null;
 };
 
 const handleMouseMove = (e) => {
   if (draggingAttackId) {
-    // В будущем здесь можно добавить визуальную линию атаки
+    const board = document.querySelector('.game-board');
+    const line = document.getElementById('attack-line');
+    if (board && line) {
+      const boardRect = board.getBoundingClientRect();
+      // Вычисляем координаты мыши относительно доски
+      line.setAttribute('x2', e.clientX - boardRect.left);
+      line.setAttribute('y2', e.clientY - boardRect.top);
+    }
   }
 };
+
+function renderManaCrystals(containerId, currentMana, maxMana) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < maxMana; i++) {
+    const crystal = document.createElement('div');
+    crystal.className = `crystal ${i < currentMana ? 'active' : 'empty'}`;
+    container.appendChild(crystal);
+  }
+}
 
 // --- Рендер UI ---
 
@@ -513,90 +557,144 @@ function updateBattleUI(state, socket) {
 
   const isMyTurn = String(state.activeTurn) === String(myPlayerId);
 
-  document.getElementById('info-turn').textContent = isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN";
-  document.getElementById('info-round').textContent = state.round ?? 1;
+  const safeSetText = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
 
-  document.getElementById('opp-hp').textContent = opponent.hp;
-  document.getElementById('player-hp').textContent = me.hp;
-  document.getElementById('opp-mana').textContent = `${opponent.mana} / ${opponent.maxMana}`;
-  document.getElementById('player-mana').textContent = `${me.mana} / ${me.maxMana}`;
-  document.getElementById('opp-field-count').textContent = opponent.table.length;
-  document.getElementById('player-field-count').textContent = me.table.length;
-  document.getElementById('player-hand-count').textContent = me.hand.length;
+  safeSetText('info-turn', isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN");
+
+  // === ИМЕНА И ХП ===
+  // Изменено: opp-username -> opp-username-zone
+  safeSetText('opp-username-zone', opponent.displayedName || opponent.username || 'Opponent');
+  safeSetText('opp-hp', opponent.hp);
+
+  // Изменено: player-username -> my-username-zone
+  safeSetText('my-username-zone', me.displayedName || me.username || 'You');
+  safeSetText('player-hp', me.hp);
+
+  // === МАНА ===
+  // Изменено на новые контейнеры
+  renderManaCrystals('opp-mana-zone', opponent.mana, opponent.maxMana);
+  renderManaCrystals('my-mana-zone', me.mana, me.maxMana);
+
+  // === КОЛОДЫ И АВАТАРЫ (Оставлена твоя логика) ===
+  safeSetText('opp-deck', opponent.deckCount);
+  const oppAvatar = document.getElementById('opp-avatar');
+  if (oppAvatar && opponent.avatar) oppAvatar.src = opponent.avatar;
 
   const playerDeck = document.getElementById('player-deck');
-  const oppDeck = document.getElementById('opp-deck');
-  playerDeck.textContent = me.deckCount;
-  oppDeck.textContent = opponent.deckCount;
+  if (playerDeck) playerDeck.dataset.count = me.deckCount;
 
+  const playerAvatar = document.getElementById('player-avatar');
+  if (playerAvatar && me.avatar) playerAvatar.src = me.avatar;
+
+  // === УСТАЛОСТЬ (Оставлена твоя логика) ===
   const fatigueInfo = document.getElementById('fatigue-info');
-  const fatigueValue = document.getElementById('fatigue-value');
-
-  if (me.fatigue > 0) {
-    fatigueInfo.classList.remove('hidden');
-    fatigueValue.textContent = me.fatigue;
-    playerDeck.classList.add('deck-fatigue');
-  } else {
-    fatigueInfo.classList.add('hidden');
-    playerDeck.classList.remove('deck-fatigue');
+  if (fatigueInfo) {
+    if (me.fatigue > 0) {
+      fatigueInfo.classList.remove('hidden');
+      safeSetText('fatigue-value', me.fatigue);
+      if (playerDeck) playerDeck.style.filter = 'sepia(1) hue-rotate(300deg)';
+    } else {
+      fatigueInfo.classList.add('hidden');
+      if (playerDeck) playerDeck.style.filter = 'none';
+    }
   }
 
-  opponent.fatigue > 0
-    ? oppDeck.classList.add('deck-fatigue')
-    : oppDeck.classList.remove('deck-fatigue');
+  // === РЕНДЕР СТОЛА ===
+  // Изменено на новые контейнеры стола
+  const myTable = document.getElementById('my-table-zone');
+  const oppTable = document.getElementById('opp-table-zone');
+  if (myTable) myTable.innerHTML = '';
+  if (oppTable) oppTable.innerHTML = '';
 
-  const myTable = document.getElementById('my-table');
-  const oppTable = document.getElementById('opp-table');
-  myTable.innerHTML = '';
-  oppTable.innerHTML = '';
-
+  // Мои карты на столе
   me.table.forEach((card) => {
-    const cardUI = renderCard(card);
+    if (!myTable) return;
+    const cardUI = renderCard({ ...card, variant: 'board' });
     cardUI.classList.add('card-slot');
     cardUI.dataset.instanceId = card.instanceId;
 
     if (card.canAttack && isMyTurn) {
+      cardUI.classList.add('can-attack');
       cardUI.addEventListener('mousedown', (e) => {
         e.preventDefault();
         draggingAttackId = card.instanceId;
+        const board = document.querySelector('.game-board');
+        const svg = document.getElementById('attack-arrow-svg');
+        const line = document.getElementById('attack-line');
+
+        if (board && svg && line) {
+          const boardRect = board.getBoundingClientRect();
+          const cardRect = cardUI.getBoundingClientRect();
+
+          const startX = cardRect.left - boardRect.left + cardRect.width / 2;
+          const startY = cardRect.top - boardRect.top + cardRect.height / 2;
+
+          svg.style.display = 'block';
+          line.setAttribute('x1', startX);
+          line.setAttribute('y1', startY);
+          line.setAttribute('x2', e.clientX - boardRect.left);
+          line.setAttribute('y2', e.clientY - boardRect.top);
+        }
       });
+    } else {
+      cardUI.classList.add('exhausted'); // Болезнь призыва или уже била
     }
     myTable.appendChild(cardUI);
   });
 
+  // Карты противника на столе
   opponent.table.forEach((card) => {
-    const cardUI = renderCard(card);
+    if (!oppTable) return;
+    const cardUI = renderCard({ ...card, variant: 'board' });
     cardUI.classList.add('card-slot', 'enemy-card');
     cardUI.dataset.instanceId = card.instanceId;
+
+    if (card.traits?.includes('taunt')) {
+      cardUI.classList.add('taunt');
+    }
     oppTable.appendChild(cardUI);
   });
 
-  opponent.table.forEach((card) => {
-    const div = document.createElement('div');
-    div.className = 'card-slot enemy-card';
-    div.dataset.instanceId = card.instanceId;
-    div.textContent = `${card.name} | atk ${card.attack} | def ${card.defense} | cost ${card.cost}`;
-    oppTable.appendChild(div);
-  });
-
-  const oppHand = document.getElementById('opp-hand');
-  oppHand.innerHTML = '';
-  for (let i = 0; i < opponent.handCount; i++) {
-    const back = renderCard({ faceDown: true });
-    oppHand.appendChild(back);
+  // === РУКИ ===
+  // Изменено на новые контейнеры рук
+  const oppHand = document.getElementById('opp-hand-zone');
+  if (oppHand) {
+    oppHand.innerHTML = '';
+    for (let i = 0; i < opponent.handCount; i++) {
+      oppHand.appendChild(renderCard({ faceDown: true }));
+    }
   }
 
-  const handDisplay = document.getElementById('hand-display');
-  handDisplay.innerHTML = '';
-  me.hand.forEach((card) => {
-    const cardUI = renderCard(card);
-    cardUI.addEventListener('click', () => {
-      if (isMyTurn) {
-        socket.emit('play_card', { roomId: state.roomId, cardInstanceId: card.instanceId });
-      } else {
-        showBattleMessage('Wait for your turn!');
+  const handDisplay = document.getElementById('my-hand-zone');
+  if (handDisplay) {
+    handDisplay.innerHTML = '';
+    me.hand.forEach((card) => {
+      const cardUI = renderCard(card);
+
+      if (isMyTurn && me.mana >= card.cost) {
+        cardUI.classList.add('playable');
       }
+
+      cardUI.addEventListener('click', () => {
+        if (isMyTurn) {
+          if (me.mana < card.cost) {
+            showBattleMessage('Not enough mana!');
+            return;
+          }
+          if (me.table.length >= 7) {
+            showBattleMessage('Table is full!');
+            return;
+          }
+          cardUI.style.pointerEvents = 'none';
+          socket.emit('play_card', { roomId: state.roomId, cardInstanceId: card.instanceId });
+        } else {
+          showBattleMessage('Wait for your turn!');
+        }
+      });
+      handDisplay.appendChild(cardUI);
     });
-    handDisplay.appendChild(cardUI);
-  });
+  }
 }

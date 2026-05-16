@@ -40,6 +40,10 @@ export function mount() {
   socket.on('match_found', handleMatchFound);
   socket.on('force-reconnect', handleForceReconnect);
   socket.on('server-shutdown', handleServerShutdown);
+  socket.on('profile_sync', (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    renderUserProfile();
+  });
 
   if (socket.connected) {
     socket.emit('join-lobby');

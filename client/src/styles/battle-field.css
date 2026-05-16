@@ -19,34 +19,8 @@ body {
   background-image: url('/assets/images/battle-bg3.PNG');
   background-size: cover;
   background-position: center;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-}
-
-.hand {
-  display: flex;
-  justify-content: center;
-}
-
-.hand .card {
-  margin: 0;
-  height: 95px;
-  width: 68px;
-  transition: transform 0.2s ease-in-out;
-  margin-left: -15px;
-}
-
-.my-hand {
-  margin-bottom: 7px;
-}
-
-.my-hand .card:hover {
-  transform: translateY(-20px) scale(1.05);
-  z-index: 10;
-  cursor: pointer;
+  position: relative; /* ФУНДАМЕНТ: все absolute внутри будут отсчитываться от этой доски */
+  overflow: visible; /* Карты смогут вылезать за края доски! */
 }
 
 .player-info {
@@ -143,14 +117,6 @@ body {
 }
 .crystal.empty {
   background-image: url('/assets/images/mana-empty.png');
-}
-
-.battlefield {
-  flex-grow: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 40px;
 }
 
 .decks-column {
@@ -288,12 +254,295 @@ body {
   transform: scale(0.95);
 }
 
-.bottom-zone {
-  position: relative;
+.card.playable {
+  box-shadow: 0 0 15px 5px rgba(0, 255, 255, 0.7);
+  cursor: pointer;
+}
+
+.card-slot.can-attack {
+  box-shadow: 0 0 15px 5px rgba(0, 255, 0, 0.7);
+  cursor: grab;
+}
+
+.card-slot.can-attack:active {
+  cursor: grabbing;
+}
+
+.card-slot.exhausted {
+  filter: grayscale(0.8) brightness(0.6);
+  pointer-events: none;
+}
+
+.card-slot.enemy-card.taunt {
+  box-shadow: 0 0 15px 5px rgba(255, 0, 0, 0.8);
+}
+
+/* =========================================
+   ЦЕНТРАЛЬНЫЙ ФУНДАМЕНТ
+========================================= */
+.battle-center-column {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Пропускает клики сквозь пустые места */
+}
+
+.battle-center-column > * {
+  pointer-events: auto;
+}
+
+/* =========================================
+   1. ПРОФИЛЬ ВРАГА (Настраивай каждую деталь)
+========================================= */
+#opp-username-zone {
+  position: absolute;
+  top: 158px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: -80px; /* КРУТИ ЭТО ДЛЯ СДВИГА ВЛЕВО/ВПРАВО */
+  margin-top: 0px; /* КРУТИ ЭТО ДЛЯ ТОНКОГО СДВИГА ВВЕРХ/ВНИЗ */
+  font-size: 16px;
+  color: black;
+  z-index: 20;
+}
+
+#opp-avatar-zone {
+  position: absolute;
+  top: 139px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-top: 0px;
+  width: 65px;
+  height: 65px;
   z-index: 10;
-  margin-top: -7px;
+}
+
+#opp-health-zone {
+  position: absolute;
+  top: 45px; /* Настроено независимо от аватара! */
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-top: 0px;
+  width: 40px;
+  height: 40px;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#opp-mana-zone {
+  position: absolute;
+  top: 160px; /* Ищи красную рамку здесь! */
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 155px;
+  margin-top: 0px;
+  display: flex;
+  gap: 3px;
+  z-index: 20;
+  height: 20px; /* Даем высоту, чтобы контейнер не схлопнулся */
+}
+
+/* =========================================
+   2. НАШ ПРОФИЛЬ (Настраивай каждую деталь)
+========================================= */
+#my-username-zone {
+  position: absolute;
+  bottom: 139px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: -73px;
+  margin-bottom: 0px; /* КРУТИ ДЛЯ ТОНКОЙ НАСТРОЙКИ */
+  font-size: 16px;
+  color: black;
+  z-index: 20;
+}
+
+#my-avatar-zone {
+  position: absolute;
+  bottom: 115px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-bottom: 0px;
+  width: 65px;
+  height: 65px;
+  z-index: 10;
+}
+
+#my-health-zone {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 0px;
+  margin-bottom: 0px;
+  width: 40px;
+  height: 40px;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#my-mana-zone {
+  position: absolute;
+  bottom: 136px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 155px;
+  margin-bottom: 0px;
+  display: flex;
+  gap: 3px;
+  z-index: 20;
+  height: 20px;
+}
+
+/* =========================================
+   3. ИГРОВОЙ СТОЛ (Ряды оторваны друг от друга)
+========================================= */
+.row-table {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px; /* КРУТИ ДЛЯ РАССТОЯНИЯ МЕЖДУ КАРТАМИ В РЯДУ */
+  width: 100%;
+}
+
+#opp-table-zone {
+  top: 256px; /* ВЫСОТА РЯДА ВРАГА */
+  margin-left: 0px;
+}
+
+#my-table-zone {
+  bottom: 245px; /* ВЫСОТА ТВОЕГО РЯДА */
+  margin-left: 0px;
+}
+
+/* =========================================
+   4. РУКИ (Отвязаны и могут вылезать за экран)
+========================================= */
+.row-hand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  z-index: 50; /* Поверх всего */
+  pointer-events: none;
+}
+
+#opp-hand-zone {
+  top: -63px; /* УЛЕТАЕТ ЗА ВЕРХНИЙ КРАЙ ДОСКИ */
+  margin-left: 0px;
+}
+
+#my-hand-zone {
+  bottom: -173px; /* УЛЕТАЕТ ЗА НИЖНИЙ КРАЙ ДОСКИ */
+  margin-left: 0px;
+}
+
+.row-hand .card {
+  transform: scale(0.6);
+  margin: 0 -36px; /* ПЛОТНОСТЬ КАРТ В РУКЕ */
+  transition:
+    transform 0.2s,
+    z-index 0s;
+  pointer-events: auto;
+}
+
+#my-hand-zone .card:hover {
+  transform: scale(0.8) translateY(-20px);
+  z-index: 100;
+  cursor: pointer;
+}
+
+/* =========================================
+   ОБЩИЕ ВНУТРЕННИЕ СТИЛИ 
+========================================= */
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid #202560;
+  object-fit: cover;
+}
+
+.heart-img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.health-text {
+  position: relative;
+  z-index: 2;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  text-shadow: 1px 1px 0 #000;
+  margin-top: -3px;
+}
+
+.crystal {
+  width: 18px;
+  height: 18px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.crystal.active {
+  background-image: url('/assets/images/mana-full.png');
+}
+.crystal.empty {
+  background-image: url('/assets/images/mana-empty.png');
+}
+
+/* =========================================
+   СТАРЫЕ БОКОВЫЕ ПАНЕЛИ (ОСТАВЛЯЕМ КАК БЫЛИ)
+========================================= */
+.sidebar-right {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  width: 100%;
+  align-items: center;
+  z-index: 10;
+}
+.sidebar-left {
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 10;
+}
+.turn-indicator {
+  font-size: 24px;
+  color: #f8e274;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.timer-display {
+  font-size: 54px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 20px;
 }
