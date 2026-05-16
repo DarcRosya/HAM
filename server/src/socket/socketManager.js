@@ -4,6 +4,7 @@ import { registerMatchmakingHandlers, removeFromQueue } from './handlers/matchma
 import { registerGameHandlers } from './handlers/gameHandler.js';
 import { gameService } from '../services/gameService.js';
 import { addUserSocket, getUserSocketCount, removeUserSocket } from './socketRegistry.js';
+import { findById } from '../repositories/userRepository.js';
 
 export function initSocketManager(httpServer, clientOrigin) {
   const io = new Server(httpServer, {
@@ -39,12 +40,20 @@ export function initSocketManager(httpServer, clientOrigin) {
     registerMatchmakingHandlers(io, socket);
     registerGameHandlers(io, socket);
 
-    socket.on('join-lobby', () => {
+    socket.on('join-lobby', async () => {
       const lobbyUserId = socket.user?.id;
       if (!lobbyUserId) return;
 
-      const match = gameService.findGameByPlayer(lobbyUserId);
+      try {
+        const updatedUser = await findById(lobbyUserId);
+        if (updatedUser) {
+          socket.emit('profile_sync', updatedUser);
+        }
+      } catch (err) {
+        console.error('Failed to sync profile on join-lobby:', err);
+      }
 
+      const match = gameService.findGameByPlayer(lobbyUserId);
       if (match && match.game && match.game.status !== 'finished') {
         socket.emit('force-reconnect', match.game.getGameState(lobbyUserId));
       } else {

@@ -42,6 +42,10 @@
     </div>
   </div>
 
+  <div id="freeze-overlay" class="hidden">
+    <div id="freeze-text">Opponent disconnected...<br>Waiting for reconnect.</div>
+  </div>
+
   <div class="game-board" id="player-section">
 
     <div
@@ -49,20 +53,27 @@
       <div id="opponent-connection-status" class="opponent-connection-status hidden">
         <span id="opponent-connection-text"></span>
       </div>
-      <div id="battle-message" class="hidden"
-        style="color: #ff4d4d; font-size: 28px; text-shadow: 2px 2px 0 black; margin-top: 10px;"></div>
     </div>
 
+    <div id="battle-message" class="battle-message"></div>
+
     <div class="sidebar-right">
-      <div id="info-turn" class="turn-indicator"></div>
-      <div id="info-timer" class="timer-display">0</div>
-      <button class="end-turn-btn" id="end-turn-btn">END TURN</button>
+      <div id="opp-mana-zone" class="flask-container opp-flask"></div>
+
+      <div class="turn-info-block">
+        <div id="info-turn" class="turn-indicator"></div>
+        <div id="info-timer" class="timer-display">0</div>
+        <button class="end-turn-btn" id="end-turn-btn">END TURN</button>
+      </div>
+
+      <div id="player-mana-zone" class="flask-container player-flask"></div>
+
       <button class="text-btn" id="surrender-btn" style="margin-top: 20px;">SURRENDER</button>
     </div>
 
     <div class="sidebar-left">
       <div class="his-deck" id="opp-deck">30</div>
-      <div class="my-deck" id="player-deck" data-count="30"></div>
+      <div class="player-deck" id="player-deck" data-count="30"></div>
       <div id="fatigue-info" class="hidden" style="color: red; font-weight: bold; text-align: center;">Fatigue: <span
           id="fatigue-value">0</span></div>
     </div>
@@ -70,7 +81,7 @@
     <div class="battle-center-column">
 
       <div class="row-hand enemy-hand" id="opp-hand-zone"></div>
-      <div class="row-hand my-hand" id="my-hand-zone"></div>
+      <div class="row-hand player-hand" id="player-hand-zone"></div>
 
       <div class="username" id="opp-username-zone">Opponent</div>
       <div class="avatar-container" id="opp-avatar-zone">
@@ -80,25 +91,19 @@
           <span class="health-text" id="opp-hp">20</span>
         </div>
       </div>
-      <div class="mana-container" id="opp-mana-zone"></div>
 
       <div class="row-table enemy-table" id="opp-table-zone"></div>
-      <div class="row-table my-table" id="my-table-zone"></div>
+      <div class="row-table player-table" id="player-table-zone"></div>
 
-      <div class="username" id="my-username-zone">You</div>
-      <div class="avatar-container" id="my-avatar-zone">
+      <div class="username" id="player-username-zone">You</div>
+      <div class="avatar-container" id="player-avatar-zone">
         <img src="/assets/images/avatar-my.png" alt="Me" class="avatar" id="player-avatar">
-        <div class="health-badge" id="my-health-zone">
+        <div class="health-badge" id="player-health-zone">
           <img src="/assets/images/heart.png" alt="HP" class="heart-img">
           <span class="health-text" id="player-hp">20</span>
         </div>
       </div>
-      <div class="mana-container" id="my-mana-zone"></div>
 
-    </div>
-
-    <div class="hand-wrapper my-hand-zone">
-      <div class="row-hand my-hand" id="hand-display"></div>
     </div>
 
     <svg id="attack-arrow-svg"

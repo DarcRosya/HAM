@@ -302,7 +302,7 @@ export class GameRoom {
     }
   }
 
-  playCard(playerId, cardInstanceId) {
+  playCard(playerId, cardInstanceId, targetIndex) {
     const player = this.players[String(playerId)];
     if (!player) {
       console.warn(`Action ignored: Player ${playerId} not found in room ${this.roomId}`);
@@ -343,7 +343,16 @@ export class GameRoom {
 
     card.canAttack = false;
 
-    activePlayer.table.push(card);
+    let insertIndex = activePlayer.table.length;
+    if (
+      typeof targetIndex === 'number' &&
+      targetIndex >= 0 &&
+      targetIndex <= activePlayer.table.length
+    ) {
+      insertIndex = targetIndex;
+    }
+
+    activePlayer.table.splice(insertIndex, 0, card);
 
     this.broadcastState();
   }
