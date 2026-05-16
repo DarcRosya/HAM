@@ -10,6 +10,7 @@ let latestState = null;
 let battleSocket = null;
 let turnInterval = null;
 let opponentStatusTimeout = null;
+let battleMessageTimeout = null;
 let elements = {};
 
 let watchdogTimer = null;
@@ -75,6 +76,7 @@ export function unmount() {
   if (watchdogTimer) clearTimeout(watchdogTimer);
   if (turnInterval) clearInterval(turnInterval);
   if (opponentStatusTimeout) clearTimeout(opponentStatusTimeout);
+  if (battleMessageTimeout) clearTimeout(battleMessageTimeout);
 
   window.removeEventListener('mouseup', handleMouseUp);
   window.removeEventListener('mousemove', handleMouseMove);
@@ -225,9 +227,30 @@ function setBattleFrozenState(isFrozen, message) {
 
 const showBattleMessage = (text) => {
   if (!elements.battleMessage) return;
-  elements.battleMessage.textContent = text;
-  elements.battleMessage.classList.remove('hidden');
-  setTimeout(() => elements.battleMessage.classList.add('hidden'), 2000);
+
+  const msgEl = elements.battleMessage;
+
+  if (battleMessageTimeout) {
+    clearTimeout(battleMessageTimeout);
+  }
+
+  // Если текст тот же самый и плашка УЖЕ висит -> слабая встряска
+  if (msgEl.textContent === text && msgEl.classList.contains('show')) {
+    msgEl.classList.remove('shake', 'strong-pop');
+    void msgEl.offsetWidth; // Жесткий рефлоу для перезапуска анимации
+    msgEl.classList.add('shake');
+  } else {
+    // Новая ошибка -> сильный вылет (pop)
+    msgEl.classList.remove('shake', 'strong-pop');
+    msgEl.textContent = text;
+    void msgEl.offsetWidth;
+    msgEl.classList.add('show', 'strong-pop');
+  }
+
+  battleMessageTimeout = setTimeout(() => {
+    msgEl.classList.remove('show', 'shake', 'strong-pop');
+    battleMessageTimeout = null;
+  }, 2500);
 };
 
 const showOpponentStatus = (message, { autoHideMs = 0 } = {}) => {
@@ -473,7 +496,6 @@ const handleMouseUp = (e) => {
     const svg = document.getElementById('attack-arrow-svg');
     if (svg) {
       svg.style.display = 'none';
-      // Перестраховка: если pointer-events слетел, он мог перекрывать клик
       svg.style.pointerEvents = 'none';
     }
   }
@@ -489,14 +511,19 @@ const handleMouseUp = (e) => {
 
   const cardTarget = elementBelow?.closest('.enemy-card');
   const avatarTarget = elementBelow?.closest(
-    '#opp-avatar-zone, #opp-avatar, .avatar-container, #opp-health-zone'
+    '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
   );
 
   console.log('3. Попали в КАРТУ врага?', !!cardTarget);
   console.log('4. Попали в АВАТАР врага?', !!avatarTarget);
 
-  if (cardTarget) {
-    console.log('🚀 ИТОГ: Отправляем на бэкенд атаку по КАРТЕ');
+  const selfTarget = elementBelow?.closest(
+    '#player-avatar, #player-hp, #my-username-zone, #my-table-zone .card-slot, #my-mana-zone'
+  );
+
+  if (selfTarget) {
+    showBattleMessage("You can't attack yourself!");
+  } else if (cardTarget) {
     battleSocket.emit('attack_target', {
       roomId: latestState.roomId,
       attackerInstanceId: draggingAttackId,
@@ -504,17 +531,13 @@ const handleMouseUp = (e) => {
       targetType: 'card',
     });
   } else if (avatarTarget) {
-    console.log('🚀 ИТОГ: Отправляем на бэкенд атаку по АВАТАРУ');
     battleSocket.emit('attack_target', {
       roomId: latestState.roomId,
       attackerInstanceId: draggingAttackId,
       targetId: null,
       targetType: 'avatar',
     });
-  } else {
-    console.warn('❌ ИТОГ: Промах. Мышка отпущена в пустую зону.');
   }
-  console.log('======================');
 
   draggingAttackId = null;
 };
