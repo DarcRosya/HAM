@@ -133,6 +133,10 @@ export const BattleNetwork = {
 
   // --- Команды отправки на сервер ---
 
+  sendReady() {
+    if (socket) socket.emit('player_ready_for_battle');
+  },
+
   endTurn() {
     if (socket) socket.emit('end_turn');
   },

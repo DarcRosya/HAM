@@ -1,6 +1,17 @@
 import { gameService } from '../../services/gameService.js';
 
 export function registerGameHandlers(io, socket) {
+  socket.on('player_ready_for_battle', () => {
+    try {
+      const match = gameService.findGameByPlayer(socket.user.id);
+      if (match && match.game) {
+        match.game.setPlayerReady(socket.user.id);
+      }
+    } catch (e) {
+      console.error('Error in player_ready:', e);
+    }
+  });
+
   socket.on('end_turn', () => {
     try {
       const match = gameService.findGameByPlayer(socket.user.id);

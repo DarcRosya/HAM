@@ -297,3 +297,50 @@ body {
   font-size: 16px;
   cursor: pointer;
 }
+
+/* =========================================
+   BMO TIMER UI & FONTS
+========================================= */
+.bmo-small-font {
+  font-family: 'VT323', monospace;
+  font-size: 14px; /* Было 22, ужали под мелкий дисплей */
+  color: #1a3b32;
+  line-height: 1;
+}
+
+.bmo-large-font {
+  font-family: 'Londrina Solid', sans-serif;
+  font-size: 20px; /* Было 32, теперь должно влезть YOUR TURN */
+  color: #1a3b32;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.bmo-timer-font {
+  font-family: 'VT323', monospace;
+  font-size: 42px; /* Было 58. Должно идеально встать по центру 62px экрана */
+  color: #1a3b32;
+  line-height: 1;
+  margin-top: -3px; /* Компенсация базовой линии шрифта */
+}
+
+.danger-tick {
+  color: #d32f2f !important;
+  animation: bmo-blink 1s infinite alternate;
+}
+
+.bmo-vibrate {
+  animation: bmo-shake 0.2s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes bmo-blink {
+  0% {
+    opacity: 1;
+    text-shadow: 0 0 5px #d32f2f;
+  }
+  100% {
+    opacity: 0.3;
+    text-shadow: none;
+  }
+}

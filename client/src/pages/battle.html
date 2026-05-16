@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/src/styles/battle/layout.css" />
   <link rel="stylesheet" href="/src/styles/battle/ui.css" />
   <link rel="stylesheet" href="/src/styles/battle/animations.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=VT323&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -67,18 +68,22 @@
     <div class="sidebar-right">
       <div id="opp-mana-zone" class="flask-container opp-flask"></div>
 
-      <div class="turn-info-block">
-        <div id="info-turn" class="turn-indicator"></div>
-        <div id="info-timer" class="timer-display">0</div>
-        <button class="end-turn-btn" id="end-turn-btn">END TURN</button>
+      <div class="bmo-timer-wrapper">
+        <div class="bmo-hint-text">press to end turn &#10549;</div>
+
+        <div class="bmo-body" id="bmo-end-turn-zone">
+          <div class="bmo-screen">
+            <div id="bmo-text-top" class="bmo-small-font"></div>
+            <div id="bmo-text-bottom" class="bmo-large-font"></div>
+          </div>
+          <div class="bmo-hitbox"></div>
+        </div>
       </div>
-
       <div id="player-mana-zone" class="flask-container player-flask"></div>
-
-      <button class="text-btn" id="surrender-btn" style="margin-top: 20px;">SURRENDER</button>
     </div>
 
     <div class="sidebar-left">
+      <button class="text-btn" id="surrender-btn" style="margin-bottom: 20px;">SURRENDER</button>
       <div class="his-deck" id="opp-deck">30</div>
       <div class="player-deck" id="player-deck" data-count="30"></div>
       <div id="fatigue-info" class="hidden" style="color: red; font-weight: bold; text-align: center;">Fatigue: <span

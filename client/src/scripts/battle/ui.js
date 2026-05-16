@@ -69,7 +69,15 @@ function applyFanMath(cardUI, index, total, isMyHand, isMyTurn) {
 
 export const BattleUI = {
   reveal(elements) {
-    if (elements.loader) elements.loader.classList.add('hidden');
+    if (elements.loader && !elements.loader.classList.contains('hidden')) {
+      elements.loader.style.transition = 'opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      elements.loader.style.opacity = '0';
+      setTimeout(() => {
+        elements.loader.classList.add('hidden');
+        elements.loader.style.display = 'none';
+      }, 400);
+    }
+
     if (elements.battleContainer) {
       elements.battleContainer.classList.add('is-visible');
       elements.battleContainer.style.opacity = '1';
@@ -369,5 +377,66 @@ export const BattleUI = {
     }
 
     return activeElement;
+  },
+
+  updateBmoDisplay(remainingMs, isMyTurn, elements, phase) {
+    if (!elements.bmoTextTop || !elements.bmoTextBottom) return;
+
+    if (phase === 'loading') {
+      elements.bmoTextTop.textContent = 'WAIT';
+      elements.bmoTextBottom.className = 'bmo-large-font';
+      elements.bmoTextBottom.textContent = 'SYNC...';
+      return;
+    }
+
+    const exactSeconds = Math.ceil(remainingMs / 1000);
+    const displaySeconds = Math.min(30, Math.max(0, exactSeconds));
+
+    const isIntroPhase = phase === 'coin_toss' || remainingMs > 30000;
+
+    if (isIntroPhase) {
+      elements.bmoTextTop.textContent = '30';
+      elements.bmoTextBottom.className = 'bmo-large-font';
+
+      // Вычисляем, сколько миллисекунд осталось чисто на интро (от 2000 до 0)
+      const introTimeLeft = remainingMs - 30000;
+
+      if (isMyTurn) {
+        // Жесткие тайминги для 2 слов (по 1000мс на фазу)
+        if (introTimeLeft > 1000) {
+          elements.bmoTextBottom.textContent = 'YOUR';
+        } else {
+          elements.bmoTextBottom.textContent = 'TURN';
+        }
+      } else {
+        // Жесткие тайминги для 3 слов (по ~666мс на фазу)
+        if (introTimeLeft > 1333) {
+          elements.bmoTextBottom.textContent = 'OPPO';
+        } else if (introTimeLeft > 666) {
+          elements.bmoTextBottom.textContent = 'NENT';
+        } else {
+          elements.bmoTextBottom.textContent = 'TURN';
+        }
+      }
+    } else {
+      // Игровая фаза
+      elements.bmoTextTop.textContent = isMyTurn ? 'YOUR TURN' : 'OPPONENT';
+      elements.bmoTextBottom.className = 'bmo-timer-font';
+      elements.bmoTextBottom.textContent = displaySeconds;
+
+      if (displaySeconds <= 8 && displaySeconds > 0) {
+        elements.bmoTextBottom.classList.add('danger-tick');
+      } else {
+        elements.bmoTextBottom.classList.remove('danger-tick');
+      }
+    }
+  },
+
+  // Анимация вибрации BMO при клике
+  triggerBmoVibration(elements) {
+    if (!elements.bmoBody) return;
+    elements.bmoBody.classList.remove('bmo-vibrate');
+    void elements.bmoBody.offsetWidth; // Форсируем Reflow
+    elements.bmoBody.classList.add('bmo-vibrate');
   },
 };

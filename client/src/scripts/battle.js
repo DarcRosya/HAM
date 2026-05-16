@@ -10,87 +10,54 @@ const COIN_TOSS_DURATION_MS = 7500;
 // ЛОКАЛЬНАЯ БИЗНЕС-ЛОГИКА (Таймеры и Монетка)
 // ==========================================
 
-function startLocalTimer(seconds) {
-  if (battleState.timers.turn) clearInterval(battleState.timers.turn);
+function getMyPlayerId() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const entries = Object.entries(battleState.match?.players ?? {});
+  const myEntry = entries.find(([id]) => String(id) === String(user.id));
+  return myEntry ? myEntry[0] : null;
+}
 
-  let remaining = seconds;
-  const display = battleState.elements.timerDisplay;
-  if (!display) return;
+function syncLocalTimer(state) {
+  if (battleState.timers.turn) {
+    clearInterval(battleState.timers.turn);
+  }
 
-  display.textContent = remaining;
+  // Если фаза загрузки - таймера еще нет
+  if (state.phase === 'loading') {
+    BattleUI.updateBmoDisplay(0, false, battleState.elements, state.phase);
+    return;
+  }
+
+  // Фиксируем конец времени по локальным часам (Никаких рассинхронов)
+  const localEndTime = Date.now() + (state.turnEndsInMs || 0);
+
   battleState.timers.turn = setInterval(() => {
-    remaining--;
-    display.textContent = Math.max(0, remaining);
-    if (remaining <= 0) {
+    const remainingMs = Math.max(0, localEndTime - Date.now());
+    const isMyTurn = String(state.activeTurn) === String(getMyPlayerId());
+
+    if (remainingMs <= 0) {
       clearInterval(battleState.timers.turn);
       battleState.timers.turn = null;
     }
-  }, 1000);
+
+    BattleUI.updateBmoDisplay(remainingMs, isMyTurn, battleState.elements, state.phase);
+  }, 100);
 }
 
 async function startMatch(state) {
   battleState.isMatchStarted = true;
   battleState.setMatch(state);
   store.setMatchState(state);
-
   BattleUI.reveal(battleState.elements);
 
-  const isFresh = localStorage.getItem('matchIsFresh') === 'true';
-  const alreadyTossed = store.hasObservedCoinToss(state.roomId);
+  // Отправляем серверу сигнал, что мы отрисовали UI и готовы к бою
+  BattleNetwork.sendReady();
 
-  if (isFresh) localStorage.removeItem('matchIsFresh');
+  // Рисуем стол
+  BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
 
-  if (
-    !battleState.elements.coinOverlay ||
-    !battleState.elements.coin ||
-    alreadyTossed ||
-    !isFresh
-  ) {
-    BattleUI.resetCoin(battleState.elements);
-    startLocalTimer(state.turnTimer);
-    BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
-    store.markCoinTossObserved(state.roomId);
-    return;
-  }
-
-  // Анимация монетки
-  const myId = getMyPlayerId();
-  if (!myId) {
-    BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
-    return;
-  }
-
-  battleState.elements.coinOverlay.style.display = '';
-  battleState.elements.coinOverlay.classList.add('is-active');
-  battleState.elements.coinOverlay.setAttribute('aria-hidden', 'false');
-  battleState.elements.coin.classList.remove('coin--you', 'coin--opp');
-
-  // Рефлоу для запуска CSS анимации
-  void battleState.elements.coin.offsetWidth;
-
-  const isMyTurn = String(state.activeTurn) === String(myId);
-  battleState.elements.coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
-
-  await new Promise((resolve) => setTimeout(resolve, COIN_TOSS_DURATION_MS));
-  if (!battleState.isMounted) return;
-
-  if (!store.isInBattle()) {
-    BattleUI.resetCoin(battleState.elements);
-    return;
-  }
-
-  store.markCoinTossObserved(state.roomId);
-  BattleUI.resetCoin(battleState.elements);
-
-  startLocalTimer(battleState.match.turnTimer);
-  BattleUI.updateBoard(battleState.match, BattleNetwork.socket?.id, battleState.drag);
-}
-
-function getMyPlayerId() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const entries = Object.entries(battleState.match?.players ?? {});
-  const myEntry = entries.find(([id]) => String(id) === String(user.id));
-  return myEntry ? myEntry[0] : null;
+  // Если мы только что подключились, а там уже идет игра (реконнект), запускаем таймер
+  syncLocalTimer(state);
 }
 
 // ==========================================
@@ -114,7 +81,8 @@ const networkCallbacks = {
     store.setMatchState(state);
     BattleUI.reveal(battleState.elements);
 
-    if (state.turnTimer !== undefined) startLocalTimer(state.turnTimer);
+    // Чистая синхронизация локального таймера на основе turnEndsInMs
+    syncLocalTimer(state);
 
     // Проверка статуса оппонента
     const entries = Object.entries(state.players || {});
@@ -133,6 +101,22 @@ const networkCallbacks = {
     }
 
     BattleUI.updateBoard(state, BattleNetwork.socket?.id, battleState.drag);
+
+    // Синхронизация отображения 3D монетки на основе фазы сервера
+    if (state.phase === 'coin_toss') {
+      const myId = getMyPlayerId();
+      if (battleState.elements.coinOverlay && myId) {
+        battleState.elements.coinOverlay.style.display = '';
+        battleState.elements.coinOverlay.classList.add('is-active');
+        battleState.elements.coin.classList.remove('coin--you', 'coin--opp');
+
+        void battleState.elements.coin.offsetWidth;
+        const isMyTurn = String(state.activeTurn) === String(myId);
+        battleState.elements.coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
+      }
+    } else if (state.phase === 'playing') {
+      BattleUI.resetCoin(battleState.elements);
+    }
   },
 
   onGameOver: ({ winnerId }) => {
@@ -211,20 +195,36 @@ const networkCallbacks = {
 export function mount() {
   if (battleState.isMounted) return;
   battleState.setMounted(true);
-  console.log('%c[BATTLE MODULE] mount()', 'background: #440000; color: #ffaaaa');
+  console.log(
+    '%c[MAIN MOUNT] Инициализация боевого экрана...',
+    'background: #330033; color: #ffaaee'
+  );
 
   battleState.elements = {
     loader: document.getElementById('battle-loader'),
     battleContainer: document.querySelector('.battle-container'),
     coinOverlay: document.getElementById('coin-toss-overlay'),
     coin: document.querySelector('.coin'),
-    endTurnBtn: document.getElementById('end-turn-btn'),
     surrenderBtn: document.getElementById('surrender-btn'),
     opponentStatus: document.getElementById('opponent-connection-status'),
     opponentStatusText: document.getElementById('opponent-connection-text'),
     battleMessage: document.getElementById('battle-message'),
-    timerDisplay: document.getElementById('info-timer'),
+
+    // Новые элементы BMO
+    bmoBody: document.querySelector('.bmo-body'),
+    bmoHitbox: document.querySelector('.bmo-hitbox'),
+    bmoTextTop: document.getElementById('bmo-text-top'),
+    bmoTextBottom: document.getElementById('bmo-text-bottom'),
   };
+
+  console.log(
+    '%c[DOM CACHE] Результаты сканирования элементов BMO:',
+    'font-weight: bold; color: #ff9800'
+  );
+  console.log('bmoBody:', battleState.elements.bmoBody);
+  console.log('bmoHitbox (Зона клика):', battleState.elements.bmoHitbox);
+  console.log('bmoTextTop:', battleState.elements.bmoTextTop);
+  console.log('bmoTextBottom:', battleState.elements.bmoTextBottom);
 
   if (battleState.elements.loader) battleState.elements.loader.classList.remove('hidden');
   if (battleState.elements.coinOverlay) battleState.elements.coinOverlay.style.display = 'none';
@@ -233,7 +233,13 @@ export function mount() {
   BattleNetwork.init(networkCallbacks);
 
   BattleInput.init({
-    endTurn: () => BattleNetwork.endTurn(),
+    endTurn: () => {
+      console.log(
+        '%c[ACTION LOG] Сигнал отправки конца хода на сервер через сокет',
+        'color: #9c27b0'
+      );
+      BattleNetwork.endTurn();
+    },
     surrender: (roomId) => BattleNetwork.surrender(roomId),
     attackTarget: (payload) => BattleNetwork.attackTarget(payload),
     playCard: (payload) => BattleNetwork.playCard(payload),

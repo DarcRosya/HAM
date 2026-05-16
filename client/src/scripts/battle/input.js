@@ -9,22 +9,47 @@ let networkActions = {};
 // ==========================================
 
 function handleEndTurn() {
-  if (!battleState.match) return;
+  console.log(
+    '%c[INPUT DEBUG] Функция handleEndTurn была успешно вызвана!',
+    'background: #4ab367; color: #fff'
+  );
 
-  // Простая проверка (на сервере все равно есть валидация)
+  if (!battleState.match) {
+    console.warn('[INPUT DEBUG] Нажатие проигнорировано: battleState.match отсутствует');
+    return;
+  }
+
+  // Трясем BMO при клике (если функция добавлена в ui.js)
+  if (BattleUI.triggerBmoVibration) {
+    console.log('[INPUT DEBUG] Запуск анимации вибрации BMO');
+    BattleUI.triggerBmoVibration(battleState.elements);
+  }
+
   const myId = getMyPlayerId();
-  if (String(battleState.match.activeTurn) === String(myId)) {
+  const activeTurnId = battleState.match.activeTurn;
+  console.log(
+    `[INPUT DEBUG] Сверка ходов. Мой ID: ${myId}, Активный ход по серверу: ${activeTurnId}`
+  );
+
+  if (String(activeTurnId) === String(myId)) {
+    console.log(
+      '%c[INPUT DEBUG] Верификация пройдена, вызываем networkActions.endTurn()',
+      'color: #4caf50'
+    );
     networkActions.endTurn();
   } else {
+    console.warn('%c[INPUT DEBUG] Попытка скипнуть чужой ход!', 'color: #f44336');
     BattleUI.showMessage('Not your turn!', battleState.elements);
   }
 }
 
 function handleSurrender() {
   if (!battleState.match) return;
-  networkActions.surrender(battleState.match.roomId);
+  // Жесткий confirm, чтобы игрок не сдался случайно
+  if (window.confirm('Are you sure you want to surrender? You will lose MMR!')) {
+    networkActions.surrender(battleState.match.roomId);
+  }
 }
-
 function handleMouseOver(e) {
   if (battleState.drag.playCardId || battleState.drag.attackCardId) return;
 
@@ -295,6 +320,10 @@ function findCardInState(instanceId) {
 
 export const BattleInput = {
   init(actions) {
+    console.log(
+      '%c[INPUT INIT] Регистрация слушателей событий ввода...',
+      'background: #00796b; color: #fff'
+    );
     networkActions = actions;
 
     // Кешируем биндинги для безопасного удаления
@@ -307,9 +336,20 @@ export const BattleInput = {
     boundHandlers.mouseOut = handleMouseOut;
 
     // Вешаем слушатели на кнопки
-    if (battleState.elements.endTurnBtn) {
-      battleState.elements.endTurnBtn.addEventListener('click', boundHandlers.endTurn);
+    if (battleState.elements.bmoHitbox) {
+      console.log(
+        '%c[INPUT INIT] Успешно привязан клик к bmoHitbox',
+        'color: #4caf50',
+        battleState.elements.bmoHitbox
+      );
+      battleState.elements.bmoHitbox.addEventListener('click', boundHandlers.endTurn);
+    } else {
+      console.error(
+        '%c[INPUT CRITICAL] Невозможно повесить событие! battleState.elements.bmoHitbox равен null или undefined',
+        'background: #ff0000; color: #fff'
+      );
     }
+
     if (battleState.elements.surrenderBtn) {
       battleState.elements.surrenderBtn.addEventListener('click', boundHandlers.surrender);
     }
@@ -323,9 +363,13 @@ export const BattleInput = {
   },
 
   cleanup() {
+    console.log(
+      '%c[INPUT CLEANUP] Снятие всех слушателей событий...',
+      'background: #5d4037; color: #fff'
+    );
     // Жесткая зачистка обработчиков (защита от утечек)
-    if (battleState.elements.endTurnBtn) {
-      battleState.elements.endTurnBtn.removeEventListener('click', boundHandlers.endTurn);
+    if (battleState.elements.bmoHitbox) {
+      battleState.elements.bmoHitbox.removeEventListener('click', boundHandlers.endTurn);
     }
     if (battleState.elements.surrenderBtn) {
       battleState.elements.surrenderBtn.removeEventListener('click', boundHandlers.surrender);

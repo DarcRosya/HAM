@@ -18,45 +18,70 @@ export class GameRoom {
   constructor(roomId, player1, player2, io, onGameEnd) {
     this.roomId = roomId;
     this.status = 'playing';
+    this.phase = 'loading';
     this.startedAt = new Date();
     this.io = io;
     this.onGameEnd = onGameEnd;
 
     this.activeTurn = Math.random() > 0.5 ? player1.user.id : player2.user.id;
-    this.turnDuration = 30000; // 30 seconds in ms
-    this.turnStartTime = Date.now();
-    this.turnExpiresAt = this.turnStartTime + this.turnDuration;
+
+    this.turnDuration = 30000;
+    this.coinTossDuration = 7500;
+    this.animationCompensation = 2000;
 
     this.players = {
       [player1.user.id]: this.createPlayerState(player1),
       [player2.user.id]: this.createPlayerState(player2),
     };
 
-    this.disconnectCounts = {
-      [player1.user.id]: 0,
-      [player2.user.id]: 0,
-    };
+    this.readyPlayers = new Set();
+    this.turnExpiresAt = 0;
+
+    this.disconnectCounts = { [player1.user.id]: 0, [player2.user.id]: 0 };
     this.disconnectGraceTimers = {};
     this.disconnectGraceMs = 30000;
     this.maxDisconnectStrikes = 3;
+    this.lastDisconnectTime = {};
 
-    setTimeout(() => {
-      if (this.status === 'playing') {
-        this.startTurnTimer();
-      }
-    }, 7500);
+    this.loadingWatchdog = setTimeout(() => this.handleLoadingTimeout(), 15000);
   }
 
-  startTurnTimer() {
+  setPlayerReady(playerId) {
+    if (this.phase !== 'loading' || this.status !== 'playing') return;
+
+    this.readyPlayers.add(String(playerId));
+
+    if (this.readyPlayers.size === 2) {
+      clearTimeout(this.loadingWatchdog);
+      this.phase = 'coin_toss';
+      this.turnExpiresAt = Date.now() + this.coinTossDuration;
+
+      this.broadcastState();
+      this.startPhaseTimer(this.coinTossDuration, 'playing');
+    }
+  }
+
+  handleLoadingTimeout() {
+    if (this.phase !== 'loading') return;
+    console.log(`[ROOM ${this.roomId}] Match aborted: Players failed to load UI in time.`);
+    this.endGame(null);
+  }
+
+  startPhaseTimer(durationMs, nextPhase) {
     this.clearTurnTimer();
-    this.turnStartTime = Date.now();
-    this.turnExpiresAt = this.turnStartTime + this.turnDuration;
     this.intervalId = setTimeout(() => {
-      if (this.status === 'playing') {
+      if (this.status !== 'playing') return;
+
+      if (this.phase === 'coin_toss' && nextPhase === 'playing') {
+        this.phase = 'playing';
+        this.turnExpiresAt = Date.now() + this.turnDuration;
+        this.startPhaseTimer(this.turnDuration, 'next_turn');
+        this.broadcastState();
+      } else if (this.phase === 'playing' && nextPhase === 'next_turn') {
         this.nextTurn();
         this.broadcastState();
       }
-    }, this.turnDuration);
+    }, durationMs);
   }
 
   clearTurnTimer() {
@@ -176,6 +201,16 @@ export class GameRoom {
       return;
     }
 
+    const now = Date.now();
+    if (
+      this.lastDisconnectTime[normalizedId] &&
+      now - this.lastDisconnectTime[normalizedId] < 2000
+    ) {
+      console.log(`[ROOM ${this.roomId}] Игнорируем двойной дисконнект для ${normalizedId}`);
+      return;
+    }
+    this.lastDisconnectTime[normalizedId] = now;
+
     this.disconnectCounts[normalizedId] = (this.disconnectCounts[normalizedId] ?? 0) + 1;
     const strikes = this.disconnectCounts[normalizedId];
 
@@ -208,7 +243,13 @@ export class GameRoom {
       this.clearDisconnectTimer(normalizedId);
       this.notifyOpponentReconnected(normalizedId);
 
-      this.startTurnTimer();
+      const remainingMs = Math.max(0, this.turnExpiresAt - Date.now());
+
+      if (this.phase === 'coin_toss') {
+        this.startPhaseTimer(remainingMs, 'playing');
+      } else if (this.phase === 'playing') {
+        this.startPhaseTimer(remainingMs, 'next_turn');
+      }
     }
 
     this.broadcastState();
@@ -233,7 +274,6 @@ export class GameRoom {
 
     for (const [id, player] of Object.entries(this.players)) {
       const isMe = String(id) === String(requestingUserId);
-
       sanitizedPlayers[id] = {
         socketId: player.socketId,
         username: player.username,
@@ -251,13 +291,11 @@ export class GameRoom {
       };
     }
 
-    const elapsed = Date.now() - this.turnStartTime;
-    const turnTimerSeconds = Math.max(0, Math.ceil((this.turnDuration - elapsed) / 1000));
-
     return {
       roomId: this.roomId,
       activeTurn: this.activeTurn,
-      turnTimer: turnTimerSeconds,
+      phase: this.phase,
+      turnEndsInMs: this.turnExpiresAt > 0 ? Math.max(0, this.turnExpiresAt - Date.now()) : 0,
       players: sanitizedPlayers,
     };
   }
@@ -265,9 +303,7 @@ export class GameRoom {
   nextTurn() {
     try {
       const playerIds = Object.keys(this.players);
-
       this.activeTurn = playerIds.find((id) => id !== String(this.activeTurn));
-
       const currentPlayer = this.players[this.activeTurn];
 
       currentPlayer.maxMana = Math.min(currentPlayer.maxMana + 1, 10);
@@ -277,12 +313,10 @@ export class GameRoom {
 
       while (cardsNeeded > 0) {
         if (currentPlayer.deck.length > 0) {
-          const drawnCard = currentPlayer.deck.shift();
-          currentPlayer.hand.push(drawnCard);
+          currentPlayer.hand.push(currentPlayer.deck.shift());
         } else {
           currentPlayer.fatigue += 1;
           currentPlayer.hp -= currentPlayer.fatigue;
-
           if (currentPlayer.hp <= 0) {
             const winnerId = playerIds.find((id) => id !== String(this.activeTurn));
             this.endGame(winnerId);
@@ -294,7 +328,8 @@ export class GameRoom {
 
       currentPlayer.table.forEach((card) => (card.canAttack = true));
 
-      this.startTurnTimer();
+      this.turnExpiresAt = Date.now() + this.animationCompensation + this.turnDuration;
+      this.startPhaseTimer(this.animationCompensation + this.turnDuration, 'next_turn');
     } catch (error) {
       console.error(`[CRITICAL] Error in nextTurn for room ${this.roomId}:`, error);
       this.status = 'error';
@@ -452,6 +487,7 @@ export class GameRoom {
 
     this.status = 'finished';
     this.clearTurnTimer();
+    clearTimeout(this.loadingWatchdog);
 
     const playerIds = Object.keys(this.players);
     this.clearDisconnectTimer(playerIds[0]);
