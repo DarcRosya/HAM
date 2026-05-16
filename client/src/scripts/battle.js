@@ -13,15 +13,26 @@ let dragGhostElement = null;
 let latestState = null;
 let battleSocket = null;
 let turnInterval = null;
+
 let opponentStatusTimeout = null;
 let battleMessageTimeout = null;
+let tooltipTimeout = null;
+
 let elements = {};
+
+let activeTooltipElement = null;
 
 let watchdogTimer = null;
 
 let hoveredCardCost = 0;
 
 const COIN_TOSS_DURATION_MS = 7500;
+
+const TRAITS_DESC = {
+  taunt: { title: 'Taunt', desc: 'Enemies must attack this unit first.' },
+  charge: { title: 'Charge', desc: 'Can attack the same turn it is played.' },
+  // Сюда будешь добавлять новые механики по мере развития игры
+};
 
 // --- Жизненный цикл ---
 
@@ -104,7 +115,7 @@ export function unmount() {
     'player-hand-count',
     'player-deck',
     'opp-deck',
-    'my-table',
+    'player-table',
     'opp-table',
     'opp-hand',
     'hand-display',
@@ -505,6 +516,10 @@ const handleMouseUp = (e) => {
       svg.style.pointerEvents = 'none';
     }
 
+    document.querySelectorAll('.taunt-target-glow').forEach((el) => {
+      el.classList.remove('taunt-target-glow');
+    });
+
     if (latestState) {
       const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
       const cardTarget = elementBelow?.closest('.enemy-card');
@@ -512,7 +527,7 @@ const handleMouseUp = (e) => {
         '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
       );
       const selfTarget = elementBelow?.closest(
-        '#player-avatar, #player-hp, #my-username-zone, #my-table-zone .card-slot, #my-mana-zone'
+        '#player-avatar, #player-hp, #player-username-zone, #player-table-zone .card-slot, #player-mana-zone'
       );
 
       if (selfTarget) {
@@ -538,11 +553,12 @@ const handleMouseUp = (e) => {
 
   // === 2. НОВАЯ ЛОГИКА: Отпускание карты из руки на стол ===
   if (draggingPlayCardId && latestState) {
-    const tableZone = document.getElementById('my-table-zone');
+    const tableZone = document.getElementById('player-table-zone');
     const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
 
     // Проверяем, входит ли мышка в область размещения на столе
-    const isOverTable = dropTarget?.closest('#my-table-zone') || dropTarget?.closest('.my-table');
+    const isOverTable =
+      dropTarget?.closest('#player-table-zone') || dropTarget?.closest('.player-table');
 
     if (isOverTable && tableZone) {
       // ФИКС СЕЛЕКТОРА: Раньше мы искали card-slot, а теперь у нас токены card-board
@@ -605,40 +621,32 @@ function renderMana(containerId, currentMana, maxMana) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const isMyMana = containerId === 'my-mana-zone';
+  const isMyMana = containerId === 'player-mana-zone';
   const MAX_SEGMENTS = 10;
 
-  // 1. SMART RENDER: Создаем колбу только 1 раз, если её еще нет
-  let wrapper = container.querySelector('.mana-flask-wrapper');
+  // 1. Создаем универсальную колбу 1 раз
+  let wrapper = container.querySelector('.flask-wrapper');
   if (!wrapper) {
-    let segmentsHtml = '';
-    for (let i = 0; i < MAX_SEGMENTS; i++) {
-      segmentsHtml += `<div class="flask-segment"></div>`;
-    }
-
     container.innerHTML = `
-      <span class="mana-text" style="color: white; font-size: 20px; font-weight: bold; margin-right: 12px; text-shadow: 1px 1px 0 #000;"></span>
-      <div class="mana-flask-wrapper" style="position: relative; width: 180px; height: 26px;">
-        <div class="mana-flask">
-          <div class="flask-liquid"><div class="flask-wave"></div></div>
-          <div class="flask-spend-preview"></div>
-          <div class="flask-segments-overlay">${segmentsHtml}</div>
+      <div class="flask-wrapper">
+        <div class="flask-liquid-track">
+          <div class="flask-liquid"></div>
+          <div class="flask-preview"></div>
         </div>
+        <img src="/assets/images/vertical-flask.png" class="flask-glass-overlay" alt="Mana Flask">
+        <div class="mana-text-badge">0/0</div>
       </div>
     `;
-    wrapper = container.querySelector('.mana-flask-wrapper');
+    wrapper = container.querySelector('.flask-wrapper');
   }
 
-  // 2. Получаем постоянные DOM-узлы
-  const textEl = container.querySelector('.mana-text');
+  const textEl = container.querySelector('.mana-text-badge');
   const liquidEl = container.querySelector('.flask-liquid');
-  const previewEl = container.querySelector('.flask-spend-preview');
-  const segments = container.querySelectorAll('.flask-segment');
+  const previewEl = container.querySelector('.flask-preview');
 
-  // 3. Обновляем текст
   textEl.textContent = `${currentMana}/${maxMana}`;
 
-  // 4. Математика процентов (ширина берется от родителя-колбы)
+  // Высчитываем ширину
   const fillPercent = (currentMana / MAX_SEGMENTS) * 100;
   let previewPercent = 0;
 
@@ -646,7 +654,7 @@ function renderMana(containerId, currentMana, maxMana) {
     previewPercent = (hoveredCardCost / MAX_SEGMENTS) * 100;
   }
 
-  // 5. ДИНАМИЧЕСКАЯ АНИМАЦИЯ: Медленно наливаем (1.2s), быстро тратим (0.25s)
+  // Анимация налива и траты
   const currentWidth = parseFloat(liquidEl.style.width) || 0;
   if (fillPercent > currentWidth) {
     liquidEl.style.transition = 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)';
@@ -654,25 +662,116 @@ function renderMana(containerId, currentMana, maxMana) {
     liquidEl.style.transition = 'width 0.25s ease-out';
   }
 
-  // Применяем новую ширину (браузер сам запустит анимацию)
   liquidEl.style.width = `${fillPercent}%`;
 
-  // 6. Позиционируем красную зону сгорания прямо перед краем актуальной маны
+  // Позиционируем красную зону сгорания над синей жидкостью
   if (previewPercent > 0) {
     previewEl.style.width = `${previewPercent}%`;
+    // Отступ слева = (текущая мана - сгораемая мана) в процентах
     previewEl.style.left = `${fillPercent - previewPercent}%`;
     previewEl.style.display = 'block';
   } else {
     previewEl.style.display = 'none';
   }
+}
 
-  // 7. Отрисовываем заблокированные отсеки
-  segments.forEach((seg, index) => {
-    if (index >= maxMana) {
-      seg.classList.add('locked');
+function hideTooltip() {
+  if (tooltipTimeout) {
+    clearTimeout(tooltipTimeout);
+    tooltipTimeout = null;
+  }
+  if (activeTooltipElement) {
+    activeTooltipElement.remove();
+    activeTooltipElement = null;
+  }
+}
+
+function showTooltip(e, cardData, isBoard) {
+  hideTooltip(); // На всякий случай чистим старый
+
+  activeTooltipElement = document.createElement('div');
+  activeTooltipElement.className = 'card-tooltip-container';
+
+  let hasContent = false;
+
+  // 1. Если мы на столе -> рисуем полноразмерную карту
+  if (isBoard) {
+    // Используем твой же renderCard, но просим вариант 'hand', чтобы нарисовало карту целиком
+    const fullCard = renderCard({ ...cardData, variant: 'hand' });
+    fullCard.style.position = 'relative';
+    fullCard.style.margin = '0';
+    fullCard.style.transform = 'none'; // Отключаем веерные стили
+    activeTooltipElement.appendChild(fullCard);
+    hasContent = true;
+  }
+
+  // 2. Если у карты есть traits -> рисуем плашки сбоку
+  if (cardData.traits && cardData.traits.length > 0) {
+    const traitsPanel = document.createElement('div');
+    traitsPanel.className = 'traits-panel';
+
+    cardData.traits.forEach((trait) => {
+      const traitInfo = TRAITS_DESC[trait.toLowerCase()];
+      if (traitInfo) {
+        traitsPanel.innerHTML += `
+          <div class="trait-item">
+            <div class="trait-title">${traitInfo.title}</div>
+            <div class="trait-desc">${traitInfo.desc}</div>
+          </div>
+        `;
+        hasContent = true;
+      }
+    });
+    activeTooltipElement.appendChild(traitsPanel);
+  }
+
+  // Если нечего показывать (например, в руке карта без трейтов) - отмена
+  if (!hasContent) return;
+
+  document.body.appendChild(activeTooltipElement); // Рендерим в DOM, чтобы получить реальные размеры окна
+
+  const rect = e.target.closest('.card').getBoundingClientRect();
+  const tooltipWidth = activeTooltipElement.offsetWidth;
+  const tooltipHeight = activeTooltipElement.offsetHeight;
+
+  if (isBoard) {
+    // ДЛЯ СТОЛА: Строго по центру НАД картой
+    const centerX = rect.left + rect.width / 2 - tooltipWidth / 2;
+    const topY = rect.top - tooltipHeight - 15; // 15px зазор
+    activeTooltipElement.style.left = `${centerX}px`;
+    activeTooltipElement.style.top = `${topY}px`;
+  } else {
+    // ДЛЯ РУКИ: Сбоку, с защитой от вылета за экран
+    const offsetX = 30;
+    const offsetY = 10;
+    const isTooFarRight = rect.right + tooltipWidth + offsetX > window.innerWidth;
+
+    if (isTooFarRight) {
+      activeTooltipElement.style.left = `${rect.left - tooltipWidth - offsetX}px`;
     } else {
-      seg.classList.remove('locked');
+      activeTooltipElement.style.left = `${rect.right + offsetX}px`;
     }
+    activeTooltipElement.style.top = `${rect.top + offsetY}px`;
+  }
+}
+
+// Функция-биндилка, которую мы будем вешать на карты
+function bindTooltipEvents(cardUI, cardData, isBoard) {
+  cardUI.addEventListener('mouseenter', (e) => {
+    // Защита: если мы сейчас тащим карту или натягиваем стрелку атаки — тултипы не показываем!
+    if (draggingPlayCardId || draggingAttackId) return;
+
+    tooltipTimeout = setTimeout(() => {
+      showTooltip(e, cardData, isBoard);
+    }, 500); // 500мс задержка
+  });
+
+  cardUI.addEventListener('mouseleave', () => {
+    hideTooltip();
+  });
+
+  cardUI.addEventListener('mousedown', () => {
+    hideTooltip(); // Мгновенно прячем, если игрок решил схватить карту
   });
 }
 
@@ -731,14 +830,14 @@ function updateBattleUI(state, socket) {
   safeSetText('opp-username-zone', opponent.displayedName || opponent.username || 'Opponent');
   safeSetText('opp-hp', opponent.hp);
 
-  // Изменено: player-username -> my-username-zone
-  safeSetText('my-username-zone', me.displayedName || me.username || 'You');
+  // Изменено: player-username -> player-username-zone
+  safeSetText('player-username-zone', me.displayedName || me.username || 'You');
   safeSetText('player-hp', me.hp);
 
   // === МАНА ===
   // Изменено на новые контейнеры
   renderMana('opp-mana-zone', opponent.mana, opponent.maxMana);
-  renderMana('my-mana-zone', me.mana, me.maxMana);
+  renderMana('player-mana-zone', me.mana, me.maxMana);
 
   // === КОЛОДЫ И АВАТАРЫ (Оставлена твоя логика) ===
   safeSetText('opp-deck', opponent.deckCount);
@@ -766,7 +865,7 @@ function updateBattleUI(state, socket) {
 
   // === РЕНДЕР СТОЛА ===
   // Изменено на новые контейнеры стола
-  const myTable = document.getElementById('my-table-zone');
+  const myTable = document.getElementById('player-table-zone');
   const oppTable = document.getElementById('opp-table-zone');
   if (myTable) myTable.innerHTML = '';
   if (oppTable) oppTable.innerHTML = '';
@@ -778,6 +877,8 @@ function updateBattleUI(state, socket) {
     cardUI.classList.add('card-slot');
     cardUI.dataset.instanceId = card.instanceId;
 
+    bindTooltipEvents(cardUI, card, true);
+
     if (card.canAttack && isMyTurn) {
       cardUI.classList.add('can-attack');
       cardUI.addEventListener('mousedown', (e) => {
@@ -786,6 +887,18 @@ function updateBattleUI(state, socket) {
         const board = document.querySelector('.game-board');
         const svg = document.getElementById('attack-arrow-svg');
         const line = document.getElementById('attack-line');
+
+        const oppTableZone = document.getElementById('opp-table-zone');
+        if (oppTableZone && opponent && opponent.table) {
+          opponent.table.forEach((oppCard) => {
+            if (oppCard.traits?.includes('taunt')) {
+              const oppUI = oppTableZone.querySelector(
+                `[data-instance-id="${oppCard.instanceId}"]`
+              );
+              if (oppUI) oppUI.classList.add('taunt-target-glow');
+            }
+          });
+        }
 
         if (board && svg && line) {
           const boardRect = board.getBoundingClientRect();
@@ -814,9 +927,8 @@ function updateBattleUI(state, socket) {
     cardUI.classList.add('card-slot', 'enemy-card');
     cardUI.dataset.instanceId = card.instanceId;
 
-    if (card.traits?.includes('taunt')) {
-      cardUI.classList.add('taunt');
-    }
+    bindTooltipEvents(cardUI, card, true);
+
     oppTable.appendChild(cardUI);
   });
 
@@ -837,7 +949,7 @@ function updateBattleUI(state, socket) {
     });
   }
 
-  const handDisplay = document.getElementById('my-hand-zone');
+  const handDisplay = document.getElementById('player-hand-zone');
   if (handDisplay) {
     const existingNodes = Array.from(handDisplay.children);
     const newIds = me.hand.map((c) => c.instanceId);
@@ -853,19 +965,20 @@ function updateBattleUI(state, socket) {
         cardUI = renderCard(card);
         cardUI.dataset.instanceId = card.instanceId;
         handDisplay.appendChild(cardUI);
+        bindTooltipEvents(cardUI, card, false);
       }
 
       // БИНДИНГ СОБЫТИЙ С АКТУАЛЬНЫМ STATE
       cardUI.onmouseenter = () => {
         if (isMyTurn && me.mana >= card.cost) {
           hoveredCardCost = card.cost;
-          renderMana('my-mana-zone', me.mana, me.maxMana);
+          renderMana('player-mana-zone', me.mana, me.maxMana);
         }
       };
 
       cardUI.onmouseleave = () => {
         hoveredCardCost = 0;
-        renderMana('my-mana-zone', me.mana, me.maxMana);
+        renderMana('player-mana-zone', me.mana, me.maxMana);
       };
 
       cardUI.onmousedown = (e) => {
@@ -887,7 +1000,7 @@ function updateBattleUI(state, socket) {
         e.preventDefault();
         draggingPlayCardId = card.instanceId;
         hoveredCardCost = 0;
-        renderMana('my-mana-zone', me.mana, me.maxMana);
+        renderMana('player-mana-zone', me.mana, me.maxMana);
 
         // Создаем призрака для переноса
         dragGhostElement = cardUI.cloneNode(true);

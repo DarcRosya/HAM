@@ -130,7 +130,7 @@ body {
 }
 
 .his-deck,
-.my-deck {
+.player-deck {
   margin-left: 40px;
   width: 130px;
   height: 170px;
@@ -145,12 +145,12 @@ body {
   transform: rotate(180deg);
 }
 
-.my-deck {
+.player-deck {
   position: relative;
   cursor: pointer;
 }
 
-.my-deck::after {
+.player-deck::after {
   content: attr(data-count);
   position: absolute;
   bottom: -35px;
@@ -171,7 +171,7 @@ body {
     transform 0.2s ease-in-out;
 }
 
-.my-deck:hover::after {
+.player-deck:hover::after {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(5px);
@@ -258,11 +258,13 @@ body {
 }
 
 .card.playable {
-  /* Двойная тень: внешняя жесткая и внутренняя для объема */
+  /* Плотный зеленый бордер + жесткое внешнее и внутреннее неоновое свечение */
+  border: 3px solid #33ff33 !important;
   box-shadow:
-    0 0 6px 3px #1aff1a,
-    inset 0 0 15px 2px rgba(26, 255, 26, 0.8) !important;
-  border-radius: 12px; /* Убеждаемся, что тень огибает углы карты */
+    0 0 10px 3px #1aff1a,
+    0 0 25px 8px rgba(0, 255, 0, 0.6),
+    inset 0 0 15px 3px rgba(26, 255, 26, 0.9) !important;
+  border-radius: 12px;
 }
 
 .card-slot.can-attack {
@@ -277,10 +279,6 @@ body {
 .card-slot.exhausted {
   filter: grayscale(0.8) brightness(0.6);
   pointer-events: none;
-}
-
-.card-slot.enemy-card.taunt {
-  box-shadow: 0 0 15px 5px rgba(255, 0, 0, 0.8);
 }
 
 /* =========================================
@@ -361,8 +359,8 @@ body {
 
 #opp-mana-zone {
   position: absolute;
-  top: 145px;
-  left: 50%;
+  top: -57px;
+  left: -21%;
   transform: translateX(-50%);
   margin-left: 170px; /* Сдвинули в другую сторону */
 
@@ -384,7 +382,7 @@ body {
    2. НАШ ПРОФИЛЬ (Настраивай каждую деталь)
 ========================================= */
 
-#my-avatar-zone {
+#player-avatar-zone {
   position: absolute;
   bottom: 115px;
   left: 29%;
@@ -396,7 +394,7 @@ body {
   z-index: 10;
 }
 
-#my-health-zone {
+#player-health-zone {
   position: absolute;
   bottom: -18px;
   left: 50%;
@@ -411,10 +409,10 @@ body {
   align-items: center;
 }
 
-#my-mana-zone {
+#player-mana-zone {
   position: absolute;
-  bottom: 128px;
-  left: 50%;
+  bottom: -66px;
+  left: -16%;
   transform: translateX(-50%);
   margin-left: 170px;
 
@@ -456,7 +454,7 @@ body {
   margin-left: 0px;
 }
 
-#my-table-zone {
+#player-table-zone {
   bottom: 245px; /* ВЫСОТА ТВОЕГО РЯДА */
   margin-left: 0px;
 }
@@ -480,7 +478,7 @@ body {
   top: -63px;
 }
 
-#my-hand-zone {
+#player-hand-zone {
   bottom: -60px;
 }
 
@@ -493,7 +491,7 @@ body {
   pointer-events: auto;
 }
 /* Наши карты */
-#my-hand-zone .card {
+#player-hand-zone .card {
   margin: 0 -55px; /* Жестко стягиваем наши карты */
   transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg))
     scale(0.65);
@@ -505,7 +503,7 @@ body {
 }
 
 /* Зумирование нашей карты при наведении */
-#my-hand-zone .card:hover {
+#player-hand-zone .card:hover {
   transform: translate(var(--fan-x, 0px), -60px) rotate(0deg) scale(0.9) !important;
   z-index: 100 !important;
   cursor: pointer;
@@ -514,101 +512,110 @@ body {
 /* =========================================
    АНИМАЦИЯ ПРЕДПРОСМОТРА МАНЫ
 ========================================= */
-.mana-flask {
+.flask-container {
+  display: flex;
+  justify-content: center;
   width: 100%;
-  height: 100%;
-  background: rgba(10, 15, 30, 0.85); /* 2. Потраченная мана (темно-синее дно) */
+}
+
+.flask-container.opp-flask {
+  margin-bottom: 20px; /* Отступ вражеской колбы от индикатора хода */
+}
+
+.flask-container.player-flask {
+  margin-top: 20px; /* Отступ твоей колбы от кнопки End Turn */
+}
+
+.mana-text-badge {
+  position: absolute;
+  right: -20px;
+  top: -25px;
+  background: rgba(22, 25, 43, 0.95);
   border: 2px solid #5c7cb3;
-  border-radius: 12px;
+  border-radius: 8px;
+  padding: 4px 14px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+.flask-wrapper {
   position: relative;
+  width: 260px; /* Ширина горизонтальной колбы */
+  height: 51px; /* Высота горизонтальной колбы */
+  /* Убираем flex, внутри всё будет на absolute */
+}
+
+.flask-glass-overlay {
+  position: absolute;
+  /* Задаем обратные размеры (высота стала шириной) */
+  width: 60px;
+  height: 260px;
+  /* Центрируем перед поворотом, чтобы оно никуда не уехало */
+  left: 68%;
+  top: 50%;
+  /* Поворот на 90deg (донышко слева, крышка справа) */
+  transform: translate(-50%, -50%) rotate(90deg);
+  z-index: 5;
+  pointer-events: none;
+  object-fit: contain;
+}
+
+/* Настройки неоновой жидкости под стеклом */
+.flask-liquid-track {
+  position: absolute;
+  /* НАСТРОЙКИ ДЛЯ ТЕБЯ: 
+     Крути left и right, чтобы обрезать трек ровно по внутренним краям золотых крышек! */
+  top: 14px; /* Отступ сверху */
+  bottom: 15px; /* Отступ снизу */
+  left: 16px; /* Отступ от левой крышки (донышка) */
+  right: -43px; /* Отступ от правой крышки (горлышка) */
+
+  z-index: 2;
+  border-radius: 8px; /* Закругление краев самой жидкости */
+  /* Обязательно скрываем всё, что может вылезти при 100% заполнении */
   overflow: hidden;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.9);
 }
 
-/* 1. Актуальная мана (светящаяся жидкость) */
-.flask-liquid {
-  height: 100%;
-  background: linear-gradient(90deg, #1a75ff, #00ffff);
+/* Сама жидкость теперь занимает 100% высоты трека и не требует отступов */
+.flask-liquid,
+.flask-preview {
   position: absolute;
+  top: 0;
+  bottom: 0;
   left: 0;
-  top: 0;
-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
-  /* transition управляется из JS! */
+  /* НОВОЕ: Острый левый край (у дна), и сильно закругленный правый (движущийся) край */
+  border-radius: 10px 14px 14px 2px;
 }
 
-/* Эффект блика и переливания */
-.flask-wave {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: mana-slosh 2s infinite linear;
+.flask-liquid {
+  background: linear-gradient(to right, #00aaff, #00ffff);
+  /* НОВОЕ: inset тень создает красивый белый блик (мениск) на самом закруглении жидкости */
+  box-shadow:
+    inset -6px 0 8px rgba(255, 255, 255, 0.6),
+    0 0 15px 4px rgba(0, 255, 255, 0.5);
 }
 
-@keyframes mana-slosh {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
+.flask-preview {
+  background: rgba(255, 50, 50, 0.9);
+  /* У превью траты маны тоже делаем блик, но красноватый */
+  box-shadow:
+    inset -6px 0 8px rgba(255, 150, 150, 0.6),
+    0 0 20px 5px rgba(255, 0, 0, 0.8);
+  animation: flash-spend-horiz 0.5s infinite alternate;
 }
-
-/* Красный предпросмотр траты */
-.flask-spend-preview {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  background: rgba(255, 50, 50, 0.85);
-  box-shadow: 0 0 15px rgba(255, 0, 0, 1);
-  animation: flash-spend 0.6s infinite alternate;
-  z-index: 2; /* Поверх жидкости */
-}
-
-@keyframes flash-spend {
+@keyframes flash-spend-horiz {
   from {
-    opacity: 0.7;
+    opacity: 0.6;
     filter: brightness(1);
   }
   to {
     opacity: 1;
     filter: brightness(1.5);
   }
-}
-
-/* Сетка отсеков поверх всего */
-.flask-segments-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.flask-segment {
-  flex: 1;
-  border-right: 2px solid rgba(10, 15, 30, 0.95); /* Жесткие перегородки */
-  transition: background-color 0.3s ease;
-}
-
-.flask-segment:last-child {
-  border-right: none;
-}
-
-/* 3. Заблокированные отсеки */
-.flask-segment.locked {
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(0, 0, 0, 0.8),
-    rgba(0, 0, 0, 0.8) 4px,
-    rgba(30, 30, 30, 0.8) 4px,
-    rgba(30, 30, 30, 0.8) 8px
-  );
 }
 
 /* =========================================
@@ -664,11 +671,21 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   z-index: 10;
+  width: 300px; /* Фиксируем ширину всей правой колонки */
 }
+
+.turn-info-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 15px 0; /* Фиксированный отступ вокруг центральной кнопки */
+}
+
 .sidebar-left {
   position: absolute;
-  left: 30px;
+  left: 110px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -689,4 +706,88 @@ body {
   color: white;
   text-shadow: 2px 2px 0 #000;
   margin-bottom: 20px;
+}
+
+/* =========================================
+   СИСТЕМА УМНЫХ ТУЛТИПОВ
+========================================= */
+.card-tooltip-container {
+  /* ТВОЯ ПAНЕЛЬ НАСТРОЕК — КРУТИ ЭТИ ПAРAМЕТРЫ ДЛЯ ВЫРAВНИВAНИЯ */
+  --tooltip-scale: 0.95; /* Общий масштаб всплывающего окна */
+  --tooltip-blur: 6px; /* Размытие заднего фона под тултипом */
+  --tooltip-bg: rgba(13, 17, 28, 0.93); /* Фон плашек с трейтами */
+  --tooltip-border-color: #ffd700; /* Цвет рамки плашек (золотой) */
+  --text-primary-color: #ffffff; /* Основной цвет текста */
+  --text-secondary-color: #a6c7ff; /* Цвет описания трейтов */
+
+  position: fixed;
+  z-index: 12000; /* Поднимаем максимально высоко поверх всех элементов */
+  display: flex;
+  gap: 20px;
+  align-items: center; /* Центрируем карту и трейты по вертикали друг относительно друга */
+
+  /* Блокируем перехват курсора самим тултипом, чтобы не было дерганий */
+  pointer-events: none;
+
+  /* Применяем кастомные настройки */
+  transform: scale(var(--tooltip-scale));
+  animation: fade-in-smooth 0.22s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes fade-in-smooth {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(calc(var(--tooltip-scale) - 0.05));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(var(--tooltip-scale));
+  }
+}
+
+.traits-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 240px;
+}
+
+.trait-item {
+  background: var(--tooltip-bg);
+  border: 2px solid var(--tooltip-border-color);
+  backdrop-filter: blur(var(--tooltip-blur));
+  -webkit-backdrop-filter: blur(var(--tooltip-blur));
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.85),
+    inset 0 0 15px rgba(0, 0, 0, 0.6);
+  color: var(--text-primary-color);
+  transition: all 0.2s ease;
+}
+
+.trait-title {
+  font-family: 'Londrina Solid', sans-serif;
+  font-size: 26px;
+  color: var(--tooltip-border-color);
+  text-shadow: 1px 1px 2px #000;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.trait-desc {
+  font-family: 'Georgia', serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-secondary-color);
+}
+
+.card-slot,
+.card-board,
+.card-slot.exhausted {
+  /* Гарантируем, что браузер будет регистрировать наведение мыши на ЛЮБОЙ токен, 
+     даже если он спит, устал или заблокирован */
+  pointer-events: auto !important;
+  cursor: pointer;
 }
