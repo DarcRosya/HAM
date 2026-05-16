@@ -25,6 +25,10 @@ let activeTooltipElement = null;
 let watchdogTimer = null;
 
 let hoveredCardCost = 0;
+let pendingGameState = null;
+let isAnimationPlaying = false;
+let attackReticle = null;
+let lastDropCoords = null;
 
 const COIN_TOSS_DURATION_MS = 7500;
 
@@ -83,6 +87,20 @@ export function mount() {
       battleSocket.once('connect', () => battleSocket.emit('join-lobby'));
     }
   }
+  if (!document.getElementById('attack-reticle')) {
+    attackReticle = document.createElement('div');
+    attackReticle.id = 'attack-reticle';
+    attackReticle.className = 'attack-reticle';
+    document.body.appendChild(attackReticle);
+  } else {
+    attackReticle = document.getElementById('attack-reticle');
+  }
+
+  const svgArrow = document.getElementById('attack-arrow-svg');
+  if (svgArrow && svgArrow.parentNode !== document.body) {
+    document.body.appendChild(svgArrow);
+    svgArrow.style.position = 'fixed';
+  }
 }
 
 export function unmount() {
@@ -94,6 +112,10 @@ export function unmount() {
   if (turnInterval) clearInterval(turnInterval);
   if (opponentStatusTimeout) clearTimeout(opponentStatusTimeout);
   if (battleMessageTimeout) clearTimeout(battleMessageTimeout);
+  if (attackReticle) {
+    attackReticle.remove();
+    attackReticle = null;
+  }
 
   window.removeEventListener('mouseup', handleMouseUp);
   window.removeEventListener('mousemove', handleMouseMove);
@@ -134,6 +156,8 @@ export function unmount() {
   draggingAttackId = null;
   latestState = null;
   elements = {};
+  pendingGameState = null;
+  isAnimationPlaying = false;
 }
 
 // --- Обработчики Сокетов ---
@@ -148,6 +172,7 @@ function attachSocketListeners() {
   battleSocket.on('opponent-disconnected', handleOpponentDisconnected);
   battleSocket.on('opponent-reconnected', handleOpponentReconnected);
   battleSocket.on('match_not_found', handleMatchNotFound);
+  battleSocket.on('opponent_attack', handleOpponentAttack);
 }
 
 function detachSocketListeners() {
@@ -160,6 +185,7 @@ function detachSocketListeners() {
   battleSocket.off('opponent-disconnected', handleOpponentDisconnected);
   battleSocket.off('opponent-reconnected', handleOpponentReconnected);
   battleSocket.off('match_not_found', handleMatchNotFound);
+  battleSocket.off('opponent_attack', handleOpponentAttack);
 }
 
 // --- Логика Боя ---
@@ -429,7 +455,11 @@ const handleGameState = (state) => {
     setBattleFrozenState(false);
   }
 
-  updateBattleUI(state, battleSocket);
+  if (isAnimationPlaying) {
+    pendingGameState = state;
+  } else {
+    updateBattleUI(state, battleSocket);
+  }
 };
 
 const handleOpponentDisconnected = (payload = {}) => {
@@ -453,6 +483,42 @@ const handleOpponentReconnected = (payload = {}) => {
     { autoHideMs: 2500 }
   );
 };
+
+function handleOpponentAttack({ attackerInstanceId, targetId, targetType }) {
+  console.log('%c[BATTLE] ВНИМАНИЕ! Оппонент атакует!', 'color: #ff3333; font-weight: bold;', {
+    attackerInstanceId,
+    targetId,
+    targetType,
+  });
+
+  if (!store.isInBattle()) return;
+
+  const attackerEl = document.querySelector(`[data-instance-id="${attackerInstanceId}"]`);
+
+  let targetEl = null;
+  if (targetType === 'avatar') {
+    targetEl = document.getElementById('player-avatar') || document.getElementById('player-hp');
+  } else {
+    targetEl = document.querySelector(`[data-instance-id="${targetId}"]`);
+  }
+
+  if (!attackerEl) {
+    return;
+  }
+  if (!targetEl) {
+    return;
+  }
+
+  isAnimationPlaying = true;
+
+  playAttackAnimation(attackerEl, targetEl, null, () => {
+    isAnimationPlaying = false;
+    if (pendingGameState) {
+      updateBattleUI(pendingGameState, battleSocket);
+      pendingGameState = null;
+    }
+  });
+}
 
 const handleGameOver = ({ winnerId }) => {
   hideOpponentStatus();
@@ -508,7 +574,6 @@ const handleSurrenderClick = () => {
 };
 
 const handleMouseUp = (e) => {
-  // === 1. Логика отпускания стрелки атаки (твой старый код) ===
   if (draggingAttackId) {
     const svg = document.getElementById('attack-arrow-svg');
     if (svg) {
@@ -516,98 +581,173 @@ const handleMouseUp = (e) => {
       svg.style.pointerEvents = 'none';
     }
 
-    document.querySelectorAll('.taunt-target-glow').forEach((el) => {
-      el.classList.remove('taunt-target-glow');
-    });
+    const attackerEl = document.querySelector(`[data-instance-id="${draggingAttackId}"]`);
 
     if (latestState) {
       const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
-      const cardTarget = elementBelow?.closest('.enemy-card');
-      const avatarTarget = elementBelow?.closest(
-        '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
-      );
-      const selfTarget = elementBelow?.closest(
-        '#player-avatar, #player-hp, #player-username-zone, #player-table-zone .card-slot, #player-mana-zone'
-      );
+      const isForbidden = elementBelow?.closest('.forbidden-target');
+      if (isForbidden) {
+        showBattleMessage('You must attack a unit with Taunt!');
+      } else {
+        const cardTarget = elementBelow?.closest('.enemy-card:not(.forbidden-target)');
+        let avatarTarget = elementBelow?.closest(
+          '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
+        );
+        if (avatarTarget && avatarTarget.closest('.forbidden-target')) avatarTarget = null;
 
-      if (selfTarget) {
-        showBattleMessage("You can't attack yourself!");
-      } else if (cardTarget) {
-        battleSocket.emit('attack_target', {
-          roomId: latestState.roomId,
-          attackerInstanceId: draggingAttackId,
-          targetId: cardTarget.dataset.instanceId,
-          targetType: 'card',
-        });
-      } else if (avatarTarget) {
-        battleSocket.emit('attack_target', {
-          roomId: latestState.roomId,
-          attackerInstanceId: draggingAttackId,
-          targetId: null,
-          targetType: 'avatar',
-        });
+        const selfTarget = elementBelow?.closest(
+          '#player-avatar, #player-hp, #player-username-zone, #player-table-zone .card-slot, #player-mana-zone'
+        );
+
+        if (selfTarget) {
+          showBattleMessage("You can't attack yourself!");
+        } else if (cardTarget || avatarTarget) {
+          const targetId = cardTarget ? cardTarget.dataset.instanceId : null;
+          const targetType = cardTarget ? 'card' : 'avatar';
+          const targetEl = cardTarget || avatarTarget;
+          const attackIdToSend = draggingAttackId;
+          document.body.style.pointerEvents = 'none';
+          playAttackAnimation(
+            attackerEl,
+            targetEl,
+            () => {
+              battleSocket.emit('attack_target', {
+                roomId: latestState.roomId,
+                attackerInstanceId: attackIdToSend,
+                targetId: targetId,
+                targetType: targetType,
+              });
+            },
+            () => {
+              document.body.style.pointerEvents = 'auto';
+            }
+          );
+        }
       }
     }
+
+    if (attackerEl) {
+      attackerEl.classList.remove('is-attacking-active');
+    }
+    if (attackReticle) {
+      attackReticle.classList.remove('show', 'snapped', 'lethal');
+    }
+    document.querySelectorAll('.taunt-target-glow').forEach((el) => {
+      el.classList.remove('taunt-target-glow');
+    });
+    document.querySelectorAll('.forbidden-target').forEach((el) => {
+      el.classList.remove('forbidden-target');
+    });
+
     draggingAttackId = null;
   }
 
-  // === 2. НОВАЯ ЛОГИКА: Отпускание карты из руки на стол ===
   if (draggingPlayCardId && latestState) {
     const tableZone = document.getElementById('player-table-zone');
     const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
 
-    // Проверяем, входит ли мышка в область размещения на столе
     const isOverTable =
       dropTarget?.closest('#player-table-zone') || dropTarget?.closest('.player-table');
 
     if (isOverTable && tableZone) {
-      // ФИКС СЕЛЕКТОРА: Раньше мы искали card-slot, а теперь у нас токены card-board
+      lastDropCoords = { x: e.clientX, y: e.clientY };
       const existingCards = Array.from(tableZone.querySelectorAll('.card-board'));
-      let targetIndex = existingCards.length; // По умолчанию в самый конец
+      let targetIndex = existingCards.length;
 
-      // ВЫЧИСЛЯЕМ ПОЗИЦИЮ
       for (let i = 0; i < existingCards.length; i++) {
         const rect = existingCards[i].getBoundingClientRect();
         const cardCenter = rect.left + rect.width / 2;
         if (e.clientX < cardCenter) {
           targetIndex = i;
-          break; // Нашли место!
+          break;
         }
       }
 
-      // Отправляем на сервер команду розыгрыша
       battleSocket.emit('play_card', {
         roomId: latestState.roomId,
         cardInstanceId: draggingPlayCardId,
         targetIndex: targetIndex,
       });
-    } else {
-      console.log('Card dropped outside table zone. Returning to hand.');
     }
 
-    // В любом случае уничтожаем летающего призрака
     if (dragGhostElement) {
       dragGhostElement.remove();
       dragGhostElement = null;
     }
 
     draggingPlayCardId = null;
-
-    // Мгновенный принудительный ререндер.
-    // Поскольку стейт на сервере не изменился (если промахнулись),
-    // функция просто перерисует руку, вернув карте opacity = 1 и её законное место в веере.
     updateBattleUI(latestState, battleSocket);
   }
 };
 
 const handleMouseMove = (e) => {
   if (draggingAttackId) {
-    const board = document.querySelector('.game-board');
     const line = document.getElementById('attack-line');
-    if (board && line) {
-      const boardRect = board.getBoundingClientRect();
-      line.setAttribute('x2', e.clientX - boardRect.left);
-      line.setAttribute('y2', e.clientY - boardRect.top);
+
+    if (line) {
+      const attackerEl = document.querySelector(`[data-instance-id="${draggingAttackId}"]`);
+      if (attackerEl) {
+        const aRect = attackerEl.getBoundingClientRect();
+        const startX = aRect.left + aRect.width / 2;
+        const startY = aRect.top + aRect.height / 2;
+        const endX = e.clientX;
+        const endY = e.clientY;
+
+        const midX = (startX + endX) / 2;
+        const midY = (startY + endY) / 2;
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const curveAmount = 0.2;
+        const ctrlX = midX - dy * curveAmount;
+        const ctrlY = midY + dx * curveAmount;
+
+        line.setAttribute('d', `M ${startX} ${startY} Q ${ctrlX} ${ctrlY} ${endX} ${endY}`);
+      }
+    }
+
+    if (attackReticle) {
+      const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+      const cardTarget = elementBelow?.closest('.enemy-card:not(.forbidden-target)');
+      let avatarTarget = elementBelow?.closest(
+        '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
+      );
+      if (avatarTarget && avatarTarget.closest('.forbidden-target')) avatarTarget = null;
+      const selfTarget = elementBelow?.closest(
+        '#player-avatar, #player-hp, #player-username-zone, #player-table-zone .card-slot, #player-mana-zone'
+      );
+
+      if ((cardTarget || avatarTarget) && !selfTarget) {
+        const targetEl = cardTarget || document.getElementById('opp-avatar-zone');
+        const targetRect = targetEl.getBoundingClientRect();
+        attackReticle.style.left = `${targetRect.left + targetRect.width / 2}px`;
+        attackReticle.style.top = `${targetRect.top + targetRect.height / 2}px`;
+        attackReticle.classList.add('snapped');
+        let isLethal = false;
+        const attackerEl = document.querySelector(`[data-instance-id="${draggingAttackId}"]`);
+        if (attackerEl) {
+          const atkDamage = parseInt(
+            attackerEl.querySelector('.token-attack')?.textContent || '0',
+            10
+          );
+          let targetHp = 999;
+          if (cardTarget) {
+            targetHp = parseInt(cardTarget.querySelector('.token-defense')?.textContent || '0', 10);
+          } else {
+            targetHp = parseInt(document.getElementById('opp-hp')?.textContent || '0', 10);
+          }
+          if (atkDamage >= targetHp) isLethal = true;
+        }
+
+        if (isLethal) {
+          attackReticle.classList.add('lethal');
+        } else {
+          attackReticle.classList.remove('lethal');
+        }
+      } else {
+        attackReticle.style.left = `${e.clientX}px`;
+        attackReticle.style.top = `${e.clientY}px`;
+        attackReticle.classList.remove('snapped', 'lethal');
+      }
     }
   }
 
@@ -867,37 +1007,83 @@ function updateBattleUI(state, socket) {
   // Изменено на новые контейнеры стола
   const myTable = document.getElementById('player-table-zone');
   const oppTable = document.getElementById('opp-table-zone');
+  const oldMyCardIds = myTable
+    ? Array.from(myTable.querySelectorAll('.card-slot')).map((el) => el.dataset.instanceId)
+    : [];
+  const oldOppCardIds = oppTable
+    ? Array.from(oppTable.querySelectorAll('.card-slot')).map((el) => el.dataset.instanceId)
+    : [];
   if (myTable) myTable.innerHTML = '';
   if (oppTable) oppTable.innerHTML = '';
 
   // Мои карты на столе
   me.table.forEach((card) => {
     if (!myTable) return;
+    const isNewCard = !oldMyCardIds.includes(String(card.instanceId));
     const cardUI = renderCard({ ...card, variant: 'board' });
     cardUI.classList.add('card-slot');
     cardUI.dataset.instanceId = card.instanceId;
 
     bindTooltipEvents(cardUI, card, true);
 
+    if (isNewCard) {
+      playEpicSpawn(cardUI, card);
+    }
+
     if (card.canAttack && isMyTurn) {
       cardUI.classList.add('can-attack');
       cardUI.addEventListener('mousedown', (e) => {
         e.preventDefault();
         draggingAttackId = card.instanceId;
+        cardUI.classList.add('is-attacking-active');
         const board = document.querySelector('.game-board');
         const svg = document.getElementById('attack-arrow-svg');
         const line = document.getElementById('attack-line');
 
         const oppTableZone = document.getElementById('opp-table-zone');
+        let hasTaunt = false;
         if (oppTableZone && opponent && opponent.table) {
           opponent.table.forEach((oppCard) => {
             if (oppCard.traits?.includes('taunt')) {
+              hasTaunt = true;
               const oppUI = oppTableZone.querySelector(
                 `[data-instance-id="${oppCard.instanceId}"]`
               );
               if (oppUI) oppUI.classList.add('taunt-target-glow');
             }
           });
+
+          if (hasTaunt) {
+            const allEnemyCards = oppTableZone.querySelectorAll('.enemy-card');
+            allEnemyCards.forEach((enemyCardUI) => {
+              if (!enemyCardUI.classList.contains('taunt-target-glow')) {
+                enemyCardUI.classList.add('forbidden-target');
+              }
+            });
+
+            if (svg && line) {
+              const cardRect = cardUI.getBoundingClientRect();
+              const startX = cardRect.left + cardRect.width / 2;
+              const startY = cardRect.top + cardRect.height / 2;
+              const endX = e.clientX;
+              const endY = e.clientY;
+
+              svg.style.display = 'block';
+              line.setAttribute(
+                'd',
+                `M ${startX} ${startY} Q ${(startX + endX) / 2} ${(startY + endY) / 2} ${endX} ${endY}`
+              );
+            }
+
+            if (attackReticle) {
+              attackReticle.classList.add('show');
+              attackReticle.style.left = `${e.clientX}px`;
+              attackReticle.style.top = `${e.clientY}px`;
+            }
+
+            document.getElementById('opp-avatar-zone')?.classList.add('forbidden-target');
+            document.getElementById('opp-username-zone')?.classList.add('forbidden-target');
+          }
         }
 
         if (board && svg && line) {
@@ -906,12 +1092,20 @@ function updateBattleUI(state, socket) {
 
           const startX = cardRect.left - boardRect.left + cardRect.width / 2;
           const startY = cardRect.top - boardRect.top + cardRect.height / 2;
+          const endX = e.clientX - boardRect.left;
+          const endY = e.clientY - boardRect.top;
 
           svg.style.display = 'block';
-          line.setAttribute('x1', startX);
-          line.setAttribute('y1', startY);
-          line.setAttribute('x2', e.clientX - boardRect.left);
-          line.setAttribute('y2', e.clientY - boardRect.top);
+          line.setAttribute(
+            'd',
+            `M ${startX} ${startY} Q ${(startX + endX) / 2} ${(startY + endY) / 2} ${endX} ${endY}`
+          );
+        }
+
+        if (attackReticle) {
+          attackReticle.classList.add('show');
+          attackReticle.style.left = `${e.clientX - boardRect.left}px`;
+          attackReticle.style.top = `${e.clientY - boardRect.top}px`;
         }
       });
     } else {
@@ -923,11 +1117,15 @@ function updateBattleUI(state, socket) {
   // Карты противника на столе
   opponent.table.forEach((card) => {
     if (!oppTable) return;
+    const isNewCard = !oldOppCardIds.includes(String(card.instanceId));
     const cardUI = renderCard({ ...card, variant: 'board' });
     cardUI.classList.add('card-slot', 'enemy-card');
     cardUI.dataset.instanceId = card.instanceId;
 
     bindTooltipEvents(cardUI, card, true);
+    if (isNewCard) {
+      playEpicSpawn(cardUI, card);
+    }
 
     oppTable.appendChild(cardUI);
   });
@@ -1025,9 +1223,10 @@ function updateBattleUI(state, socket) {
         cardUI.style.opacity = '0';
         cardUI.style.pointerEvents = 'none';
       };
-
+      const isWaitingForServer =
+        dragGhostElement && dragGhostElement.dataset.instanceId === String(card.instanceId);
       // Проверка при отрисовке: если карту сейчас тащат, она должна оставаться невидимой в руке
-      if (card.instanceId === draggingPlayCardId) {
+      if (card.instanceId === draggingPlayCardId || isWaitingForServer) {
         cardUI.style.opacity = '0';
         cardUI.style.pointerEvents = 'none';
       } else {
@@ -1045,4 +1244,178 @@ function updateBattleUI(state, socket) {
       applyFanMath(cardUI, index, me.hand.length, true, isMyTurn);
     });
   }
+}
+
+function playEpicSpawn(cardUI, cardData) {
+  cardUI.style.opacity = '0';
+  requestAnimationFrame(() => {
+    let startX = window.innerWidth / 2;
+    let startY = window.innerHeight;
+    if (lastDropCoords) {
+      startX = lastDropCoords.x;
+      startY = lastDropCoords.y;
+      lastDropCoords = null;
+    } else if (typeof dragGhostElement !== 'undefined' && dragGhostElement) {
+      const ghostRect = dragGhostElement.getBoundingClientRect();
+      startX = ghostRect.left + ghostRect.width / 2;
+      startY = ghostRect.top + ghostRect.height / 2;
+      dragGhostElement.remove();
+      dragGhostElement = null;
+    }
+
+    const boardContainer = document.querySelector('.battle-center-column');
+    if (!boardContainer) return;
+
+    const boardRect = boardContainer.getBoundingClientRect();
+    const rect = cardUI.getBoundingClientRect();
+
+    const targetX = rect.left - boardRect.left + rect.width / 2;
+    const targetY = rect.top - boardRect.top + rect.height / 2;
+    const startRelX = startX - boardRect.left;
+    const startRelY = startY - boardRect.top;
+
+    const ghostCard = renderCard({ ...cardData, variant: 'hand' });
+    ghostCard.classList.add('epic-spawn-glowing');
+
+    ghostCard.style.left = `${startRelX}px`;
+    ghostCard.style.top = `${startRelY}px`;
+    boardContainer.appendChild(ghostCard);
+
+    void ghostCard.offsetWidth;
+    ghostCard.style.left = `${targetX}px`;
+    ghostCard.style.top = `${targetY}px`;
+    setTimeout(() => {
+      if (ghostCard && ghostCard.parentNode) ghostCard.remove();
+
+      cardUI.style.opacity = '1';
+      cardUI.classList.add('epic-spawn-token');
+
+      const board = document.querySelector('.game-board');
+      if (board) {
+        board.classList.add('board-shake');
+        setTimeout(() => board.classList.remove('board-shake'), 300);
+      }
+
+      const shockwave = document.createElement('div');
+      shockwave.className = 'epic-spawn-shockwave';
+      shockwave.style.left = `${targetX}px`;
+      shockwave.style.top = `${targetY}px`;
+      boardContainer.appendChild(shockwave);
+
+      setTimeout(() => {
+        if (shockwave.parentNode) shockwave.remove();
+      }, 400);
+
+      setTimeout(() => {
+        cardUI.classList.remove('epic-spawn-token');
+      }, 400);
+    }, 350);
+  });
+}
+
+function playAttackAnimation(attackerEl, targetEl, onImpact, onComplete) {
+  if (!attackerEl || !targetEl) {
+    if (onImpact) onImpact();
+    if (onComplete) onComplete();
+    return;
+  }
+  isAnimationPlaying = true;
+  if (onImpact) {
+    onImpact();
+  }
+
+  const attackerAtk = parseInt(attackerEl.querySelector('.token-attack')?.textContent || '0', 10);
+  let targetAtk = 0;
+  if (targetEl.classList.contains('card-slot') || targetEl.classList.contains('enemy-card')) {
+    targetAtk = parseInt(targetEl.querySelector('.token-attack')?.textContent || '0', 10);
+  }
+  const aRect = attackerEl.getBoundingClientRect();
+  const tRect = targetEl.getBoundingClientRect();
+
+  const deltaX = tRect.left + tRect.width / 2 - (aRect.left + aRect.width / 2);
+  const deltaY = tRect.top + tRect.height / 2 - (aRect.top + aRect.height / 2);
+  const tilt = Math.max(-20, Math.min(20, deltaX * 0.04));
+
+  const originalZ = attackerEl.style.zIndex;
+  const originalTransition = attackerEl.style.transition;
+
+  attackerEl.style.zIndex = '10000';
+  attackerEl.style.transition = 'transform 0.2s cubic-bezier(0.42, 0, 0.58, 1)';
+  attackerEl.style.transform = `translate(${-deltaX * 0.08}px, ${-deltaY * 0.08}px) scale(0.95) rotate(${-tilt * 0.2}deg)`;
+
+  setTimeout(() => {
+    attackerEl.classList.add('anim-attacking');
+    attackerEl.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    attackerEl.style.transform = `translate(${deltaX * 0.85}px, ${deltaY * 0.85}px) scale(1.15) rotate(${tilt}deg)`;
+    setTimeout(() => {
+      attackerEl.style.transition = 'all 0.05s ease-out';
+      attackerEl.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.3)`;
+      attackerEl.style.filter = 'brightness(2) drop-shadow(0 0 30px #ff3333)';
+      targetEl.classList.add('anim-target-hit');
+      showFloatingDamage(targetEl, attackerAtk);
+      if (targetAtk > 0) {
+        showFloatingDamage(attackerEl, targetAtk);
+      }
+
+      const boardContainer = document.querySelector('.battle-center-column');
+      if (boardContainer) {
+        const shockwave = document.createElement('div');
+        shockwave.className = 'epic-spawn-shockwave';
+        shockwave.style.borderColor = 'rgba(255, 50, 50, 0.9)';
+        const boardRect = boardContainer.getBoundingClientRect();
+        shockwave.style.left = `${tRect.left + tRect.width / 2 - boardRect.left}px`;
+        shockwave.style.top = `${tRect.top + tRect.height / 2 - boardRect.top}px`;
+        boardContainer.appendChild(shockwave);
+        setTimeout(() => {
+          if (shockwave.parentNode) shockwave.remove();
+        }, 400);
+      }
+
+      const board = document.querySelector('.game-board');
+      if (board) {
+        board.classList.add('board-shake');
+        setTimeout(() => board.classList.remove('board-shake'), 300);
+      }
+
+      setTimeout(() => {
+        attackerEl.classList.remove('anim-attacking');
+        attackerEl.classList.add('anim-attack-return');
+        attackerEl.style.filter = '';
+        attackerEl.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        attackerEl.style.transform = 'translate(0px, 0px) scale(1) rotate(0deg)';
+
+        setTimeout(() => {
+          if (attackerEl) {
+            attackerEl.classList.remove('anim-attack-return');
+            attackerEl.style.zIndex = originalZ;
+            attackerEl.style.transition = originalTransition;
+            attackerEl.style.transform = '';
+          }
+          if (targetEl) targetEl.classList.remove('anim-target-hit');
+
+          if (onComplete) onComplete();
+
+          isAnimationPlaying = false;
+
+          if (pendingGameState) {
+            updateBattleUI(pendingGameState, battleSocket);
+            pendingGameState = null;
+          }
+        }, 400);
+      }, 70);
+    }, 250);
+  }, 200);
+}
+
+function showFloatingDamage(element, damageAmount) {
+  if (!element || damageAmount <= 0) return;
+  const targetContainer = element.closest('.avatar-container') || element;
+  const dmgEl = document.createElement('div');
+  dmgEl.className = 'damage-number';
+  dmgEl.textContent = `-${damageAmount}`;
+  targetContainer.appendChild(dmgEl);
+
+  setTimeout(() => {
+    if (dmgEl.parentNode) dmgEl.remove();
+  }, 1000);
 }

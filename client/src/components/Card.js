@@ -23,7 +23,9 @@ export function renderCard(props = {}) {
   // === НОВАЯ ЛОГИКА ДЛЯ СТОЛА (ОВAЛЬНЫЙ ТОКЕН) ===
   if (variant === 'board') {
     cardDiv.classList.add('card-board'); // Оставляем класс для JS-селекторов
-
+    if (props.isNew) {
+      cardDiv.classList.add('anim-card-drop', 'anim-card-spawn');
+    }
     cardDiv.innerHTML = `
       <div class="token-art" style="background-image: url('${art}');"></div>
       <div class="token-border"></div>
