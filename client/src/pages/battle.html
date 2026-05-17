@@ -125,7 +125,26 @@
         fill="none" marker-end="url(#arrowhead)" />
     </svg>
 
-  </div>
+    <div id="game-result-overlay" class="hidden">
+      <div class="result-board">
+        <div id="result-banner" class="result-banner"></div>
+
+        <div class="result-stats">
+          <div class="mmr-change">
+            <span id="result-mmr-value"></span>
+            <span class="mmr-label">MMR</span>
+          </div>
+          <div class="match-duration">
+            MATCH DURATION: <span id="result-duration"></span>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="play-again-btn" class="result-action-btn">PLAY AGAIN</button>
+          <button id="back-lobby-btn" class="result-action-btn">BACK TO LOBBY</button>
+        </div>
+      </div>
+    </div>
   </div>
 
 </body>

@@ -500,3 +500,308 @@
     font-size: 12px;
   }
 }
+
+.anim-card-shatter {
+  pointer-events: none !important;
+  z-index: 10005 !important;
+  animation: cardFadeAndShatter 0.75s ease-out forwards;
+  animation-fill-mode: both;
+  will-change: transform, opacity, filter;
+  position: absolute;
+  transform-origin: center;
+}
+
+@keyframes cardFadeAndShatter {
+  0% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    filter: brightness(1);
+    opacity: 1;
+  }
+  10% {
+    transform: translate(-50%, -50%) scale(1.1) rotate(-3deg);
+    filter: brightness(1.5);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1.05) rotate(3deg);
+    filter: brightness(2);
+    opacity: 0.8;
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(0.8) rotate(-5deg);
+    filter: brightness(0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.8) rotate(-5deg);
+    filter: brightness(0);
+    opacity: 0;
+  }
+}
+
+.anim-card-shatter::before {
+  content: '';
+  position: absolute;
+  inset: -30px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 210, 120, 0.95) 20%,
+    rgba(255, 120, 40, 0.6) 45%,
+    transparent 75%
+  );
+  mix-blend-mode: screen;
+  z-index: 2;
+  animation: deathFlashSmooth 0.45s ease-out forwards;
+}
+
+@keyframes deathFlashSmooth {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+
+  35% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+.anim-card-shatter::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  border-radius: 3px;
+  z-index: 3;
+  animation: deathDebrisSmooth 0.7s ease-out forwards;
+}
+
+@keyframes deathDebrisSmooth {
+  0% {
+    box-shadow:
+      0 0 0 0 #8b5a2b,
+      0 0 0 0 #5c3a21,
+      0 0 0 0 #b08d57,
+      0 0 0 0 #3d2314,
+      0 0 0 0 #8b5a2b,
+      0 0 0 0 #d4af37,
+      0 0 0 0 #5c3a21,
+      0 0 0 0 #3d2314;
+    opacity: 1;
+  }
+
+  100% {
+    box-shadow:
+      -140px -110px 0 5px #8b5a2b,
+      130px -95px 0 4px #5c3a21,
+      160px 30px 0 6px #b08d57,
+      110px 120px 0 5px #3d2314,
+      -125px 85px 0 4px #8b5a2b,
+      -150px -40px 0 6px #d4af37,
+      70px -145px 0 4px #5c3a21,
+      -95px -135px 0 5px #3d2314;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.9) rotate(180deg);
+  }
+}
+
+.board-shake-light {
+  animation: earthquakeLight 0.25s ease-out both;
+}
+
+@keyframes earthquakeLight {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-2px, 1px);
+  }
+  50% {
+    transform: translate(2px, -1px);
+  }
+  75% {
+    transform: translate(-1px, 1px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.death-placeholder {
+  visibility: hidden;
+  flex-shrink: 0;
+}
+
+.anim-avatar-death {
+  pointer-events: none !important;
+  z-index: 15000 !important;
+}
+
+.anim-avatar-death .avatar {
+  animation: avatarShatter 1.2s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
+}
+
+@keyframes avatarShatter {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+    opacity: 1;
+  }
+  15% {
+    transform: scale(1.15) rotate(-4deg);
+    filter: brightness(2) contrast(1.5);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.05) rotate(4deg);
+    filter: brightness(3) contrast(2);
+    opacity: 0.9;
+  }
+  40% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.anim-avatar-death::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  height: 120px;
+  margin-top: -60px;
+  margin-left: -60px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 200, 80, 0.95) 20%,
+    rgba(255, 50, 0, 0.6) 50%,
+    transparent 75%
+  );
+  mix-blend-mode: screen;
+  z-index: 20;
+  animation: heroDeathFlash 1.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes heroDeathFlash {
+  0% {
+    transform: scale(0.1);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(3.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(6.5);
+    opacity: 0;
+  }
+}
+
+.anim-avatar-death::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 25px;
+  height: 25px;
+  border-radius: 4px;
+  z-index: 21;
+  animation: heroDebris 1.2s cubic-bezier(0.05, 0.9, 0.1, 1) forwards;
+}
+
+@keyframes heroDebris {
+  0% {
+    box-shadow:
+      0 0 0 0 #202560,
+      0 0 0 0 #111,
+      0 0 0 0 #202560,
+      0 0 0 0 #202560,
+      0 0 0 0 #111,
+      0 0 0 0 #333,
+      0 0 0 0 #b08d57,
+      0 0 0 0 #8b5a2b,
+      0 0 0 0 #5c3a21,
+      0 0 0 0 #3d2314,
+      0 0 0 0 #ffaa00,
+      0 0 0 0 #ffffff,
+      0 0 0 0 #ff7700,
+      0 0 0 0 #ffaa00,
+      0 0 0 0 #ffffff,
+      0 0 0 0 #d4af37;
+    opacity: 1;
+  }
+  100% {
+    box-shadow:
+      -250px -150px 0 10px #202560,
+      220px -200px 0 8px #111,
+      -180px 250px 0 12px #202560,
+      250px 180px 0 6px #202560,
+      -80px -300px 0 15px #111,
+      120px 300px 0 10px #333,
+      -300px -80px 0 2px #b08d57,
+      320px 40px 0 4px #8b5a2b,
+      240px 260px 0 3px #5c3a21,
+      -260px 220px 0 5px #3d2314,
+      -400px -120px 5px -2px #ffaa00,
+      420px -180px 6px -1px #ffffff,
+      -200px -380px 4px -2px #ff7700,
+      360px 320px 5px -1px #ffaa00,
+      -100px 400px 6px 0px #ffffff,
+      -350px -280px 4px -2px #d4af37;
+    opacity: 0;
+    transform: translate(-50%, -5%) scale(3) rotate(220deg);
+  }
+}
+
+.board-shake-heavy {
+  animation: earthquakeHeavy 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes earthquakeHeavy {
+  0% {
+    transform: translate(0, 0);
+  }
+  10% {
+    transform: translate(-8px, 6px) rotate(-1deg);
+  }
+  20% {
+    transform: translate(8px, -4px) rotate(1deg);
+  }
+  30% {
+    transform: translate(-6px, 8px) rotate(-0.5deg);
+  }
+  40% {
+    transform: translate(6px, -6px) rotate(0.5deg);
+  }
+  50% {
+    transform: translate(-4px, 4px);
+  }
+  60% {
+    transform: translate(4px, -2px);
+  }
+  70% {
+    transform: translate(-2px, 2px);
+  }
+  80% {
+    transform: translate(2px, -1px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}

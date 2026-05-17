@@ -29,6 +29,13 @@ export function mount() {
     });
   }
 
+  if (localStorage.getItem('autoQueue') === 'true') {
+    if (elements.searchOverlay) {
+      elements.searchOverlay.classList.remove('is-hidden');
+      elements.searchOverlay.classList.remove('hidden');
+    }
+  }
+
   renderUserProfile();
   initHistory(elements.historyList);
 
@@ -36,6 +43,13 @@ export function mount() {
 
   socket = socketService.connect();
   initMatchmaking(elements, socket);
+
+  if (localStorage.getItem('autoQueue') === 'true') {
+    localStorage.removeItem('autoQueue');
+    setTimeout(() => {
+      if (elements.playBtn) elements.playBtn.click();
+    }, 50);
+  }
 
   socket.on('match_found', handleMatchFound);
   socket.on('force-reconnect', handleForceReconnect);

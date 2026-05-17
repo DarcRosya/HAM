@@ -29,6 +29,7 @@ let pendingGameState = null;
 let isAnimationPlaying = false;
 let attackReticle = null;
 let lastDropCoords = null;
+let pendingGameOverPayload = null;
 
 const COIN_TOSS_DURATION_MS = 7500;
 
@@ -56,6 +57,7 @@ export function mount() {
     opponentStatusText: document.getElementById('opponent-connection-text'),
     battleMessage: document.getElementById('battle-message'),
     timerDisplay: document.getElementById('info-timer'),
+    playBtn: document.querySelector('.play-btn'),
   };
 
   if (elements.loader) elements.loader.classList.remove('hidden');
@@ -158,6 +160,7 @@ export function unmount() {
   elements = {};
   pendingGameState = null;
   isAnimationPlaying = false;
+  pendingGameOverPayload = null;
 }
 
 // --- Обработчики Сокетов ---
@@ -520,39 +523,79 @@ function handleOpponentAttack({ attackerInstanceId, targetId, targetType }) {
   });
 }
 
-const handleGameOver = ({ winnerId }) => {
+function handleGameOver(payload = {}) {
+  if (isAnimationPlaying && !payload.forceExecute) {
+    pendingGameOverPayload = payload;
+    return;
+  }
   hideOpponentStatus();
   store.clearMatchState();
 
+  const winnerId = payload.winnerId || null;
+  const mmrChange = Number(payload.ratingChange ?? payload.mmrChange ?? 0);
+  const durationSeconds = Number(payload.duration ?? payload.matchDuration ?? 0);
   const { myPlayerId } = resolvePlayers(latestState, battleSocket);
   const myId = myPlayerId ?? battleSocket.id;
-  const message = String(winnerId) === String(myId) ? 'You won!' : 'You lost!';
+  const isIWon = String(winnerId) === String(myId);
+  const targetAvatarZoneId = isIWon ? 'opp-avatar-zone' : 'player-avatar-zone';
+  const avatarZone = document.getElementById(targetAvatarZoneId);
 
-  const overlay = document.getElementById('game-result-overlay');
-  const text = document.getElementById('result-text');
-  const btn = document.getElementById('return-lobby-btn');
-
-  if (overlay && text && btn) {
-    overlay.classList.remove('hidden');
-    text.textContent = message;
-    btn.disabled = true;
-
-    setTimeout(() => {
-      btn.disabled = false;
-    }, 2000);
-    const redirectTimeout = setTimeout(() => {
-      window.location.hash = '#lobby';
-    }, 10000);
-
-    btn.onclick = () => {
-      clearTimeout(redirectTimeout);
-      window.location.hash = '#lobby';
-    };
-  } else {
-    // Резервный переход, если DOM не загружен
-    window.location.hash = '#lobby';
+  if (avatarZone) {
+    const hpBadge = avatarZone.querySelector('.health-badge');
+    if (hpBadge) hpBadge.style.opacity = '0';
+    avatarZone.classList.add('anim-avatar-death');
+    const board = document.querySelector('.game-board');
+    if (board) board.classList.add('board-shake-heavy');
   }
-};
+
+  setTimeout(() => {
+    const overlay = document.getElementById('game-result-overlay');
+    const banner = document.getElementById('result-banner');
+    const mmrValue = document.getElementById('result-mmr-value');
+    const durationText = document.getElementById('result-duration');
+    const playAgainBtn = document.getElementById('play-again-btn');
+    const backLobbyBtn = document.getElementById('back-lobby-btn');
+
+    if (overlay && banner && mmrValue) {
+      overlay.classList.remove('hidden');
+
+      banner.className = `result-banner ${isIWon ? 'victory' : 'defeat'}`;
+      const displayMmr = isIWon ? Math.abs(mmrChange) : -Math.abs(mmrChange);
+      mmrValue.textContent = displayMmr > 0 ? `+${displayMmr}` : `${displayMmr}`;
+
+      if (durationText) {
+        if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
+          durationText.textContent = '0:00';
+        } else {
+          const minutes = Math.floor(durationSeconds / 60);
+          const seconds = Math.floor(durationSeconds % 60);
+          durationText.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+      }
+
+      const autoRedirectTimer = setTimeout(() => {
+        window.location.hash = '#lobby';
+      }, 10000);
+
+      if (backLobbyBtn) {
+        backLobbyBtn.onclick = () => {
+          clearTimeout(autoRedirectTimer);
+          window.location.hash = '#lobby';
+        };
+      }
+
+      if (playAgainBtn) {
+        playAgainBtn.onclick = () => {
+          clearTimeout(autoRedirectTimer);
+          localStorage.setItem('autoQueue', 'true');
+          window.location.hash = '#lobby';
+        };
+      }
+    } else {
+      window.location.hash = '#lobby';
+    }
+  }, 1500);
+}
 
 // --- Взаимодействие игрока (Кнопки и мышь) ---
 
@@ -955,6 +998,10 @@ function applyFanMath(cardUI, index, total, isMyHand, isMyTurn) {
 function updateBattleUI(state, socket) {
   const { myPlayerId, me, opponent } = resolvePlayers(state, socket);
   if (!myPlayerId || !me || !opponent) return;
+  document.querySelectorAll('.card-slot').forEach((el) => {
+    el.style.pointerEvents = 'auto';
+    delete el.dataset.locked;
+  });
 
   const isMyTurn = String(state.activeTurn) === String(myPlayerId);
 
@@ -1004,19 +1051,82 @@ function updateBattleUI(state, socket) {
   }
 
   // === РЕНДЕР СТОЛА ===
-  // Изменено на новые контейнеры стола
   const myTable = document.getElementById('player-table-zone');
   const oppTable = document.getElementById('opp-table-zone');
   const oldMyCardIds = myTable
-    ? Array.from(myTable.querySelectorAll('.card-slot')).map((el) => el.dataset.instanceId)
+    ? Array.from(myTable.querySelectorAll('.card-slot'))
+        .map((el) => el.dataset.instanceId)
+        .filter(Boolean)
     : [];
   const oldOppCardIds = oppTable
-    ? Array.from(oppTable.querySelectorAll('.card-slot')).map((el) => el.dataset.instanceId)
+    ? Array.from(oppTable.querySelectorAll('.card-slot'))
+        .map((el) => el.dataset.instanceId)
+        .filter(Boolean)
     : [];
+  const newMyCardIds = me.table.map((c) => String(c.instanceId));
+  const newOppCardIds = opponent.table.map((c) => String(c.instanceId));
+  const boardContainer = document.querySelector('.battle-center-column');
+  const myDeaths = oldMyCardIds.some((id) => !newMyCardIds.includes(id));
+  const oppDeaths = oldOppCardIds.some((id) => !newOppCardIds.includes(id));
+
+  if (myDeaths || oppDeaths) {
+    isAnimationPlaying = true;
+    pendingGameState = state;
+
+    const processDeadCards = (oldIds, newIds, tableEl) => {
+      if (!tableEl || !boardContainer) return;
+      const boardRect = boardContainer.getBoundingClientRect();
+
+      oldIds.forEach((id) => {
+        if (!newIds.includes(id)) {
+          const deadCardEl = tableEl.querySelector(`[data-instance-id="${id}"]`);
+          if (deadCardEl) {
+            const rect = deadCardEl.getBoundingClientRect();
+            const placeholder = document.createElement('div');
+            placeholder.className = 'card-slot death-placeholder';
+            placeholder.style.width = `${rect.width}px`;
+            placeholder.style.height = `${rect.height}px`;
+            deadCardEl.parentNode.replaceChild(placeholder, deadCardEl);
+            const clone = deadCardEl.cloneNode(true);
+            clone.className = deadCardEl.className;
+            clone.classList.remove(
+              'can-attack',
+              'taunt-target-glow',
+              'playable',
+              'anim-target-hit'
+            );
+            clone.classList.add('anim-card-shatter');
+
+            clone.style.position = 'absolute';
+            clone.style.left = `${rect.left - boardRect.left + rect.width / 2}px`;
+            clone.style.top = `${rect.top - boardRect.top + rect.height / 2}px`;
+            clone.style.margin = '0';
+
+            boardContainer.appendChild(clone);
+
+            setTimeout(() => {
+              clone.remove();
+              placeholder.remove();
+            }, 900);
+          }
+        }
+      });
+    };
+    processDeadCards(oldMyCardIds, newMyCardIds, myTable);
+    processDeadCards(oldOppCardIds, newOppCardIds, oppTable);
+    setTimeout(() => {
+      isAnimationPlaying = false;
+      if (pendingGameState) {
+        updateBattleUI(pendingGameState, battleSocket);
+        pendingGameState = null;
+      }
+    }, 400);
+    return;
+  }
+
   if (myTable) myTable.innerHTML = '';
   if (oppTable) oppTable.innerHTML = '';
 
-  // Мои карты на столе
   me.table.forEach((card) => {
     if (!myTable) return;
     const isNewCard = !oldMyCardIds.includes(String(card.instanceId));
@@ -1033,6 +1143,7 @@ function updateBattleUI(state, socket) {
     if (card.canAttack && isMyTurn) {
       cardUI.classList.add('can-attack');
       cardUI.addEventListener('mousedown', (e) => {
+        if (isAnimationPlaying) return;
         e.preventDefault();
         draggingAttackId = card.instanceId;
         cardUI.classList.add('is-attacking-active');
@@ -1042,8 +1153,10 @@ function updateBattleUI(state, socket) {
 
         const oppTableZone = document.getElementById('opp-table-zone');
         let hasTaunt = false;
-        if (oppTableZone && opponent && opponent.table) {
-          opponent.table.forEach((oppCard) => {
+        const { opponent: freshOpponent } = resolvePlayers(latestState, battleSocket);
+
+        if (oppTableZone && freshOpponent && freshOpponent.table) {
+          freshOpponent.table.forEach((oppCard) => {
             if (oppCard.traits?.includes('taunt')) {
               hasTaunt = true;
               const oppUI = oppTableZone.querySelector(
@@ -1110,6 +1223,8 @@ function updateBattleUI(state, socket) {
       });
     } else {
       cardUI.classList.add('exhausted'); // Болезнь призыва или уже била
+      cardUI.style.pointerEvents = 'none';
+      cardUI.dataset.locked = 'true';
     }
     myTable.appendChild(cardUI);
   });
@@ -1356,6 +1471,12 @@ function playAttackAnimation(attackerEl, targetEl, onImpact, onComplete) {
       if (targetAtk > 0) {
         showFloatingDamage(attackerEl, targetAtk);
       }
+      if (pendingGameOverPayload) {
+        const p = pendingGameOverPayload;
+        pendingGameOverPayload = null;
+        p.forceExecute = true;
+        handleGameOver(p);
+      }
 
       const boardContainer = document.querySelector('.battle-center-column');
       if (boardContainer) {
@@ -1397,11 +1518,16 @@ function playAttackAnimation(attackerEl, targetEl, onImpact, onComplete) {
 
           isAnimationPlaying = false;
 
-          if (pendingGameState) {
+          if (pendingGameOverPayload) {
+            const p = pendingGameOverPayload;
+            pendingGameOverPayload = null;
+            p.forceExecute = true;
+            handleGameOver(p);
+          } else if (pendingGameState) {
             updateBattleUI(pendingGameState, battleSocket);
             pendingGameState = null;
           }
-        }, 400);
+        }, 300);
       }, 70);
     }, 250);
   }, 200);
