@@ -496,8 +496,13 @@ export class GameRoom {
       console.error('Failed to save match history or update rating:', e);
     }
 
+    const durationSeconds = Math.floor((Date.now() - this.startedAt.getTime()) / 1000);
     for (const playerId of Object.keys(this.players)) {
-      this.emitToPlayer(playerId, 'game_over', { winnerId });
+      this.emitToPlayer(playerId, 'game_over', {
+        winnerId: winnerId,
+        ratingChange: ratingChange,
+        duration: durationSeconds,
+      });
     }
   }
 }
