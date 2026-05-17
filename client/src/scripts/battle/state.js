@@ -3,6 +3,7 @@ export const battleState = {
   match: null,
   isMatchStarted: false,
   isMounted: false,
+  hasRenderedOnce: false,
 
   // --- Состояние Drag & Drop ---
   drag: {
@@ -15,6 +16,8 @@ export const battleState = {
   ui: {
     hoveredCardCost: 0,
     activeTooltip: null,
+    isAnimating: false,
+    initialDrawDone: false,
   },
 
   // --- Реестр таймеров (для защиты от утечек памяти) ---
@@ -61,6 +64,8 @@ export const battleState = {
   reset() {
     this.match = null;
     this.isMatchStarted = false;
+    this.hasRenderedOnce = false;
+    this.initialDrawDone = false;
 
     if (this.drag.ghostElement) {
       this.drag.ghostElement.remove();
@@ -71,7 +76,7 @@ export const battleState = {
     }
 
     this.drag = { attackCardId: null, playCardId: null, ghostElement: null };
-    this.ui = { hoveredCardCost: 0, activeTooltip: null };
+    this.ui = { hoveredCardCost: 0, activeTooltip: null, isAnimating: false };
     this.elements = {};
 
     this.clearTimers();

@@ -1,4 +1,5 @@
 import { renderCard } from '../../components/Card.js';
+import { battleState } from './state.js';
 
 let messageTimer = null;
 
@@ -344,6 +345,7 @@ export const BattleUI = {
     if (!myPlayerId || !me || !opponent) return;
 
     const isMyTurn = String(state.activeTurn) === String(myPlayerId);
+    const isPlaying = state.phase === 'playing';
 
     // 1. Базовое инфо
     safeSetText(document.getElementById('info-turn'), isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN");
@@ -413,22 +415,39 @@ export const BattleUI = {
       oppTable.appendChild(cardUI);
     });
 
+    // Массивы для сбора нод, которые нужно анимировать в этом кадре
+    const newOppCards = [];
+    const newPlayerCards = [];
+
+    // ГВАРД ФАЗ ДЛЯ БАГА 0: Анимируем раздачу только если фаза матча перешла в активную игру ('playing')
+    // Если игрок делает реконнект посреди матча (таймер уже вовсю тикает), анимацию стартовой раздачи блокируем
+
+    const canAnimateDraw = isPlaying && !battleState.ui.isAnimating;
+
     // 5. Рука противника
     const oppHand = document.getElementById('opp-hand-zone');
     if (oppHand) {
       const existingOpp = Array.from(oppHand.children);
       while (existingOpp.length > opponent.handCount) existingOpp.pop().remove();
+
       while (existingOpp.length < opponent.handCount) {
         const newCard = renderCard({ faceDown: true });
-        oppHand.appendChild(newCard);
+        oppHand.prepend(newCard); // Вставляем всегда слева
         existingOpp.push(newCard);
       }
-      existingOpp.forEach((cardUI, index) =>
-        applyFanMath(cardUI, index, opponent.handCount, false, !isMyTurn)
-      );
+
+      // Пересчитываем математику веера для актуального DOM
+      Array.from(oppHand.children).forEach((cardUI, index) => {
+        if (!battleState.ui.initialDrawDone && state.phase !== 'playing') {
+          cardUI.style.opacity = '0';
+        } else if (!battleState.ui.isAnimating) {
+          cardUI.style.opacity = '1';
+        }
+        applyFanMath(cardUI, index, opponent.handCount, false, !isMyTurn);
+      });
     }
 
-    // 6. Наша рука (с diffing'ом для сохранения призраков drag&drop)
+    // 6. Наша рука
     const handDisplay = document.getElementById('player-hand-zone');
     if (handDisplay) {
       const existingNodes = Array.from(handDisplay.children);
@@ -438,21 +457,31 @@ export const BattleUI = {
         if (!newIds.includes(node.dataset.instanceId)) node.remove();
       });
 
-      me.hand.forEach((card, index) => {
+      // Переворачиваем массив стейта, чтобы новые карты были физически первыми (слева)
+      const visualHandOrder = [...me.hand].reverse();
+
+      visualHandOrder.forEach((card, index) => {
         let cardUI = handDisplay.querySelector(`[data-instance-id="${card.instanceId}"]`);
 
         if (!cardUI) {
           cardUI = renderCard(card);
           cardUI.dataset.instanceId = card.instanceId;
-          handDisplay.appendChild(cardUI);
         }
 
-        // Отрабатываем UX перетаскивания: прячем реальную карту, если ее тащит Ghost
+        // БЕЗОПАСНАЯ СИНХРОНИЗАЦИЯ: Вставляем узел на нужное место, не пересоздавая его в конце контейнера
+        if (handDisplay.children[index] !== cardUI) {
+          handDisplay.insertBefore(cardUI, handDisplay.children[index]);
+        }
+
         if (card.instanceId === dragState.playCardId) {
           cardUI.style.opacity = '0';
           cardUI.style.pointerEvents = 'none';
-        } else {
-          cardUI.style.opacity = '1';
+        } else if (!battleState.ui.isAnimating) {
+          if (!battleState.ui.initialDrawDone && state.phase !== 'playing') {
+            cardUI.style.opacity = '0';
+          } else {
+            cardUI.style.opacity = '1';
+          }
           cardUI.style.pointerEvents = 'auto';
         }
 
@@ -462,6 +491,79 @@ export const BattleUI = {
         applyFanMath(cardUI, index, me.hand.length, true, isMyTurn);
       });
     }
+
+    // 7. ЗАПУСК АНИМАЦИИ (ЦЕНТРАЛИЗОВАННО ЧЕРЕЗ DATA-MARKERS)
+
+    // Защита от реконнекта: если мы влетели в середину игры (прошло уже > 3 сек хода),
+    // мы тихо помечаем все карты как "отрисованные" и отменяем стартовый залп анимаций.
+    const isReconnectingNow =
+      isPlaying && !battleState.ui.initialDrawDone && state.turnEndsInMs < 27000;
+
+    if (isReconnectingNow) {
+      battleState.ui.initialDrawDone = true;
+      Array.from(oppHand?.children || []).forEach((c) => (c.dataset.drawn = 'true'));
+      Array.from(handDisplay?.children || []).forEach((c) => (c.dataset.drawn = 'true'));
+    }
+
+    if (isPlaying && !battleState.ui.isAnimating) {
+      battleState.ui.initialDrawDone = true;
+
+      // Фильтруем только те карты, которые еще не летали (нет флага data-drawn)
+      const newOppCards = Array.from(oppHand?.children || []).filter((c) => !c.dataset.drawn);
+      const newPlayerCards = Array.from(handDisplay?.children || []).filter(
+        (c) => !c.dataset.drawn
+      );
+
+      if (newOppCards.length > 0) this.animateDraw(newOppCards, 'opp-deck', true);
+      if (newPlayerCards.length > 0) this.animateDraw(newPlayerCards, 'player-deck', false);
+    }
+  },
+
+  animateDraw(cards, deckId, isOpponent = false) {
+    const deck = document.getElementById(deckId);
+    if (!deck || cards.length === 0) return;
+
+    battleState.ui.isAnimating = true;
+    const deckRect = deck.getBoundingClientRect();
+
+    cards.forEach((cardUI, index) => {
+      cardUI.dataset.drawn = 'true'; // МАРКЕР: Эта карта отстреляла, больше не трогаем
+
+      const cardRect = cardUI.getBoundingClientRect();
+      const deltaX = deckRect.left - cardRect.left;
+      const deltaY = deckRect.top - cardRect.top;
+
+      cardUI.style.transition = 'none';
+      cardUI.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.2) rotate(180deg)`;
+      cardUI.style.opacity = '0';
+      cardUI.style.zIndex = '9999';
+
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const fanX = cardUI.style.getPropertyValue('--fan-x') || '0px';
+          const fanY = cardUI.style.getPropertyValue('--fan-y') || '0px';
+          const fanRot = cardUI.style.getPropertyValue('--fan-rot') || '0deg';
+
+          // Пружина для тебя, плавная кривая для противника
+          const easing = isOpponent ? 'ease-out' : 'cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+          cardUI.style.transition = `transform 0.6s ${easing}, opacity 0.3s ease-out`;
+          cardUI.style.transform = `translate(${fanX}, ${fanY}) rotate(${fanRot}) scale(1)`;
+          cardUI.style.opacity = '1';
+
+          setTimeout(() => {
+            cardUI.style.transform = '';
+            cardUI.style.transition = '';
+            cardUI.style.opacity = '';
+            cardUI.style.zIndex = '';
+
+            if (index === cards.length - 1) {
+              battleState.ui.isAnimating = false;
+            }
+          }, 600);
+        }, index * 150);
+      });
+    });
   },
 
   // Чисто визуальный рендер тултипа. Вызывать его будет input.js

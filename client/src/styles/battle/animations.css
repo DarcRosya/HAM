@@ -4,10 +4,12 @@
 
 .game-board {
   opacity: 0;
+  visibility: hidden;
   transition: opacity 0.8s ease-out;
 }
 .game-board.board-visible {
   opacity: 1;
+  visibility: visible;
 }
 
 /* --- Анимация появления боевого контейнера --- */
@@ -32,6 +34,14 @@
   pointer-events: auto;
 }
 
+#opp-hand-zone .card:hover {
+  /* Сохраняем веер, сдвигаем по оси Y с учетом угла (translateY работает локально после rotate) */
+  transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg))
+    translateY(30px) scale(0.65) !important;
+  z-index: 100 !important;
+  cursor: default;
+}
+
 #player-hand-zone .card {
   margin: 0 -55px;
   transform: translate(var(--fan-x, 0px), var(--fan-y, 0px)) rotate(var(--fan-rot, 0deg))
@@ -47,6 +57,11 @@
   transform: translate(var(--fan-x, 0px), -60px) rotate(0deg) scale(0.9) !important;
   z-index: 100 !important;
   cursor: pointer;
+}
+
+body.is-dragging #player-hand-zone .card,
+body.is-dragging #opp-hand-zone .card {
+  pointer-events: none !important;
 }
 
 /* --- Анимации тултипов --- */

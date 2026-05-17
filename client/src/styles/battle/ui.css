@@ -11,6 +11,7 @@ body {
   background-image: url('/assets/images/battle-bg3.PNG');
   background-size: cover;
   background-position: center;
+  overflow: hidden;
 }
 
 /* =========================================

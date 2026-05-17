@@ -9,43 +9,32 @@ let networkActions = {};
 // ==========================================
 
 function handleEndTurn() {
-  console.log(
-    '%c[INPUT DEBUG] Функция handleEndTurn была успешно вызвана!',
-    'background: #4ab367; color: #fff'
-  );
+  if (battleState.ui.isAnimating) {
+    console.warn('[INPUT GUARD] Действие заблокировано: идет анимация');
+    return;
+  }
 
   if (!battleState.match) {
     console.warn('[INPUT DEBUG] Нажатие проигнорировано: battleState.match отсутствует');
     return;
   }
 
-  // Трясем BMO при клике (если функция добавлена в ui.js)
   if (BattleUI.triggerBmoVibration) {
-    console.log('[INPUT DEBUG] Запуск анимации вибрации BMO');
     BattleUI.triggerBmoVibration(battleState.elements);
   }
 
   const myId = getMyPlayerId();
   const activeTurnId = battleState.match.activeTurn;
-  console.log(
-    `[INPUT DEBUG] Сверка ходов. Мой ID: ${myId}, Активный ход по серверу: ${activeTurnId}`
-  );
 
   if (String(activeTurnId) === String(myId)) {
-    console.log(
-      '%c[INPUT DEBUG] Верификация пройдена, вызываем networkActions.endTurn()',
-      'color: #4caf50'
-    );
     networkActions.endTurn();
   } else {
-    console.warn('%c[INPUT DEBUG] Попытка скипнуть чужой ход!', 'color: #f44336');
     BattleUI.showMessage('Not your turn!', battleState.elements);
   }
 }
 
 function handleSurrender() {
   if (!battleState.match) return;
-  // Жесткий confirm, чтобы игрок не сдался случайно
   if (window.confirm('Are you sure you want to surrender? You will lose MMR!')) {
     networkActions.surrender(battleState.match.roomId);
   }
@@ -97,6 +86,8 @@ function handleMouseOut(e) {
 }
 
 function handleMouseDown(e) {
+  if (battleState.ui.isAnimating) return;
+
   const cardEl = e.target.closest('.card, .card-slot');
   if (!cardEl) return;
 
@@ -112,6 +103,7 @@ function handleMouseDown(e) {
   if (cardEl.classList.contains('can-attack')) {
     e.preventDefault();
     battleState.drag.attackCardId = instanceId;
+    document.body.classList.add('is-dragging');
 
     // СЧИТЫВАЕМ КООРДИНАТЫ ДО ПЕРЕРИСОВКИ DOM!
     const board = document.querySelector('.game-board');
@@ -148,6 +140,7 @@ function handleMouseDown(e) {
 
     e.preventDefault();
     battleState.drag.playCardId = instanceId;
+    document.body.classList.add('is-dragging');
 
     // Создаем призрака для перетаскивания
     const ghost = cardEl.cloneNode(true);
@@ -189,6 +182,7 @@ function handleMouseMove(e) {
 }
 
 function handleMouseUp(e) {
+  document.body.classList.remove('is-dragging');
   // 1. Отпускаем карту из руки
   if (battleState.drag.playCardId) {
     const tableZone = document.getElementById('player-table-zone');

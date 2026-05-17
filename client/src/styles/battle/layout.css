@@ -34,6 +34,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 1.5s ease-in-out;
+  overflow: hidden;
 }
 
 /* =========================================
@@ -197,8 +198,8 @@ body {
 /* Игрок */
 #player-avatar-zone {
   position: absolute;
-  bottom: 115px;
-  left: 29%;
+  bottom: 122px;
+  left: 50%;
   transform: translateX(-50%);
   width: 65px;
   height: 65px;

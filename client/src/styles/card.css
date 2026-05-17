@@ -114,7 +114,6 @@
   border-radius: 50%;
   margin: 0;
   background: none;
-  /* ВАЖНО: Разрешаем кружкам статов вылезать за пределы овала */
   overflow: visible;
   border: none;
   box-shadow: none;
