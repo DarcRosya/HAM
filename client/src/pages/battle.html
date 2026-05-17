@@ -12,9 +12,46 @@
   <link rel="stylesheet" href="/src/styles/battle/layout.css" />
   <link rel="stylesheet" href="/src/styles/battle/ui.css" />
   <link rel="stylesheet" href="/src/styles/battle/animations.css" />
+
+  <link rel="stylesheet" href="/src/styles/global.css" />
+  <link rel="stylesheet" href="/src/styles/card.css" />
+
+  <link rel="stylesheet" href="/src/styles/battle/layout.css" />
+  <link rel="stylesheet" href="/src/styles/battle/ui.css" />
+  <link rel="stylesheet" href="/src/styles/battle/animations.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=VT323&display=swap" rel="stylesheet">
 </head>
 
 <body>
+  <div id="vs-screen" class="vs-overlay hidden">
+    <div class="spotlight spot-left"></div>
+    <div class="spotlight spot-right"></div>
+
+    <div class="vs-background-blur"></div>
+
+    <div class="vs-player vs-opp">
+      <img id="vs-opp-avatar" class="vs-avatar" src="" alt="Opponent">
+      <div class="vs-info">
+        <div id="vs-opp-name" class="vs-name"></div>
+        <div id="vs-opp-mmr" class="vs-mmr"></div>
+      </div>
+      <img id="vs-opp-sword" class="vs-sword" src="" alt="Sword">
+    </div>
+
+    <div class="vs-center">
+      <div class="vs-text">VS</div>
+    </div>
+
+    <div class="vs-player vs-you">
+      <img id="vs-you-avatar" class="vs-avatar" src="" alt="You">
+      <div class="vs-info">
+        <div id="vs-you-name" class="vs-name"></div>
+        <div id="vs-you-mmr" class="vs-mmr"></div>
+      </div>
+      <img id="vs-you-sword" class="vs-sword" src="" alt="Sword">
+    </div>
+  </div>
+
   <div id="coin-toss-overlay" aria-hidden="true">
     <div class="coin-toss-stage">
       <div class="coin">
@@ -53,7 +90,7 @@
     <div id="freeze-text">Opponent disconnected...<br>Waiting for reconnect.</div>
   </div>
 
-  <div class="game-board" id="player-section">
+  <div class="game-board hidden" id="player-section">
 
     <div
       style="position: absolute; top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; z-index: 50; pointer-events: none;">
@@ -67,18 +104,22 @@
     <div class="sidebar-right">
       <div id="opp-mana-zone" class="flask-container opp-flask"></div>
 
-      <div class="turn-info-block">
-        <div id="info-turn" class="turn-indicator"></div>
-        <div id="info-timer" class="timer-display">0</div>
-        <button class="end-turn-btn" id="end-turn-btn">END TURN</button>
+      <div class="bmo-timer-wrapper">
+        <div class="bmo-hint-text">press to end turn &#10549;</div>
+
+        <div class="bmo-body" id="bmo-end-turn-zone">
+          <div class="bmo-screen">
+            <div id="bmo-text-top" class="bmo-small-font"></div>
+            <div id="bmo-text-bottom" class="bmo-large-font"></div>
+          </div>
+          <div class="bmo-hitbox"></div>
+        </div>
       </div>
-
       <div id="player-mana-zone" class="flask-container player-flask"></div>
-
-      <button class="text-btn" id="surrender-btn" style="margin-top: 20px;">SURRENDER</button>
     </div>
 
     <div class="sidebar-left">
+      <button class="text-btn" id="surrender-btn" style="margin-bottom: 20px;">SURRENDER</button>
       <div class="his-deck" id="opp-deck">30</div>
       <div class="player-deck" id="player-deck" data-count="30"></div>
       <div id="fatigue-info" class="hidden" style="color: red; font-weight: bold; text-align: center;">Fatigue: <span

@@ -7,6 +7,16 @@
   box-sizing: border-box;
 }
 
+:root {
+  /* НАСТРОЙ ЭТИ ПЕРЕМЕННЫЕ В БРАУЗЕРЕ (DEVTOOLS) ДЛЯ ИДЕАЛЬНОЙ ПОДГОНКИ! */
+  --bmo-width: 259px;
+  --bmo-height: 270px;
+  --bmo-screen-top: 46px;
+  --bmo-screen-left: 57px;
+  --bmo-screen-width: 91px;
+  --bmo-screen-height: 62px;
+}
+
 body {
   display: flex;
   justify-content: center;
@@ -21,6 +31,10 @@ body {
   position: relative; /* Все absolute внутри отсчитываются отсюда */
   user-select: none;
   -webkit-user-select: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.5s ease-in-out;
+  overflow: hidden;
 }
 
 /* =========================================
@@ -47,6 +61,7 @@ body {
   width: 100%;
   min-height: 130px; /* Фикс схлопывания для приема drop-событий */
   z-index: 10;
+  pointer-events: none; /* КРИТИЧЕСКИЙ ФИКС: Пропускает клики сквозь пустой стол прямо в BMO */
 }
 
 #opp-table-zone {
@@ -183,8 +198,8 @@ body {
 /* Игрок */
 #player-avatar-zone {
   position: absolute;
-  bottom: 115px;
-  left: 29%;
+  bottom: 122px;
+  left: 50%;
   transform: translateX(-50%);
   width: 65px;
   height: 65px;
@@ -276,4 +291,64 @@ body {
   bottom: 0;
   left: 0;
   border-radius: 10px 14px 14px 2px;
+}
+
+/* =========================================
+   BMO TIMER LAYOUT
+========================================= */
+.bmo-timer-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 15px 0;
+}
+
+.bmo-hint-text {
+  font-family: 'Permanent Marker', cursive;
+  color: #ffda6a;
+  font-size: 18px;
+  transform: rotate(-10deg);
+  margin-bottom: -10px;
+  margin-left: -90px;
+  z-index: 5;
+  text-shadow: 2px 2px 0 #000;
+  pointer-events: none;
+}
+
+.bmo-body {
+  position: relative;
+  width: var(--bmo-width);
+  height: var(--bmo-height);
+  background: url('/assets/images/bmo-timer.png') no-repeat center center;
+  /* Жесткая растяжка, чтобы экран не съезжал при ресайзе окна */
+  background-size: 100% 100%;
+  transition: transform 0.1s;
+}
+
+/* Экран BMO (подгони отступы под твою картинку bmo-timer.png) */
+.bmo-screen {
+  position: absolute;
+  top: var(--bmo-screen-top);
+  left: var(--bmo-screen-left);
+  width: var(--bmo-screen-width);
+  height: var(--bmo-screen-height);
+  background-color: #c9e2d3;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.bmo-hitbox {
+  position: absolute;
+  bottom: 83px;
+  left: 48px;
+  width: 110px;
+  height: 148px;
+  cursor: pointer;
+  z-index: 10;
 }

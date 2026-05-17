@@ -47,6 +47,16 @@ export function initSocketManager(httpServer, clientOrigin) {
       try {
         const updatedUser = await findById(lobbyUserId);
         if (updatedUser) {
+          socket.user.rating = updatedUser.rating;
+          socket.emit('profile_sync', updatedUser);
+        }
+      } catch (err) {
+        console.error('Failed to sync profile on join-lobby:', err);
+      }
+
+      try {
+        const updatedUser = await findById(lobbyUserId);
+        if (updatedUser) {
           socket.emit('profile_sync', updatedUser);
         }
       } catch (err) {

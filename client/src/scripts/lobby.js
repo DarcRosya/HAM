@@ -78,7 +78,6 @@ export function unmount() {
     socket.off('match_found', handleMatchFound);
     socket.off('force-reconnect', handleForceReconnect);
     socket.off('server-shutdown', handleServerShutdown);
-    socketService.disconnect();
   }
 
   elements = {};
@@ -87,6 +86,14 @@ export function unmount() {
 // --- Обработчики событий ---
 
 function handleMatchFound(state) {
+  if (elements.tipElement) {
+    elements.tipElement.textContent = 'MATCH FOUND!';
+    elements.tipElement.style.color = '#33ff33';
+  }
+  if (elements.cancelBtn) {
+    elements.cancelBtn.classList.add('hidden');
+  }
+
   stopMatchmaking(elements);
   store.setMatchState(state, true);
   window.location.hash = '#battle';
