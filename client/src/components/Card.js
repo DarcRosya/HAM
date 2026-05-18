@@ -54,13 +54,15 @@ export function renderCard(props = {}) {
     <div class="card-defense">${defense}</div>
   `;
 
+  const descriptionHtml = highlightKeywords(description);
+
   cardDiv.innerHTML = `
     <div class="card-art" style="background-image: url('${art}');"></div>
     <img src="${frameSrc}" class="card-frame">
     <div class="card-title">${name}</div>
     <div class="card-cost">${cost}</div>
     <div class="card-type">${type}</div>
-    <div class="card-description">${description}</div>
+    <div class="card-description">${descriptionHtml}</div>
     ${statBadges}
   `;
 
@@ -80,4 +82,24 @@ function resolveCardFrame(traits, variant, type) {
   if (normalized.includes('poison')) return '/assets/images/poison-frame.png';
 
   return '/assets/images/default-frame.png';
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function highlightKeywords(description) {
+  const safeText = escapeHtml(description || '');
+  const keywords = ['taunt', 'charge', 'poison', 'berserk', 'damage', 'defense', 'attack', 'mana'];
+  const regex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'gi');
+
+  return safeText.replace(regex, (match) => {
+    const key = match.toLowerCase();
+    return `<span class="card-keyword" data-keyword="${key}">${match}</span>`;
+  });
 }

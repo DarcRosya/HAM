@@ -39,7 +39,14 @@ export function mount() {
   renderUserProfile();
   initHistory(elements.historyList);
 
-  initProfileUI(() => initHistory(elements.historyList));
+  initProfileUI(() => {
+    const updatedUserData = JSON.parse(localStorage.getItem('user') || '{}');
+    if (typeof store.setUser === 'function') {
+      store.setUser(updatedUserData);
+    }
+
+    initHistory(elements.historyList);
+  });
 
   socket = socketService.connect();
   initMatchmaking(elements, socket);

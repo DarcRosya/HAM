@@ -1,6 +1,6 @@
 export const CARDS = [
   // ==========================================
-  // UNITS (СУЩЕСТВА)
+  // UNITSS
   // ==========================================
   {
     id: 1,
@@ -279,14 +279,14 @@ export const CARDS = [
   },
 
   // ==========================================
-  // SPELLS (ЗАКЛИНАНИЯ)
+  // SPELLS
   // ==========================================
   {
     id: 26,
     type: 'spell',
     name: "Mabel's Sweater",
     description: 'Grants +1 to your current mana.',
-    cost: 1,
+    cost: 0,
     spellEffect: 'add_mana',
     spellValue: 1,
     traits: [],
@@ -294,6 +294,28 @@ export const CARDS = [
   },
   {
     id: 27,
+    type: 'spell',
+    name: "Mabel's Sweater",
+    description: 'Grants +1 to your current mana.',
+    cost: 0,
+    spellEffect: 'add_mana',
+    spellValue: 1,
+    traits: [],
+    art: '/assets/cards-art/bubblegum.png',
+  },
+  {
+    id: 28,
+    type: 'spell',
+    name: "Mabel's Sweater",
+    description: 'Grants +1 to your current mana.',
+    cost: 0,
+    spellEffect: 'add_mana',
+    spellValue: 1,
+    traits: [],
+    art: '/assets/cards-art/bubblegum.png',
+  },
+  {
+    id: 29,
     type: 'spell',
     name: 'Fireball',
     description: 'Deals 2 damage to any target.',
@@ -304,7 +326,7 @@ export const CARDS = [
     art: '/assets/cards-art/bubblegum.png',
   },
   {
-    id: 28,
+    id: 30,
     type: 'spell',
     name: 'Bacon Pancakes',
     description: 'Restores 4 defense to your card.',
@@ -315,7 +337,7 @@ export const CARDS = [
     art: '/assets/cards-art/bubblegum.png',
   },
   {
-    id: 29,
+    id: 31,
     type: 'spell',
     name: 'The Enchiridion',
     description: 'Grants your card +2 attack and +2 defense.',
@@ -326,7 +348,7 @@ export const CARDS = [
     art: '/assets/cards-art/bubblegum.png',
   },
   {
-    id: 30,
+    id: 32,
     type: 'spell',
     name: "Cyclops' Tears",
     description: 'Restores 5 defense to your avatar.',

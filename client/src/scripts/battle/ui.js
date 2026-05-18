@@ -132,7 +132,6 @@ export const BattleUI = {
       vsOverlay.classList.remove('vs-active');
       vsOverlay.style.display = 'none';
 
-      // ВОТ ЭТО ВАЖНО: Снимаем блокировку мыши со стола
       const gameBoard = document.querySelector('.game-board');
       if (gameBoard) {
         gameBoard.style.pointerEvents = '';
@@ -196,7 +195,6 @@ export const BattleUI = {
           particleWrapper = document.createElement('div');
           particleWrapper.id = 'vs-particles-wrapper';
 
-          // Данные по ударам: время (сек) и CSS-переменные для их координат
           const clashes = [
             { time: 6.51, varX: 'var(--impact1-x)', varY: 'var(--impact1-y)' },
             { time: 7.44, varX: 'var(--impact2-x)', varY: 'var(--impact2-y)' },
@@ -207,7 +205,6 @@ export const BattleUI = {
           clashes.forEach((clash, index) => {
             const container = document.createElement('div');
             container.className = 'vs-particles-container';
-            // Жестко привязываем контейнер к переменной удара!
             container.style.setProperty('--impact-x', clash.varX);
             container.style.setProperty('--impact-y', clash.varY);
 
@@ -240,16 +237,13 @@ export const BattleUI = {
         vsOverlay.style.display = '';
         vsOverlay.classList.remove('hidden');
 
-        // Вызываем reflow браузера
         void vsOverlay.offsetWidth;
         vsOverlay.classList.add('vs-active');
 
-        // 3. ПРО-ХАК: СИНХРОНИЗАЦИЯ (теперь ВНУТРИ if, чтобы не сбивать анимацию при обновлении стейта)
         const totalPhaseDuration = 15500;
         const passedTimeMs = totalPhaseDuration - (state.turnEndsInMs || totalPhaseDuration);
         const passedSeconds = Math.max(0, passedTimeMs / 1000);
 
-        // Синхронизируем базовые статичные 15.5s анимации (аватары, мечи, фон)
         const animatedElements = vsOverlay.querySelectorAll(
           '.vs-background-blur, .vs-opp, .vs-you, .vs-info, .vs-sword, .vs-text, .vs-wipe'
         );
@@ -518,7 +512,9 @@ export const BattleUI = {
 
     me.table.forEach((card) => {
       const isNewCard =
-        !oldMyCardIds.includes(String(card.instanceId)) && state.phase === 'playing';
+        !oldMyCardIds.includes(String(card.instanceId)) &&
+        state.phase === 'playing' &&
+        battleState.hasRenderedOnce;
       const cardUI = renderCard({ ...card, variant: 'board' });
       cardUI.classList.add('card-slot');
       cardUI.dataset.instanceId = card.instanceId;
@@ -549,7 +545,9 @@ export const BattleUI = {
 
     opponent.table.forEach((card) => {
       const isNewCard =
-        !oldOppCardIds.includes(String(card.instanceId)) && state.phase === 'playing';
+        !oldOppCardIds.includes(String(card.instanceId)) &&
+        state.phase === 'playing' &&
+        battleState.hasRenderedOnce;
       const cardUI = renderCard({ ...card, variant: 'board' });
       cardUI.classList.add('card-slot', 'enemy-card');
       cardUI.dataset.instanceId = card.instanceId;
@@ -645,6 +643,8 @@ export const BattleUI = {
       if (newPlayerCards.length > 0)
         spawnPromises.push(this.animateDraw(newPlayerCards, 'player-deck', false, cancelToken));
     }
+
+    battleState.hasRenderedOnce = true;
 
     if (spawnPromises.length > 0) await Promise.all(spawnPromises);
   },
@@ -1025,6 +1025,53 @@ export const BattleUI = {
         elements.bmoTextBottom.classList.remove('danger-tick');
       }
     }
+  },
+
+  playSpellAnimation(effectType, targetEl, onComplete) {
+    if (!targetEl) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    let effectClass = '';
+    switch (effectType) {
+      case 'damage':
+        effectClass = 'anim-spell-damage';
+        break;
+      case 'heal_card':
+      case 'heal_avatar':
+        effectClass = 'anim-spell-heal';
+        break;
+      case 'buff_card':
+        effectClass = 'anim-spell-buff';
+        break;
+      case 'add_mana':
+        effectClass = 'anim-spell-mana';
+        break;
+      default:
+        effectClass = 'anim-spell-damage';
+    }
+
+    // Считываем точные координаты цели на экране
+    const rect = targetEl.getBoundingClientRect();
+    const effectEl = document.createElement('div');
+    effectEl.className = `spell-effect-overlay ${effectClass}`;
+
+    // Абсолютное позиционирование поверх экрана
+    effectEl.style.position = 'fixed';
+    effectEl.style.left = `${rect.left + rect.width / 2}px`;
+    effectEl.style.top = `${rect.top + rect.height / 2}px`;
+    effectEl.style.zIndex = '15000'; // Точно поверх всего UI
+
+    document.body.appendChild(effectEl);
+    targetEl.classList.add('anim-target-hit');
+
+    // Ожидаем завершения анимации
+    setTimeout(() => {
+      if (effectEl.parentNode) effectEl.remove();
+      targetEl.classList.remove('anim-target-hit');
+      if (onComplete) onComplete();
+    }, 800);
   },
 
   // Анимация вибрации BMO при клике

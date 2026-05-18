@@ -134,6 +134,7 @@ export class GameRoom {
       table: [],
       deck: shuffleArray(CARDS).map((card) => ({
         ...card,
+        traits: Array.isArray(card.traits) ? [...card.traits] : [],
         instanceId: `card-${card.id}-${Math.random().toString(36).substring(2, 9)}`,
       })),
       fatigue: 0,
@@ -277,6 +278,11 @@ export class GameRoom {
       this.players[normalizedId].socketId = socket.id;
     }
 
+    if (this.status === 'finished' && this.gameOverResult) {
+      this.emitToPlayer(userId, 'game_over', this.gameOverResult);
+      return;
+    }
+
     if (this.disconnectGraceTimers[normalizedId]) {
       this.clearDisconnectTimer(normalizedId);
       this.notifyOpponentReconnected(normalizedId);
@@ -386,6 +392,12 @@ export class GameRoom {
 
   _hasTrait(card, trait) {
     return Array.isArray(card?.traits) && card.traits.includes(trait);
+  }
+
+  _consumeTrait(card, trait) {
+    if (!Array.isArray(card?.traits)) return;
+    const index = card.traits.indexOf(trait);
+    if (index !== -1) card.traits.splice(index, 1);
   }
 
   _removeDeadCards(player) {
@@ -537,6 +549,15 @@ export class GameRoom {
       activePlayer.mana -= card.cost;
       activePlayer.hand.splice(cardIndex, 1);
 
+      for (const targetPlayerId of Object.keys(this.players)) {
+        this.emitToPlayer(targetPlayerId, 'spell_cast', {
+          casterId: playerId,
+          card,
+          targetId,
+          targetType,
+        });
+      }
+
       if (this.status === 'finished' || effectResult.gameOver) return;
       this.broadcastState();
       return;
@@ -620,14 +641,22 @@ export class GameRoom {
       targetCard.defense -= attackerCard.attack;
       attackerCard.defense -= targetCard.attack;
 
+      let attackerUsedPoison = false;
+      let defenderUsedPoison = false;
+
       if (this._hasTrait(attackerCard, 'poison') && attackerCard.attack > 0) {
         targetCard.defense = 0;
+        attackerUsedPoison = true;
       }
       if (this._hasTrait(targetCard, 'poison') && targetCard.attack > 0) {
         attackerCard.defense = 0;
+        defenderUsedPoison = true;
       }
 
       attackerCard.canAttack = false;
+
+      if (attackerUsedPoison) this._consumeTrait(attackerCard, 'poison');
+      if (defenderUsedPoison) this._consumeTrait(targetCard, 'poison');
 
       this._removeDeadCards(attackerPlayer);
       this._removeDeadCards(opponentPlayer);
@@ -717,12 +746,15 @@ export class GameRoom {
     }
 
     const durationSeconds = Math.floor((Date.now() - this.startedAt.getTime()) / 1000);
+
+    this.gameOverResult = {
+      winnerId: winnerId,
+      ratingChange: ratingChange,
+      duration: durationSeconds,
+    };
+
     for (const playerId of Object.keys(this.players)) {
-      this.emitToPlayer(playerId, 'game_over', {
-        winnerId: winnerId,
-        ratingChange: ratingChange,
-        duration: durationSeconds,
-      });
+      this.emitToPlayer(playerId, 'game_over', this.gameOverResult);
     }
   }
 }

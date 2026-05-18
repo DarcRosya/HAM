@@ -151,13 +151,15 @@ async function applyGameState(state, cancelToken) {
   const opponentEntry = entries.find(([id]) => String(id) !== String(myId));
   const opponent = opponentEntry ? opponentEntry[1] : null;
 
-  if (opponent && opponent.isConnected === false)
+  if (opponent && opponent.isConnected === false) {
     BattleUI.setFrozen(
       true,
-      'Opponent disconnected...<br>Waiting for reconnect.',
+      "Opponent left. Waiting for reconnect...<br>You will win automatically if they don't return.",
       battleState.elements
     );
-  else BattleUI.setFrozen(false, '', battleState.elements);
+  } else {
+    BattleUI.setFrozen(false, '', battleState.elements);
+  }
 
   const boardPromise = BattleUI.updateBoard(state, BattleNetwork.getSocketId(), battleState.drag, {
     cancelToken,
@@ -188,6 +190,7 @@ async function applyGameState(state, cancelToken) {
 }
 
 async function applyGameOver(payload, cancelToken) {
+  BattleUI.setFrozen(false, '', battleState.elements);
   BattleUI.hideStatus(battleState.elements);
   store.clearMatchState();
 
@@ -297,18 +300,44 @@ const networkCallbacks = {
     });
   },
 
+  onSpellCast: (payload) => {
+    actionQueue.add((ctx) => {
+      if (!store.isInBattle()) return Promise.resolve();
+
+      return new Promise((resolve) => {
+        let targetEl = null;
+        const myId = getMyPlayerId();
+
+        if (payload.targetType === 'avatar') {
+          targetEl =
+            String(payload.targetId) === String(myId)
+              ? document.getElementById('player-avatar-zone') ||
+                document.getElementById('player-avatar')
+              : document.getElementById('opp-avatar-zone') || document.getElementById('opp-avatar');
+        } else if (payload.targetType === 'card') {
+          targetEl = document.querySelector(`[data-instance-id="${payload.targetId}"]`);
+        } else if (!payload.targetType) {
+          targetEl =
+            String(payload.casterId) === String(myId)
+              ? document.getElementById('player-avatar-zone') ||
+                document.getElementById('player-avatar')
+              : document.getElementById('opp-avatar-zone') || document.getElementById('opp-avatar');
+        }
+
+        BattleUI.playSpellAnimation(payload.card.spellEffect, targetEl, resolve);
+      });
+    });
+  },
+
   onGameOver: (payload) => {
     actionQueue.clear();
     actionQueue.add((ctx) => applyGameOver(payload, ctx));
   },
 
   onOpponentDisconnected: (payload) => {
-    const attempts = payload.attemptsLeft ?? 0;
-    const max = payload.maxAttempts ?? 3;
-    const wait = payload.graceSeconds ?? 30;
-    BattleUI.setFrozen(true, '', battleState.elements);
-    BattleUI.showStatus(
-      `Opponent disconnected. Waiting ${wait}s. Attempts left: ${attempts} / ${max}.`,
+    BattleUI.setFrozen(
+      true,
+      "Opponent left. Waiting for reconnect...<br>You will win automatically if they don't return in 30 seconds.",
       battleState.elements
     );
   },
@@ -317,10 +346,6 @@ const networkCallbacks = {
     const attempts = payload.attemptsLeft ?? 0;
     const max = payload.maxAttempts ?? 3;
     BattleUI.setFrozen(false, '', battleState.elements);
-    BattleUI.showStatus(
-      `Opponent reconnected. Attempts left: ${attempts} / ${max}.`,
-      battleState.elements
-    );
 
     if (battleState.timers.opponentStatus) clearTimeout(battleState.timers.opponentStatus);
     battleState.timers.opponentStatus = setTimeout(() => {
