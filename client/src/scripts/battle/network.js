@@ -42,6 +42,9 @@ function handleMatchNotFound() {
 function handleOpponentAttack(payload) {
   if (callbacks.onOpponentAttack) callbacks.onOpponentAttack(payload);
 }
+function handleSpellCast(payload) {
+  if (callbacks.onSpellCast) callbacks.onSpellCast(payload);
+}
 
 function clearWatchdog() {
   if (watchdogTimer) {
@@ -76,6 +79,7 @@ export const BattleNetwork = {
     socket.off('opponent-reconnected', handleOpponentReconnected);
     socket.off('match_not_found', handleMatchNotFound);
     socket.off('opponent_attack', handleOpponentAttack);
+    socket.off('spell_cast', handleSpellCast);
 
     socket.on('error', handleError);
     socket.on('match_found', handleMatchFound);
@@ -86,6 +90,7 @@ export const BattleNetwork = {
     socket.on('opponent-reconnected', handleOpponentReconnected);
     socket.on('match_not_found', handleMatchNotFound);
     socket.on('opponent_attack', handleOpponentAttack);
+    socket.on('spell_cast', handleSpellCast);
 
     // Логика переподключения
     const pendingStateStr = store.getPendingMatchState();
@@ -109,6 +114,7 @@ export const BattleNetwork = {
     socket.off('opponent-reconnected', handleOpponentReconnected);
     socket.off('match_not_found', handleMatchNotFound);
     socket.off('opponent_attack', handleOpponentAttack);
+    socket.off('spell_cast', handleSpellCast);
 
     callbacks = {};
     socketService.disconnect();

@@ -833,78 +833,6 @@ body.is-dragging #opp-hand-zone .card {
   animation: vs-wipe-anim 15.5s ease-in both;
 }
 
-:root {
-  --impact1-x: 0px;
-  --impact1-y: -50px;
-  --impact2-x: 0px;
-  --impact2-y: -50px;
-  --impact3-x: 20px;
-  --impact3-y: 0px;
-  --opp-avatar-start-x: -50vw;
-  --opp-avatar-start-y: -100vh;
-  --opp-avatar-hit-x: 297px;
-  --opp-avatar-hit-y: 312px;
-  --opp-avatar-swing-x: 180px;
-  --opp-avatar-swing-y: 200px;
-  --opp-avatar-hit2-x: 278px;
-  --opp-avatar-hit2-y: 47px;
-  --opp-avatar-hit3-x: 234px;
-  --opp-avatar-hit3-y: 150px;
-  --you-avatar-start-x: 100vw;
-  --you-avatar-start-y: 50vh;
-  --you-avatar-hit-x: -150px;
-  --you-avatar-hit-y: 27px;
-  --you-avatar-swing-x: -80px;
-  --you-avatar-swing-y: 10px;
-  --you-avatar-hit2-x: -240px;
-  --you-avatar-hit2-y: 36px;
-  --you-avatar-hit3-x: -214px;
-  --you-avatar-hit3-y: -30px;
-  --opp-sword-start-x: -502vw;
-  --opp-sword-start-rot: -208deg;
-  --opp-sword-hand-x: 172px;
-  --opp-sword-hand-y: -152px;
-  --opp-sword-hand-rot: 13deg;
-  --opp-sword-hit-x: 112px;
-  --opp-sword-hit-y: -194px;
-  --opp-sword-hit-rot: -199deg;
-  --opp-sword-swing-x: 169px;
-  --opp-sword-swing-y: -173px;
-  --opp-sword-swing-rot: -229deg;
-  --opp-sword-hit2-x: 92px;
-  --opp-sword-hit2-y: -73px;
-  --opp-sword-hit2-rot: -303deg;
-  --opp-sword-hit3-x: 126px;
-  --opp-sword-hit3-y: -151px;
-  --opp-sword-hit3-rot: -342deg;
-  --you-sword-start-x: 153vw;
-  --you-sword-start-rot: 175deg;
-  --you-sword-hand-x: -133px;
-  --you-sword-hand-y: -143px;
-  --you-sword-hand-rot: -159deg;
-  --you-sword-hit-x: -156px;
-  --you-sword-hit-y: -79px;
-  --you-sword-hit-rot: -41deg;
-  --you-sword-swing-x: -19px;
-  --you-sword-swing-y: 52px;
-  --you-sword-swing-rot: -199deg;
-  --you-sword-hit2-x: -111px;
-  --you-sword-hit2-y: -163px;
-  --you-sword-hit2-rot: 15deg;
-  --you-sword-hit3-x: -145px;
-  --you-sword-hit3-y: -146px;
-  --you-sword-hit3-rot: -20deg;
-  --coin-finn-blue: #9fd9ff;
-  --coin-finn-white: #f7fbff;
-  --coin-finn-border: #f1d28b;
-  --coin-jake-yellow: #f6c24a;
-  --coin-jake-orange: #e5952f;
-  --coin-jake-border: #c8771e;
-  --coin-text-dark: #1f2430;
-  --coin-text-warm: #3d1f08;
-  --coin-animation-duration: 7500ms;
-}
-
 /* ==========================================================================
    KEYFRAMES 
    ========================================================================== */
@@ -1419,43 +1347,45 @@ body.is-dragging #opp-hand-zone .card {
 
 /* --- 3D Монетка (Оставляем все старые переменные и кейфреймы как были) --- */
 :root {
-  /* --- ТОЧКИ СТОЛКНОВЕНИЯ ИСКР (Калибруй под пересечение лезвий) --- */
   --impact1-x: 0px;
-  --impact1-y: -50px;
-  --impact2-x: 20px;
-  --impact1-y: -50px;
-  --impact3-x: 0px;
-  --impact3-y: 0px;
+  --impact1-y: 93px;
+  --impact2-x: 57px;
+  --impact2-y: -61px;
+  --impact3-x: -13px;
+  --impact3-y: -67px;
 
-  /* --- 1. ЛЕВЫЙ ИГРОК (ПРОТИВНИК / OPPONENT) --- */
   --opp-avatar-start-x: -525vw;
   --opp-avatar-start-y: -500vh;
-
   --opp-avatar-hit-x: 250px;
   --opp-avatar-hit-y: 274px;
-  --opp-avatar-swing-x: 180px; /* <-- ЗАМАХ (настрой) */
-  --opp-avatar-swing-y: 200px; /* <-- ЗАМАХ (настрой) */
+
+  --opp-avatar-swing-x: 180px;
+  --opp-avatar-swing-y: 200px;
+
   --opp-avatar-hit2-x: 278px;
   --opp-avatar-hit2-y: 47px;
+
   --opp-avatar-hit3-x: 234px;
   --opp-avatar-hit3-y: 150px;
 
-  /* --- 2. ПРАВЫЙ ИГРОК (ТЫ / YOU) --- */
   --you-avatar-start-x: 100vw;
   --you-avatar-start-y: 50vh;
 
   --you-avatar-hit-x: -150px;
   --you-avatar-hit-y: 27px;
-  --you-avatar-swing-x: -80px; /* <-- ЗАМАХ (настрой) */
-  --you-avatar-swing-y: 10px; /* <-- ЗАМАХ (настрой) */
+
+  --you-avatar-swing-x: -80px;
+  --you-avatar-swing-y: 10px;
+
   --you-avatar-hit2-x: -240px;
   --you-avatar-hit2-y: 36px;
+
   --you-avatar-hit3-x: -214px;
   --you-avatar-hit3-y: -30px;
 
-  /* --- 3. МЕЧ ПРОТИВНИКА (ЛЕВЫЙ) --- */
   --opp-sword-start-x: -502vw;
   --opp-sword-start-rot: -208deg;
+
   --opp-sword-hand-x: 172px;
   --opp-sword-hand-y: -152px;
   --opp-sword-hand-rot: 10deg;
@@ -1463,19 +1393,22 @@ body.is-dragging #opp-hand-zone .card {
   --opp-sword-hit-x: 109px;
   --opp-sword-hit-y: -199px;
   --opp-sword-hit-rot: -207deg;
-  --opp-sword-swing-x: 50px; /* <-- ЗАМАХ (настрой) */
-  --opp-sword-swing-y: -250px; /* <-- ЗАМАХ (настрой) */
-  --opp-sword-swing-rot: -180deg; /* <-- ЗАМАХ (настрой) */
+
+  --opp-sword-swing-x: 50px;
+  --opp-sword-swing-y: -250px;
+  --opp-sword-swing-rot: -180deg;
+
   --opp-sword-hit2-x: 92px;
   --opp-sword-hit2-y: -73px;
   --opp-sword-hit2-rot: -303deg;
-  --opp-sword-hit3-x: 126px;
+
+  --opp-sword-hit3-x: 136px;
   --opp-sword-hit3-y: -151px;
   --opp-sword-hit3-rot: -342deg;
 
-  /* --- 4. МЕЧ ИГРОКА (ПРАВЫЙ) --- */
   --you-sword-start-x: 153vw;
   --you-sword-start-rot: 180deg;
+
   --you-sword-hand-x: -133px;
   --you-sword-hand-y: -143px;
   --you-sword-hand-rot: -159deg;
@@ -1483,17 +1416,19 @@ body.is-dragging #opp-hand-zone .card {
   --you-sword-hit-x: -120px;
   --you-sword-hit-y: -9px;
   --you-sword-hit-rot: -59deg;
-  --you-sword-swing-x: -80px; /* <-- ЗАМАХ (настрой) */
-  --you-sword-swing-y: -50px; /* <-- ЗАМАХ (настрой) */
-  --you-sword-swing-rot: -20deg; /* <-- ЗАМАХ (настрой) */
+
+  --you-sword-swing-x: -80px;
+  --you-sword-swing-y: -50px;
+  --you-sword-swing-rot: -20deg;
+
   --you-sword-hit2-x: -111px;
   --you-sword-hit2-y: -163px;
   --you-sword-hit2-rot: 15deg;
-  --you-sword-hit3-x: -130px;
-  --you-sword-hit3-y: -93px;
+
+  --you-sword-hit3-x: -153px;
+  --you-sword-hit3-y: -145px;
   --you-sword-hit3-rot: -20deg;
 
-  /* --- КОНФИГУРАЦИЯ МОНЕТКИ --- */
   --coin-finn-blue: #9fd9ff;
   --coin-finn-white: #f7fbff;
   --coin-finn-border: #f1d28b;
@@ -2097,6 +2032,32 @@ body.is-dragging #opp-hand-zone .card {
     box-shadow 0.1s !important;
 }
 
+.anim-spell-dissolve {
+  animation: spellDissolve 0.5s ease-out forwards;
+  transform-origin: center;
+  will-change: transform, opacity, filter;
+  z-index: 10005 !important;
+  pointer-events: none;
+}
+
+@keyframes spellDissolve {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.95) rotate(2deg);
+    filter: brightness(1);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05) rotate(0deg);
+    filter: brightness(3) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.2) rotate(-3deg);
+    filter: brightness(3) blur(4px);
+  }
+}
+
 .attack-reticle {
   position: fixed;
   width: 40px;
@@ -2131,6 +2092,26 @@ body.is-dragging #opp-hand-zone .card {
   box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
   transform: translate(-50%, -50%) scale(1.05);
   animation: pulse-reticle 1.5s infinite;
+}
+
+.attack-reticle.target-friendly {
+  border-color: rgba(70, 200, 120, 0.95);
+  box-shadow: 0 0 12px rgba(70, 200, 120, 0.7);
+}
+
+.attack-reticle.snapped.target-friendly {
+  border-color: rgba(70, 200, 120, 0.95);
+  box-shadow: 0 0 18px rgba(70, 200, 120, 0.75);
+}
+
+.attack-reticle.snapped.target-friendly::before {
+  border-color: rgba(40, 160, 80, 0.9);
+  box-shadow: inset 0 0 10px rgba(20, 80, 40, 0.6);
+}
+
+.attack-reticle.target-enemy {
+  border-color: rgba(255, 50, 50, 0.95);
+  box-shadow: 0 0 12px rgba(255, 50, 50, 0.7);
 }
 
 .attack-reticle::before {
@@ -2170,22 +2151,73 @@ body.is-dragging #opp-hand-zone .card {
 }
 
 .attack-reticle.snapped::after {
-  content: '🔴';
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #ff3333;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #ff0000;
   opacity: 1;
-  transform: scale(0.4);
 }
 
-.attack-reticle.lethal::after {
+.attack-reticle[class*='spell-'].snapped::after {
   content: '';
-  width: 40px;
-  height: 40px;
-  background-image: url('/assets/images/scull.png');
+  width: 24px;
+  height: 24px;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 1;
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 10px rgba(120, 0, 0, 0.9));
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.attack-reticle.lethal.snapped::after {
+  content: '' !important;
+  /* Используем твою картинку как маску-трафарет */
+  -webkit-mask-image: url('/assets/images/scull.png') !important;
+  -webkit-mask-size: contain !important;
+  -webkit-mask-repeat: no-repeat !important;
+  -webkit-mask-position: center !important;
+  /* Заливаем трафарет красным цветом */
+  background-color: #ff3333 !important;
+  width: 45px !important;
+  height: 45px !important;
+  filter: drop-shadow(0 0 10px rgba(120, 0, 0, 0.9)) !important;
+  box-shadow: none !important;
+}
+
+.card.lethal-suicide::after {
+  content: '';
+  position: absolute;
+  top: 25px; /* Прижали ближе к карточке */
+  right: 18px; /* Прижали ближе к карточке */
+  width: 40px;
+  height: 40px;
+  -webkit-mask-image: url('/assets/images/scull.png');
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  background-color: #ff3333;
+  z-index: 100;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+  animation: pop-skull-suicide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  pointer-events: none;
+}
+
+@keyframes pop-skull-suicide {
+  0% {
+    transform: scale(0) rotate(-20deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
 }
 
 .enemy-card.taunt-target-flash {
@@ -2258,4 +2290,187 @@ body.is-dragging #opp-hand-zone .card {
   transition:
     transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 0.15s ease-out !important;
+}
+
+.spell-effect-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 150px;
+  pointer-events: none;
+  z-index: 10010;
+  border-radius: 50%;
+  mix-blend-mode: screen; /* Крутой эффект наложения света */
+}
+
+/* --- ДИНАМИЧЕСКИЕ ПРИЦЕЛЫ ДЛЯ ЗАКЛИНАНИЙ --- */
+.attack-reticle.spell-heal {
+  border-color: rgba(50, 255, 100, 0.9);
+  box-shadow: 0 0 15px rgba(50, 255, 100, 0.5);
+}
+.attack-reticle.spell-heal.snapped::before {
+  border-color: rgba(20, 200, 60, 0.9);
+  box-shadow: inset 0 0 10px rgba(10, 100, 30, 0.5);
+}
+.attack-reticle.spell-heal.snapped::after {
+  background-image: linear-gradient(#32ff64, #32ff64), linear-gradient(#32ff64, #32ff64);
+  background-size:
+    6px 100%,
+    100% 6px; /* Создаем ровный крест */
+  filter: drop-shadow(0 0 5px #00ff00);
+}
+
+.attack-reticle.spell-buff {
+  border-color: rgba(255, 215, 0, 0.9);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+.attack-reticle.spell-buff.snapped::before {
+  border-color: rgba(200, 160, 0, 0.9);
+  box-shadow: inset 0 0 10px rgba(150, 100, 0, 0.5);
+}
+.attack-reticle.spell-buff.snapped::after {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FFD700"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>');
+  filter: drop-shadow(0 0 5px #ffaa00);
+}
+
+.attack-reticle.spell-mana {
+  border-color: rgba(0, 200, 255, 0.9);
+  box-shadow: 0 0 15px rgba(0, 200, 255, 0.5);
+}
+.attack-reticle.spell-mana.snapped::before {
+  border-color: rgba(0, 150, 200, 0.9);
+  box-shadow: inset 0 0 10px rgba(0, 80, 100, 0.5);
+}
+.attack-reticle.spell-mana.snapped::after {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2300C8FF"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/></svg>');
+  filter: drop-shadow(0 0 5px #0055ff);
+}
+
+.attack-reticle.spell-damage {
+  border-color: rgba(255, 80, 0, 0.9);
+  box-shadow: 0 0 15px rgba(255, 80, 0, 0.5);
+}
+.attack-reticle.spell-damage.snapped::before {
+  border-color: rgba(200, 50, 0, 0.9);
+  box-shadow: inset 0 0 10px rgba(100, 20, 0, 0.5);
+}
+.attack-reticle.spell-damage.snapped::after {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF5000"><path d="M11.71 1.05C11.36 1.4 8.79 4.31 8.79 7.69c0 1.25.33 2.45.92 3.44C9.17 10.36 8.5 9.55 8 9.55c-1.25 0-2.31 1.26-2.31 2.82 0 3.03 2.76 5.63 6.31 5.63 3.55 0 6.31-2.6 6.31-5.63 0-2.63-1.89-5.18-4.32-6.57.19.64.29 1.32.29 2.02 0 .61-.09 1.2-.26 1.77-.38-1.74-1.54-3.32-3.13-4.22-.52-.3-.88-.86-.88-1.5 0-.15.02-.29.05-.44-.12.06-.23.12-.35.19z"/></svg>');
+  filter: drop-shadow(0 0 5px #ff0000);
+}
+
+/* --- ВЗРЫВЫ ЗАКЛИНАНИЙ (При попадании) --- */
+.spell-effect-overlay {
+  pointer-events: none;
+  z-index: 15000;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  transform: translate(-50%, -50%);
+}
+
+/* 1. Фаербол (damage) */
+.anim-spell-damage {
+  width: 150px;
+  height: 150px;
+  animation: spell-fireball-hit 0.6s ease-out forwards;
+}
+@keyframes spell-fireball-hit {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    background: radial-gradient(circle, #fff 0%, #ff5500 40%, transparent 70%);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.5);
+    background: radial-gradient(circle, #ffaa00 0%, #ff0000 50%, transparent 70%);
+    box-shadow: 0 0 50px 20px #ff0000;
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.2);
+    background: radial-gradient(circle, #ff0000 0%, transparent 60%);
+    opacity: 0;
+  }
+}
+
+/* 2. Лечение (heal) */
+.anim-spell-heal {
+  width: 150px;
+  height: 150px;
+  animation: spell-heal-burst 0.8s ease-out forwards;
+}
+@keyframes spell-heal-burst {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 0 0 40px 20px rgba(100, 255, 100, 0.8);
+    background: radial-gradient(circle, rgba(150, 255, 150, 0.9) 0%, transparent 60%);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    box-shadow: 0 0 60px 40px rgba(100, 255, 100, 0);
+    background: transparent;
+    opacity: 0;
+  }
+}
+
+/* 3. Бафф (buff) */
+.anim-spell-buff {
+  width: 150px;
+  height: 150px;
+  animation: spell-buff-burst 0.8s ease-out forwards;
+}
+@keyframes spell-buff-burst {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8) rotate(0deg);
+    border: 10px solid #ffd700;
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.2) rotate(45deg);
+    border: 20px solid #ffea00;
+    opacity: 1;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.5) 0%, transparent 60%);
+    box-shadow: 0 0 30px #ffea00;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.8) rotate(90deg);
+    border: 2px solid #ff8c00;
+    opacity: 0;
+  }
+}
+
+/* 4. Мана (add_mana) */
+.anim-spell-mana {
+  width: 100px;
+  height: 200px;
+  border-radius: 10px;
+  animation: spell-mana-surge 0.8s ease-out forwards;
+}
+@keyframes spell-mana-surge {
+  0% {
+    transform: translate(-50%, -50%) scaleY(0.1) scaleX(0.5);
+    background: #00ffff;
+    opacity: 1;
+    filter: blur(5px);
+  }
+  40% {
+    transform: translate(-50%, -80%) scaleY(1.5) scaleX(1.2);
+    background: linear-gradient(to top, transparent, #0055ff, #00ffff);
+    opacity: 0.9;
+    filter: blur(10px);
+    box-shadow: 0 0 40px #00ffff;
+  }
+  100% {
+    transform: translate(-50%, -150%) scaleY(2.5) scaleX(0.2);
+    background: transparent;
+    opacity: 0;
+    filter: blur(20px);
+  }
 }

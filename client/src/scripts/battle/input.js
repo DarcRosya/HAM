@@ -89,7 +89,7 @@ function triggerTauntFlash(cardEl) {
 }
 
 function handleMouseDown(e) {
-  // if (battleState.ui.isAnimating) return;
+  if (battleState.ui.isAnimating) return;
 
   const cardEl = e.target.closest('.card, .card-slot');
   if (!cardEl) return;
@@ -161,7 +161,9 @@ function handleMouseDown(e) {
     if (!isMyTurn()) return BattleUI.showMessage('Wait for your turn!', battleState.elements);
     if (me.mana < cardData.cost)
       return BattleUI.showMessage('Not enough mana!', battleState.elements);
-    if (me.table.length >= 7) return BattleUI.showMessage('Table is full!', battleState.elements);
+    const isSpell = String(cardData.type).toLowerCase() === 'spell';
+    if (!isSpell && me.table.length >= 7)
+      return BattleUI.showMessage('Table is full!', battleState.elements);
 
     e.preventDefault();
     battleState.drag.playCardId = instanceId;
@@ -180,17 +182,75 @@ function handleMouseDown(e) {
     document.body.appendChild(ghost);
     battleState.drag.ghostElement = ghost;
 
-    BattleUI.updateBoard(battleState.match, null, { playCardId: instanceId });
+    BattleUI.updateBoard(
+      battleState.match,
+      null,
+      { playCardId: instanceId },
+      { allowAnimations: false }
+    );
   }
 }
 
 function handleMouseMove(e) {
+  if (battleState.drag.playCardId || battleState.drag.attackCardId) {
+    hideTooltip();
+  }
+
+  if ((battleState.drag.playCardId || battleState.drag.attackCardId) && !isMyTurn()) {
+    BattleUI.showMessage('Time is up!', battleState.elements);
+    cancelDragInteraction();
+    return;
+  }
+
   if (battleState.drag.playCardId && battleState.drag.ghostElement) {
-    battleState.drag.ghostElement.style.left = e.clientX + 'px';
-    battleState.drag.ghostElement.style.top = e.clientY + 'px';
+    const cardData = findCardInState(battleState.drag.playCardId);
+    const isSpell = String(cardData?.type).toLowerCase() === 'spell';
+
+    if (isSpell) {
+      const barrierY = getSpellBarrierY();
+      const targetInfo = resolveSpellTarget(cardData, e.clientX, e.clientY);
+      const isAiming = e.clientY < barrierY || targetInfo.isValid;
+
+      const ghostY = e.clientY < barrierY ? barrierY : e.clientY;
+
+      battleState.drag.ghostElement.style.left = e.clientX + 'px';
+      battleState.drag.ghostElement.style.top = ghostY + 'px';
+
+      if (!isAiming || !targetInfo.needsTarget) {
+        hideSpellArrow();
+        clearSpellReticle();
+      } else {
+        updateSpellArrow(e.clientX, e.clientY);
+
+        if (attackReticle && !battleState.drag.attackCardId) {
+          const targetInfo = resolveSpellTarget(cardData, e.clientX, e.clientY);
+          if (!targetInfo.needsTarget) {
+            clearSpellReticle();
+          } else if (targetInfo.isValid && targetInfo.targetEl) {
+            const tRect = targetInfo.targetEl.getBoundingClientRect();
+            attackReticle.style.left = `${tRect.left + tRect.width / 2}px`;
+            attackReticle.style.top = `${tRect.top + tRect.height / 2}px`;
+            setSpellReticleState(true, true, targetInfo.targetSide, cardData.spellEffect);
+          } else {
+            attackReticle.style.left = `${e.clientX}px`;
+            attackReticle.style.top = `${e.clientY}px`;
+            setSpellReticleState(true, false, null, cardData.spellEffect);
+          }
+        }
+      }
+    } else {
+      battleState.drag.ghostElement.style.left = e.clientX + 'px';
+      battleState.drag.ghostElement.style.top = e.clientY + 'px';
+      hideSpellArrow();
+      clearSpellReticle();
+    }
   }
 
   if (battleState.drag.attackCardId) {
+    if (attackReticle) {
+      attackReticle.classList.remove('spell-heal', 'spell-buff', 'spell-mana', 'spell-damage');
+    }
+
     const board = document.querySelector('.game-board');
     const line = document.getElementById('attack-line');
     const attackerEl = document.querySelector(
@@ -240,26 +300,52 @@ function handleMouseMove(e) {
       );
 
       if ((cardTarget || avatarTarget) && !selfTarget) {
-        const targetEl = cardTarget || document.getElementById('opp-avatar-zone');
+        const targetEl = cardTarget || document.getElementById('opp-avatar');
         const tRect = targetEl.getBoundingClientRect();
         attackReticle.style.left = `${tRect.left + tRect.width / 2}px`;
         attackReticle.style.top = `${tRect.top + tRect.height / 2}px`;
         attackReticle.classList.add('snapped');
 
         let isLethal = false;
+        let isSuicide = false;
+
         if (attackerEl) {
+          const attackerCardData = findCardInState(battleState.drag.attackCardId);
+          const targetCardData = cardTarget ? findCardInState(cardTarget.dataset.instanceId) : null;
+
           const atk = parseInt(attackerEl.querySelector('.token-attack')?.textContent || '0', 10);
+          const hp = parseInt(attackerEl.querySelector('.token-defense')?.textContent || '0', 10);
+
           const targetHp = cardTarget
             ? parseInt(cardTarget.querySelector('.token-defense')?.textContent || '0', 10)
             : parseInt(document.getElementById('opp-hp')?.textContent || '0', 10);
-          if (atk >= targetHp) isLethal = true;
+
+          const targetAtk = cardTarget
+            ? parseInt(cardTarget.querySelector('.token-attack')?.textContent || '0', 10)
+            : 0;
+
+          const attackerHasPoison = attackerCardData?.traits?.includes('poison');
+          const defenderHasPoison = targetCardData?.traits?.includes('poison');
+
+          if (atk >= targetHp || (attackerHasPoison && atk > 0 && cardTarget)) {
+            isLethal = true;
+          }
+
+          if (targetAtk >= hp || (defenderHasPoison && targetAtk > 0)) {
+            isSuicide = true;
+          }
         }
+
         if (isLethal) attackReticle.classList.add('lethal');
         else attackReticle.classList.remove('lethal');
+
+        if (isSuicide) attackerEl.classList.add('lethal-suicide');
+        else attackerEl.classList.remove('lethal-suicide');
       } else {
         attackReticle.style.left = `${e.clientX}px`;
         attackReticle.style.top = `${e.clientY}px`;
         attackReticle.classList.remove('snapped', 'lethal');
+        if (attackerEl) attackerEl.classList.remove('lethal-suicide');
       }
     }
   }
@@ -268,7 +354,65 @@ function handleMouseMove(e) {
 function handleMouseUp(e) {
   document.body.classList.remove('is-dragging');
 
+  if (battleState.ui.isAnimating) {
+    cancelDragInteraction();
+    return;
+  }
+
   if (battleState.drag.playCardId) {
+    const cardData = findCardInState(battleState.drag.playCardId);
+    if (!cardData) {
+      if (battleState.drag.ghostElement) {
+        battleState.drag.ghostElement.remove();
+        battleState.drag.ghostElement = null;
+      }
+      battleState.drag.playCardId = null;
+      hideSpellArrow();
+      clearSpellReticle();
+      BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
+      return;
+    }
+    const isSpell = String(cardData?.type).toLowerCase() === 'spell';
+
+    if (isSpell) {
+      const targetInfo = resolveSpellTarget(cardData, e.clientX, e.clientY);
+      const handZone = document.getElementById('player-hand-zone');
+      const dropThreshold = handZone
+        ? handZone.getBoundingClientRect().top
+        : getSpellBarrierY() + 40;
+
+      if (e.clientY > dropThreshold && (!targetInfo.isValid || !targetInfo.needsTarget)) {
+        cancelDragInteraction();
+        return;
+      }
+      const shouldCast = !targetInfo.needsTarget || targetInfo.isValid;
+
+      if (!shouldCast) {
+        BattleUI.showMessage('Select a valid target!', battleState.elements);
+      } else {
+        networkActions.playCard({
+          roomId: battleState.match.roomId,
+          cardInstanceId: battleState.drag.playCardId,
+          targetIndex: null,
+          targetId: targetInfo.targetId ?? null,
+          targetType: targetInfo.targetType ?? null,
+        });
+      }
+
+      if (battleState.drag.ghostElement) {
+        if (shouldCast) dissolveSpellGhost();
+        else {
+          battleState.drag.ghostElement.remove();
+          battleState.drag.ghostElement = null;
+        }
+      }
+      battleState.drag.playCardId = null;
+      hideSpellArrow();
+      clearSpellReticle();
+      BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
+      return;
+    }
+
     const tableZone = document.getElementById('player-table-zone');
     let isOverTable = false;
     if (tableZone) {
@@ -303,7 +447,7 @@ function handleMouseUp(e) {
       battleState.drag.ghostElement = null;
     }
     battleState.drag.playCardId = null;
-    BattleUI.updateBoard(battleState.match, null, battleState.drag);
+    BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
   }
 
   if (battleState.drag.attackCardId) {
@@ -348,29 +492,55 @@ function handleMouseUp(e) {
         const attackId = battleState.drag.attackCardId;
         const targetEl = cardTarget || avatarTarget;
 
-        document.body.style.pointerEvents = 'none'; // Блокируем клики на время самой атаки
-        if (networkActions.setAnimationLock) networkActions.setAnimationLock();
+        const runAttackAnimation = (cancelToken) =>
+          new Promise((resolve) => {
+            let finished = false;
+            const originalStyles = {
+              zIndex: attackerEl?.style.zIndex,
+              transition: attackerEl?.style.transition,
+              transform: attackerEl?.style.transform,
+              filter: attackerEl?.style.filter,
+            };
 
-        BattleUI.playAttackAnimation(
-          attackerEl,
-          targetEl,
-          () => {
-            networkActions.attackTarget({
-              roomId: battleState.match.roomId,
-              attackerInstanceId: attackId,
-              targetId,
-              targetType,
-            });
-          },
-          () => {
-            document.body.style.pointerEvents = 'auto';
-            if (networkActions.releaseLock) networkActions.releaseLock();
-          }
-        );
+            const cleanup = () => {
+              if (finished) return;
+              finished = true;
+              document.body.style.pointerEvents = 'auto';
+              if (attackerEl) {
+                attackerEl.classList.remove('anim-attacking', 'anim-attack-return');
+                attackerEl.style.zIndex = originalStyles.zIndex || '';
+                attackerEl.style.transition = originalStyles.transition || '';
+                attackerEl.style.transform = originalStyles.transform || '';
+                attackerEl.style.filter = originalStyles.filter || '';
+              }
+              if (targetEl) targetEl.classList.remove('anim-target-hit');
+              resolve();
+            };
+
+            if (cancelToken?.onCancel) cancelToken.onCancel(cleanup);
+            document.body.style.pointerEvents = 'none';
+            BattleUI.playAttackAnimation(
+              attackerEl,
+              targetEl,
+              () => {
+                networkActions.attackTarget({
+                  roomId: battleState.match.roomId,
+                  attackerInstanceId: attackId,
+                  targetId,
+                  targetType,
+                });
+              },
+              cleanup
+            );
+          });
+
+        if (networkActions.queueAction) networkActions.queueAction(runAttackAnimation);
+        else runAttackAnimation();
       }
     }
 
-    if (attackerEl) attackerEl.classList.remove('is-attacking-active', 'is-preparing-attack');
+    if (attackerEl)
+      attackerEl.classList.remove('is-attacking-active', 'is-preparing-attack', 'lethal-suicide');
     document
       .querySelectorAll('.taunt-target-glow')
       .forEach((el) => el.classList.remove('taunt-target-glow'));
@@ -400,11 +570,301 @@ function hideTooltip() {
   }
 }
 
+function getSpellBarrierY() {
+  const avatarZone =
+    document.getElementById('player-avatar-zone') || document.getElementById('player-avatar');
+  const handZone = document.getElementById('player-hand-zone');
+
+  if (avatarZone && handZone) {
+    const avatarRect = avatarZone.getBoundingClientRect();
+    const handRect = handZone.getBoundingClientRect();
+    return (avatarRect.bottom + handRect.top) / 2;
+  }
+
+  if (avatarZone) {
+    return avatarZone.getBoundingClientRect().bottom + 20;
+  }
+
+  return window.innerHeight * 0.75;
+}
+
+function updateSpellArrow(cursorX, cursorY) {
+  const svg = document.getElementById('attack-arrow-svg');
+  const line = document.getElementById('attack-line');
+  const board = document.querySelector('.game-board');
+  const ghost = battleState.drag.ghostElement;
+
+  if (!svg || !line || !board || !ghost) return;
+
+  const boardRect = board.getBoundingClientRect();
+  const ghostRect = ghost.getBoundingClientRect();
+
+  const startX = ghostRect.left - boardRect.left + ghostRect.width / 2;
+  const startY = ghostRect.top - boardRect.top + ghostRect.height / 2;
+  const endX = cursorX - boardRect.left;
+  const endY = cursorY - boardRect.top;
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const distance = Math.hypot(dx, dy);
+  const curve = Math.min(0.35, Math.max(0.15, distance / 900));
+
+  const midX = (startX + endX) / 2;
+  const midY = (startY + endY) / 2;
+  const controlX = midX - dy * curve;
+  const controlY = midY + dx * curve;
+
+  svg.style.display = 'block';
+  line.setAttribute('d', `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`);
+}
+
+function hideSpellArrow() {
+  const svg = document.getElementById('attack-arrow-svg');
+  if (svg) svg.style.display = 'none';
+}
+
+function setSpellReticleState(show, snapped, targetSide, spellEffect) {
+  if (!attackReticle) return;
+  attackReticle.classList.toggle('show', Boolean(show));
+  attackReticle.classList.toggle('snapped', Boolean(snapped));
+
+  attackReticle.classList.remove(
+    'lethal',
+    'target-friendly',
+    'target-enemy',
+    'spell-heal',
+    'spell-buff',
+    'spell-mana',
+    'spell-damage'
+  );
+
+  if (targetSide) attackReticle.classList.add(`target-${targetSide}`);
+
+  if (spellEffect) {
+    if (spellEffect.includes('heal')) attackReticle.classList.add('spell-heal');
+    else if (spellEffect.includes('buff')) attackReticle.classList.add('spell-buff');
+    else if (spellEffect === 'damage') attackReticle.classList.add('spell-damage');
+    else if (spellEffect === 'add_mana') attackReticle.classList.add('spell-mana');
+  }
+}
+
+function clearSpellReticle() {
+  if (!attackReticle) return;
+  attackReticle.classList.remove('show', 'snapped', 'lethal', 'target-friendly', 'target-enemy');
+}
+
+function dissolveSpellGhost() {
+  const ghost = battleState.drag.ghostElement;
+  if (!ghost) return;
+  ghost.classList.add('anim-spell-dissolve');
+  const ghostRef = ghost;
+  setTimeout(() => {
+    if (ghostRef.parentNode) ghostRef.remove();
+  }, 300);
+  battleState.drag.ghostElement = null;
+}
+
+function getSpellTargetConfig(cardData) {
+  const effect = String(cardData?.spellEffect || '').toLowerCase();
+  switch (effect) {
+    case 'add_mana':
+      return {
+        needsTarget: false,
+        allowCard: false,
+        allowAvatar: false,
+        allowFriendly: false,
+        allowEnemy: false,
+      };
+    case 'damage':
+      return {
+        needsTarget: true,
+        allowCard: true,
+        allowAvatar: true,
+        allowFriendly: true,
+        allowEnemy: true,
+      };
+    case 'heal_card':
+    case 'buff_card':
+      return {
+        needsTarget: true,
+        allowCard: true,
+        allowAvatar: false,
+        allowFriendly: true,
+        allowEnemy: false,
+      };
+    case 'heal_avatar':
+      return {
+        needsTarget: true,
+        allowCard: false,
+        allowAvatar: true,
+        allowFriendly: true,
+        allowEnemy: false,
+      };
+    default:
+      return {
+        needsTarget: true,
+        allowCard: true,
+        allowAvatar: true,
+        allowFriendly: true,
+        allowEnemy: true,
+      };
+  }
+}
+
+function getElementUnderCursor(x, y) {
+  const ghost = battleState.drag.ghostElement;
+  let previousDisplay = null;
+  if (ghost) {
+    previousDisplay = ghost.style.display;
+    ghost.style.display = 'none';
+  }
+  const element = document.elementFromPoint(x, y);
+  if (ghost) ghost.style.display = previousDisplay;
+  return element;
+}
+
+function resolveSpellTarget(cardData, x, y) {
+  const config = getSpellTargetConfig(cardData);
+  if (!config.needsTarget) {
+    return {
+      needsTarget: false,
+      isValid: true,
+      targetId: null,
+      targetType: null,
+      targetEl: null,
+      targetSide: null,
+    };
+  }
+
+  const elementBelow = getElementUnderCursor(x, y);
+  if (!elementBelow)
+    return {
+      needsTarget: true,
+      isValid: false,
+      targetId: null,
+      targetType: null,
+      targetEl: null,
+      targetSide: null,
+    };
+
+  const cardTarget = elementBelow.closest('.card-slot, .enemy-card');
+  if (cardTarget && config.allowCard) {
+    const isEnemy = cardTarget.classList.contains('enemy-card');
+    const targetId = cardTarget.dataset.instanceId;
+    if (targetId && ((isEnemy && config.allowEnemy) || (!isEnemy && config.allowFriendly))) {
+      return {
+        needsTarget: true,
+        isValid: true,
+        targetId,
+        targetType: 'card',
+        targetEl: cardTarget,
+        targetSide: isEnemy ? 'enemy' : 'friendly',
+      };
+    }
+  }
+
+  if (config.allowAvatar) {
+    const selfAvatar = elementBelow.closest(
+      '#player-avatar-zone, #player-avatar, #player-hp, #player-username-zone'
+    );
+    const oppAvatar = elementBelow.closest(
+      '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
+    );
+
+    if (selfAvatar && config.allowFriendly) {
+      const selfEl = document.getElementById('player-avatar') || selfAvatar;
+      return {
+        needsTarget: true,
+        isValid: Boolean(getMyPlayerId()),
+        targetId: getMyPlayerId(),
+        targetType: 'avatar',
+        targetEl: selfEl,
+        targetSide: 'friendly',
+      };
+    }
+
+    if (oppAvatar && config.allowEnemy) {
+      const opponentId = getOpponentId();
+      const oppEl = document.getElementById('opp-avatar') || oppAvatar;
+      return {
+        needsTarget: true,
+        isValid: Boolean(opponentId),
+        targetId: opponentId,
+        targetType: 'avatar',
+        targetEl: oppEl,
+        targetSide: 'enemy',
+      };
+    }
+  }
+
+  return {
+    needsTarget: true,
+    isValid: false,
+    targetId: null,
+    targetType: null,
+    targetEl: null,
+    targetSide: null,
+  };
+}
+
+function cancelDragInteraction() {
+  document.body.classList.remove('is-dragging');
+
+  if (battleState.drag.playCardId) {
+    if (battleState.drag.ghostElement) {
+      battleState.drag.ghostElement.remove();
+      battleState.drag.ghostElement = null;
+    }
+    battleState.drag.playCardId = null;
+    hideSpellArrow();
+    clearSpellReticle();
+    BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
+  }
+
+  if (battleState.drag.attackCardId) {
+    const svg = document.getElementById('attack-arrow-svg');
+    if (svg) svg.style.display = 'none';
+    if (attackReticle)
+      attackReticle.classList.remove(
+        'show',
+        'snapped',
+        'lethal',
+        'target-friendly',
+        'target-enemy'
+      );
+
+    const attackerEl = document.querySelector(
+      `[data-instance-id="${battleState.drag.attackCardId}"]`
+    );
+    if (attackerEl)
+      attackerEl.classList.remove('is-attacking-active', 'is-preparing-attack', 'lethal-suicide');
+
+    document
+      .querySelectorAll('.taunt-target-glow')
+      .forEach((el) => el.classList.remove('taunt-target-glow'));
+    document
+      .querySelectorAll('.taunt-target-flash')
+      .forEach((el) => el.classList.remove('taunt-target-flash'));
+    document
+      .querySelectorAll('.forbidden-target')
+      .forEach((el) => el.classList.remove('forbidden-target'));
+
+    battleState.drag.attackCardId = null;
+  }
+}
+
 function getMyPlayerId() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const entries = Object.entries(battleState.match?.players ?? {});
   const myEntry = entries.find(([id]) => String(id) === String(user.id));
   return myEntry ? myEntry[0] : null;
+}
+
+function getOpponentId() {
+  const myId = getMyPlayerId();
+  const entries = Object.entries(battleState.match?.players ?? {});
+  const opponentEntry = entries.find(([id]) => String(id) !== String(myId));
+  return opponentEntry ? opponentEntry[0] : null;
 }
 
 function getMyPlayer() {

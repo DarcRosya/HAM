@@ -1,166 +1,193 @@
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: 'Londrina Solid', serif;
-    overflow: hidden;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Londrina Solid', serif;
+  overflow: hidden;
 }
 
 .board-container {
-    width: 1280px; 
-    height: 720px;
-    background-image: url('../../assets/images/gallery-bg.png'); 
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    max-width: 1400px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; 
+  width: 1280px;
+  height: 720px;
+  background-image: url('../../assets/images/gallery-bg.png');
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInGallery 0.8s ease-out forwards;
 }
 
 .gallery-header {
-    margin-top: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    margin-bottom: 20px;
-    background-image: url('../../assets/images/red-panel.png'); 
-    background-repeat: no-repeat; 
-    background-position: center; 
-    background-size: contain;    
-    padding: 30px 40px; 
-    background-size: 400px 90px;
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 20px;
+  background-image: url('../../assets/images/red-panel.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  padding: 30px 40px;
+  background-size: 400px 90px;
 }
 
 .return-btn {
-    width: 160px;
-    height: 45px;
-    position: absolute;
-    left: 10px;
-    background-image: url('../../assets/images/red-arrow.png'); 
-    background-size: 100% 100%; 
-    background-repeat: no-repeat;
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    transition: transform 0.1s;
-    margin-left: 30px;
-    filter: brightness(0.95);
+  width: 160px;
+  height: 45px;
+  position: absolute;
+  left: 10px;
+  background-image: url('../../assets/images/red-arrow.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s;
+  margin-left: 30px;
+  filter: brightness(0.95);
 }
 
 .return-btn:active {
-    transform: scale(0.95);
+  transform: scale(0.95);
 }
 
 .return-btn:hover {
-    /* transform: scale(1.05); */
-    filter: brightness(1.2);
+  /* transform: scale(1.05); */
+  filter: brightness(1.2);
 }
 
 .gallery-title {
-    font-family: 'Londrina Solid', serif;
-    font-weight: bold;
-    color: #f8e274;
-    margin-top: -5px;
-    font-size: 35px;
+  font-family: 'Londrina Solid', serif;
+  font-weight: bold;
+  color: #f8e274;
+  margin-top: -5px;
+  font-size: 35px;
 }
 
-.gallery-title:hover {filter: brightness(1.2); }
+.gallery-title:hover {
+  filter: brightness(1.2);
+}
 
 .cards-scroll-area {
-    flex-grow: 1; 
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 10px;
-    width: 90%;
-    scrollbar-width: thin;
-    scrollbar-color: #D42C38 rgba(0,0,0,0.1);
-    margin-bottom: 42px;
-    margin-left: auto;
-    margin-right: auto;
-    padding-bottom: 30px;
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+  width: 90%;
+  scrollbar-width: thin;
+  scrollbar-color: #d42c38 rgba(0, 0, 0, 0.1);
+  margin-bottom: 42px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-bottom: 30px;
 }
 
 .cards-scroll-area::-webkit-scrollbar {
-    width: 12px;
+  width: 12px;
 }
 .cards-scroll-area::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2); 
-    border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
 }
 .cards-scroll-area::-webkit-scrollbar-thumb {
-    background: #a67c52;
-    border-radius: 10px;
-    border: 2px solid #5c3a21;
+  background: #a67c52;
+  border-radius: 10px;
+  border: 2px solid #5c3a21;
 }
 
 .card {
-    width: 192px;
-    height: 260px;
-    flex-shrink: 0;
-    transform-origin: center center;
-    margin-bottom: -60px; 
-    transition: transform 0.1s ease-out; 
-    
-    position: relative; 
-    overflow: hidden;   
-    border-radius: 12px;
-    transform-style: preserve-3d; 
-    will-change: transform; 
+  width: 192px;
+  height: 260px;
+  flex-shrink: 0;
+  transform-origin: center center;
+  margin-bottom: -60px;
+  transition: transform 0.1s ease-out;
+
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.card-entrance {
+  animation: fadeInUpCard 0.5s ease-out both;
 }
 
 .card::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -150%; 
-    width: 30%;  
-    height: 100%;
-    background: linear-gradient(
-        to right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.4) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    transform: skewX(-25deg);
-    animation: shine 5s infinite;
-    pointer-events: none; 
-    z-index: 10; 
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: skewX(-25deg);
+  animation: shine 5s infinite;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-    gap: 65px 0px;
-    justify-items: center;
-    align-items: start;
-    max-width: 1200px;
-    margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 65px 0px;
+  justify-items: center;
+  align-items: start;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .card-placeholder {
-    border-radius: 12px;
-    width: 100%;
+  border-radius: 12px;
+  width: 100%;
 }
 
 @keyframes shine {
-    0% {
-        left: -150%;
-    }
-    45% {
-        left: 200%; 
-    }
-    100% {
-        left: 200%; 
-    }
+  0% {
+    left: -150%;
+  }
+  45% {
+    left: 200%;
+  }
+  100% {
+    left: 200%;
+  }
+}
+
+@keyframes fadeInGallery {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUpCard {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
