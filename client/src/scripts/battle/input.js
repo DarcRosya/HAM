@@ -4,6 +4,7 @@ import { BattleUI } from './ui.js';
 let boundHandlers = {};
 let networkActions = {};
 let attackReticle = null;
+const TAUNT_FLASH_DURATION_MS = 280;
 
 // ==========================================
 // ЛОКАЛЬНЫЕ ОБРАБОТЧИКИ (Event Delegation)
@@ -68,6 +69,15 @@ function handleMouseOut(e) {
   hideTooltip();
 }
 
+function triggerTauntFlash(cardEl) {
+  cardEl.classList.remove('taunt-target-flash');
+  void cardEl.offsetWidth;
+  cardEl.classList.add('taunt-target-flash');
+  setTimeout(() => {
+    cardEl.classList.remove('taunt-target-flash');
+  }, TAUNT_FLASH_DURATION_MS);
+}
+
 function handleMouseDown(e) {
   // if (battleState.ui.isAnimating) return;
 
@@ -97,6 +107,7 @@ function handleMouseDown(e) {
 
     const oppTableZone = document.getElementById('opp-table-zone');
     let hasTaunt = false;
+    const tauntIds = new Set();
     const entries = Object.entries(battleState.match?.players ?? {});
     const opponentEntry = entries.find(([id]) => String(id) !== String(getMyPlayerId()));
     const opponent = opponentEntry ? opponentEntry[1] : null;
@@ -105,13 +116,14 @@ function handleMouseDown(e) {
       opponent.table.forEach((oppCard) => {
         if (oppCard.traits?.includes('taunt')) {
           hasTaunt = true;
+          tauntIds.add(String(oppCard.instanceId));
           const oppUI = oppTableZone.querySelector(`[data-instance-id="${oppCard.instanceId}"]`);
-          if (oppUI) oppUI.classList.add('taunt-target-glow');
+          if (oppUI) triggerTauntFlash(oppUI);
         }
       });
       if (hasTaunt) {
         oppTableZone.querySelectorAll('.enemy-card').forEach((enemyCardUI) => {
-          if (!enemyCardUI.classList.contains('taunt-target-glow'))
+          if (!tauntIds.has(String(enemyCardUI.dataset.instanceId)))
             enemyCardUI.classList.add('forbidden-target');
         });
         document.getElementById('opp-avatar-zone')?.classList.add('forbidden-target');
@@ -331,6 +343,9 @@ function handleMouseUp(e) {
     document
       .querySelectorAll('.taunt-target-glow')
       .forEach((el) => el.classList.remove('taunt-target-glow'));
+    document
+      .querySelectorAll('.taunt-target-flash')
+      .forEach((el) => el.classList.remove('taunt-target-flash'));
     document
       .querySelectorAll('.forbidden-target')
       .forEach((el) => el.classList.remove('forbidden-target'));

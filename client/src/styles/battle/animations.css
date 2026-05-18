@@ -64,6 +64,17 @@ body.is-dragging #opp-hand-zone .card {
   pointer-events: none !important;
 }
 
+#opp-hand-zone,
+#player-hand-zone {
+  transition: opacity 0.3s ease-in;
+}
+
+.hand-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease-in;
+}
+
 /* --- Анимации тултипов --- */
 .card-tooltip-container {
   position: fixed;
@@ -2090,16 +2101,17 @@ body.is-dragging #opp-hand-zone .card {
   position: fixed;
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(255, 50, 50, 0.8);
+  border: 3px solid rgba(255, 50, 50, 0.8);
   border-radius: 50%;
   box-shadow:
-    0 0 15px rgba(255, 0, 0, 0.8),
-    inset 0 0 10px rgba(255, 0, 0, 0.5);
+    0 0 12px rgba(255, 0, 0, 0.75),
+    inset 0 0 8px rgba(120, 0, 0, 0.45);
   pointer-events: none;
   z-index: 10010;
   display: flex;
   justify-content: center;
   align-items: center;
+  isolation: isolate;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.5);
   transition:
@@ -2117,14 +2129,41 @@ body.is-dragging #opp-hand-zone .card {
 .attack-reticle.snapped {
   width: 90px;
   height: 90px;
-  border-width: 8px;
-  background: rgba(255, 0, 0, 0.15);
+  border-width: 2px;
+  border-color: rgba(255, 222, 222, 0.95);
+  background: transparent;
+  box-shadow:
+    0 0 0 1px rgba(255, 120, 120, 0.5),
+    0 0 26px rgba(175, 5, 5, 0.9);
   transform: translate(-50%, -50%) scale(1.05);
   animation: pulse-reticle 1.5s infinite;
 }
 
+.attack-reticle::before {
+  content: '';
+  position: absolute;
+  inset: 11px;
+  border-radius: 50%;
+  border: 0 solid transparent;
+  box-shadow: none;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.attack-reticle.snapped::before {
+  border: 8px solid rgba(122, 9, 17, 0.98);
+  box-shadow:
+    inset 0 0 10px rgba(255, 90, 90, 0.35),
+    0 0 16px rgba(140, 0, 0, 0.85);
+  opacity: 1;
+}
+
 .attack-reticle::after {
   content: '';
+  position: relative;
+  z-index: 1;
   font-size: 45px;
   line-height: 1;
   filter: drop-shadow(0 4px 6px black);
@@ -2157,18 +2196,18 @@ body.is-dragging #opp-hand-zone .card {
 @keyframes pulse-reticle {
   0% {
     box-shadow:
-      0 0 15px rgba(255, 0, 0, 0.8),
-      inset 0 0 10px rgba(255, 0, 0, 0.5);
+      0 0 0 1px rgba(255, 120, 120, 0.5),
+      0 0 20px rgba(170, 0, 0, 0.8);
   }
   50% {
     box-shadow:
-      0 0 35px rgba(255, 0, 0, 1),
-      inset 0 0 20px rgba(255, 0, 0, 0.8);
+      0 0 0 1px rgba(255, 150, 150, 0.75),
+      0 0 34px rgba(210, 0, 0, 1);
   }
   100% {
     box-shadow:
-      0 0 15px rgba(255, 0, 0, 0.8),
-      inset 0 0 10px rgba(255, 0, 0, 0.5);
+      0 0 0 1px rgba(255, 120, 120, 0.5),
+      0 0 20px rgba(170, 0, 0, 0.8);
   }
 }
 

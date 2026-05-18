@@ -64,6 +64,14 @@ function applyFanMath(cardUI, index, total, isMyHand, isMyTurn) {
   }
 }
 
+function syncHandVisibilityByPhase(phase) {
+  const shouldHideHands = phase === 'coin_toss';
+  ['opp-hand-zone', 'player-hand-zone'].forEach((zoneId) => {
+    const handZone = document.getElementById(zoneId);
+    if (handZone) handZone.classList.toggle('hand-hidden', shouldHideHands);
+  });
+}
+
 // ==========================================
 // ЭКСПОРТИРУЕМЫЙ API ДЛЯ ОРКЕСТРАТОРА
 // ==========================================
@@ -346,6 +354,7 @@ export const BattleUI = {
 
     const isMyTurn = String(state.activeTurn) === String(myPlayerId);
     const isPlaying = state.phase === 'playing';
+    syncHandVisibilityByPhase(state.phase);
 
     // 1. Базовое инфо
     safeSetText(document.getElementById('info-turn'), isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN");
@@ -482,9 +491,6 @@ export const BattleUI = {
       cardUI.dataset.instanceId = card.instanceId;
 
       if (isNewCard) this.playEpicSpawn(cardUI, card, null, null);
-
-      if (dragState.attackCardId && card.traits?.includes('taunt'))
-        cardUI.classList.add('taunt-target-glow');
       oppTable.appendChild(cardUI);
     });
 
