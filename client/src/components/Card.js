@@ -18,6 +18,16 @@ export function renderCard(props = {}) {
   const cardDiv = document.createElement('div');
   cardDiv.classList.add('card');
 
+  const normalizedTraits = Array.isArray(traits)
+    ? traits.map((t) => String(t).toLowerCase())
+    : typeof traits === 'string'
+      ? [traits.toLowerCase()]
+      : [];
+
+  if (normalizedTraits.includes('poison')) {
+    cardDiv.dataset.isPoison = 'true';
+  }
+
   if (faceDown) {
     cardDiv.classList.add('face-down');
     cardDiv.innerHTML = `<img src="/assets/images/card-back.png" class="card-back" style="width: 100%; height: 100%;">`;
@@ -71,12 +81,15 @@ export function renderCard(props = {}) {
 
 function resolveCardFrame(traits, variant, type) {
   const isSpell = String(type).toLowerCase() === 'spell';
-  if (variant === 'hand') return isSpell ? '/assets/images/card-frame-spell.png' : '/assets/images/card-frame.png';
+  if (variant === 'hand')
+    return isSpell ? '/assets/images/card-frame-spell.png' : '/assets/images/card-frame.png';
 
-  const normalized = Array.isArray(traits)
-    ? traits.map((trait) => String(trait).toLowerCase())
-    : [];
-
+  let normalized = [];
+  if (Array.isArray(traits)) {
+    normalized = traits.map((trait) => String(trait).toLowerCase());
+  } else if (typeof traits === 'string') {
+    normalized = [traits.toLowerCase()];
+  }
   if (normalized.includes('taunt')) return '/assets/images/taunt-frame.png';
   if (normalized.includes('berserk')) return '/assets/images/berserk-frame.png';
   if (normalized.includes('poison')) return '/assets/images/poison-frame.png';
