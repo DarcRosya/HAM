@@ -1,6 +1,8 @@
 import { mount as mountMainMenu, unmount as unmountMainMenu } from '../scripts/main_menu.js';
 import { mount as mountBattle, unmount as unmountBattle } from '../scripts/battle.js';
 import { mount as mountLobby, unmount as unmountLobby } from '../scripts/lobby.js';
+import { mount as mountGallery, unmount as unmountGallery } from '../scripts/gallery.js';
+import { mount as mountCredits, unmount as unmountCredits } from '../scripts/credits.js';
 import { requireAuth, requireGuest, blockLobbyIfInBattle, requireBattle } from './guards.js';
 
 const mainContainer = document.getElementById('main-container');
@@ -18,16 +20,16 @@ const routes = {
     unmount: unmountMainMenu,
     guards: [],
   },
-  '#cards': {
-    path: 'src/pages/main_menu.html',
-    mount: mountMainMenu,
-    unmount: unmountMainMenu,
+  '#gallery': {
+    path: 'src/pages/gallery.html',
+    mount: mountGallery,
+    unmount: unmountGallery,
     guards: [],
   },
   '#credits': {
-    path: 'src/pages/main_menu.html',
-    mount: mountMainMenu,
-    unmount: unmountMainMenu,
+    path: 'src/pages/credits.html',
+    mount: mountCredits,
+    unmount: unmountCredits,
     guards: [],
   },
 
@@ -116,8 +118,11 @@ async function router() {
   try {
     const shouldFade = route.path === LOBBY_PATH;
     if (shouldFade) {
+      mainContainer.classList.remove('route-fade-in');
       mainContainer.classList.add('route-fade-out');
       await waitForFade(routeFadeDuration);
+    } else {
+      mainContainer.classList.remove('route-fade-out', 'route-fade-in');
     }
 
     if (currentRouteObj?.unmount) currentRouteObj.unmount();
@@ -130,8 +135,14 @@ async function router() {
     currentRouteObj = route;
 
     if (shouldFade) {
-      mainContainer.classList.remove('route-fade-out');
-      mainContainer.classList.add('route-fade-in');
+      requestAnimationFrame(() => {
+        mainContainer.classList.remove('route-fade-out');
+        mainContainer.classList.add('route-fade-in');
+
+        window.setTimeout(() => {
+          mainContainer.classList.remove('route-fade-in');
+        }, routeFadeDuration);
+      });
     }
 
     if (route.mount) route.mount();

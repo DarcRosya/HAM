@@ -1,7 +1,7 @@
 import { renderCard } from '../components/Card.js';
 import { API_BASE_URL } from '../services/api.js';
 
-export async function initGallery() {
+export async function mount() {
   const cardsGrid = document.querySelector('.cards-grid');
   if (!cardsGrid) return;
 
@@ -24,4 +24,9 @@ export async function initGallery() {
     cardsGrid.innerHTML =
       '<h2 style="color:red; grid-column: 1 / -1; text-align: center;">Failed to load cards.</h2>';
   }
+}
+
+export function unmount() {
+  const cardsGrid = document.querySelector('.cards-grid');
+  if (cardsGrid) cardsGrid.innerHTML = '';
 }

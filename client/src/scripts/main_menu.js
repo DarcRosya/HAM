@@ -229,6 +229,20 @@ export function mount() {
     });
   }
 
+  const cardsBtn = document.getElementById('cards-btn');
+  if (cardsBtn) {
+    cardsBtn.addEventListener('click', () => {
+      window.location.hash = '#gallery';
+    });
+  }
+
+  const creditsBtn = document.getElementById('credits-btn');
+  if (creditsBtn) {
+    creditsBtn.addEventListener('click', () => {
+      window.location.hash = '#credits';
+    });
+  }
+
   const closeModalBtn = document.getElementById('close-modal');
   if (closeModalBtn) {
     closeModalBtn.addEventListener('click', () => {
