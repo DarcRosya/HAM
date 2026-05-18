@@ -17,11 +17,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const avatarsDir = path.resolve(__dirname, '../../../client/assets/avatars');
 const avatarPublicBase = '/assets/avatars';
+const avatarFramesDir = path.resolve(__dirname, '../../../client/assets/avatars/frames');
+const avatarFramesPublicBase = '/assets/avatars/frames';
 const allowedAvatarExtensions = new Set(['.svg', '.png', '.jpg', '.jpeg', '.webp']);
 
 export const updateProfile = async (req, res) => {
   try {
-    const { username, email, displayedName, avatar } = req.body;
+    const { username, email, displayedName, avatar, avatarFrame, avatar_frame } = req.body;
     const userId = req.user.id;
 
     if (gameService.findGameByPlayer(userId)) {
@@ -33,6 +35,8 @@ export const updateProfile = async (req, res) => {
     if (email !== undefined) profileUpdates.email = email;
     if (displayedName !== undefined) profileUpdates.displayedName = displayedName;
     if (avatar !== undefined) profileUpdates.avatar = avatar;
+    if (avatarFrame !== undefined || avatar_frame !== undefined)
+      profileUpdates.avatarFrame = avatarFrame ?? avatar_frame;
 
     if (
       displayedName !== undefined &&
@@ -64,7 +68,8 @@ export const updateProfile = async (req, res) => {
       updatedUser.id,
       updatedUser.username,
       updatedUser.displayedName,
-      updatedUser.avatar
+      updatedUser.avatar,
+      updatedUser.avatarFrame
     );
 
     res.status(200).json({ message: 'Profile updated', token, user: updatedUser });
@@ -125,6 +130,30 @@ export const getAvatars = async (req, res) => {
     res.status(200).json(avatars);
   } catch (error) {
     console.error('Error loading avatars:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getAvatarFrames = async (req, res) => {
+  try {
+    let entries = [];
+    try {
+      entries = await fs.readdir(avatarFramesDir, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === 'ENOENT') return res.status(200).json([]);
+      throw error;
+    }
+
+    const frames = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((name) => allowedAvatarExtensions.has(path.extname(name).toLowerCase()))
+      .map((name) => `${avatarFramesPublicBase}/${name}`)
+      .sort();
+
+    res.status(200).json(frames);
+  } catch (error) {
+    console.error('Error loading avatar frames:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -45,6 +45,27 @@ export class GameRoom {
     this.lastDisconnectTime = {};
 
     this.loadingWatchdog = setTimeout(() => this.handleLoadingTimeout(), 15000);
+
+    this.syncProfiles(player1.user.id, player2.user.id);
+  }
+
+  async syncProfiles(id1, id2) {
+    try {
+      const [u1, u2] = await Promise.all([findById(id1), findById(id2)]);
+
+      if (u1 && this.players[id1]) {
+        this.players[id1].avatarFrame = u1.avatarFrame;
+        this.players[id1].avatar = u1.avatar;
+      }
+      if (u2 && this.players[id2]) {
+        this.players[id2].avatarFrame = u2.avatarFrame;
+        this.players[id2].avatar = u2.avatar;
+      }
+
+      this.broadcastState();
+    } catch (e) {
+      console.error(`[ROOM ${this.roomId}] Failed to sync profiles:`, e);
+    }
   }
 
   setPlayerReady(playerId) {
@@ -102,6 +123,7 @@ export class GameRoom {
       socketId: socket.id,
       username: socket.user.username,
       avatar: socket.user.avatar,
+      avatarFrame: socket.user.avatarFrame || socket.user.avatar_frame || null,
       displayedName: socket.user.displayedName,
       rating: socket.user.rating || 500,
       swordId: Math.floor(Math.random()) + 1,
@@ -300,6 +322,7 @@ export class GameRoom {
         socketId: player.socketId,
         username: player.username,
         avatar: player.avatar,
+        avatarFrame: player.avatarFrame,
         displayedName: player.displayedName,
         rating: player.rating,
         swordId: player.swordId,

@@ -2,7 +2,7 @@ import { createUser, findByEmail, findByUsername } from '../repositories/userRep
 import { hashPassword, verifyPassword } from '../utils/hash.js';
 import { generateToken } from '../utils/jwt.js';
 
-export async function registerUser({ username, email, password, displayedName, avatar }) {
+export async function registerUser({ username, email, password, displayedName, avatar, avatarFrame }) {
   const [existingUser, existingEmail] = await Promise.all([
     findByUsername(username),
     findByEmail(email),
@@ -27,6 +27,7 @@ export async function registerUser({ username, email, password, displayedName, a
     passwordHash,
     displayedName,
     avatar,
+    avatarFrame,
   });
 
   return {
@@ -35,6 +36,7 @@ export async function registerUser({ username, email, password, displayedName, a
     email: user.email,
     displayedName: user.displayedName,
     avatar: user.avatar,
+    avatarFrame: user.avatarFrame,
   };
 }
 
@@ -57,7 +59,13 @@ export async function loginUser({ username, password }) {
     throw error;
   }
 
-  const token = generateToken(user.id, user.username, user.displayedName, user.avatar);
+  const token = generateToken(
+    user.id,
+    user.username,
+    user.displayedName,
+    user.avatar,
+    user.avatarFrame
+  );
 
   return {
     token,
@@ -67,6 +75,7 @@ export async function loginUser({ username, password }) {
       email: user.email,
       displayedName: user.displayedName,
       avatar: user.avatar,
+      avatarFrame: user.avatarFrame,
     },
   };
 }

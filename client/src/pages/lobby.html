@@ -18,7 +18,10 @@
           <span class="mmr-value"></span>
         </div>
 
-        <img id="avatar" src="/assets/avatars/avatar.png" alt="Avatar" class="avatar">
+        <div class="avatar-wrapper wrapper-lobby-header">
+          <img id="avatar" src="/assets/avatars/avatar.png" alt="Avatar" class="avatar">
+          <img src="" alt="" class="avatar-frame" id="avatar-frame">
+        </div>
         <div class="names">
           <h2 class="display-name"></h2>
           <p class="username"></p>
@@ -43,7 +46,10 @@
         <button class="back-btn is-hidden back-pw-btn"></button>
 
         <div class="edit-avatar-container">
-          <img id="edit-avatar-preview" src="/assets/avatars/avatar.png" alt="Avatar" class="large-avatar clickable">
+          <div class="avatar-wrapper wrapper-modal-large">
+            <img id="edit-avatar-preview" src="/assets/avatars/avatar.png" alt="Avatar" class="large-avatar clickable">
+            <img src="" alt="" class="avatar-frame" id="edit-avatar-frame">
+          </div>
         </div>
         <div id="edit-main-content">
           <form id="edit-profile-form" class="edit-form">
@@ -76,6 +82,11 @@
         <div id="pfp-selection-view" class="hidden">
           <div class="pfp-grid">
           </div>
+          <hr class="pfp-divider">
+          <div class="frame-grid"></div>
+          <button type="button" id="confirm-pfp-btn" class="apply-changes-btn">
+            <span>Change pfp</span>
+          </button>
         </div>
 
         <form id="password-change-view" class="hidden">

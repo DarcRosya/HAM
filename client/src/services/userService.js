@@ -20,6 +20,12 @@ export const userService = {
     return await res.json();
   },
 
+  getAvatarFrames: async () => {
+    const res = await fetch(`${BASE_URL}/avatar-frames`);
+    if (!res.ok) throw new Error('Failed to fetch avatar frames');
+    return await res.json();
+  },
+
   updateProfile: async (token, payload) => {
     const res = await fetch(`${BASE_URL}/profile`, {
       method: 'PATCH',

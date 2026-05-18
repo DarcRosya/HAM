@@ -158,21 +158,22 @@ body {
 
 #opp-avatar-zone {
   position: absolute;
-  top: 139px;
-  left: 50%;
+  top: 134px;
+  left: 49%;
   transform: translateX(-50%);
-  width: 65px;
-  height: 65px;
+  width: 68px;
+  height: 67px;
   z-index: 10;
+  scale: 0.8;
 }
 
 #opp-health-zone {
   position: absolute;
-  top: 45px;
-  left: 50%;
+  top: 59px;
+  left: 63%;
   transform: translateX(-50%);
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 50px;
   z-index: 15;
   display: flex;
   justify-content: center;
@@ -201,18 +202,19 @@ body {
   bottom: 122px;
   left: 50%;
   transform: translateX(-50%);
-  width: 65px;
-  height: 65px;
+  width: 106px;
+  height: 80px;
   z-index: 10;
+  scale: 0.8;
 }
 
 #player-health-zone {
   position: absolute;
-  bottom: -18px;
-  left: 50%;
+  bottom: -32px;
+  left: 40%;
   transform: translateX(-50%);
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 50px;
   z-index: 15;
   display: flex;
   justify-content: center;

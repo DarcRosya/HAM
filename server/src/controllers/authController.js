@@ -12,8 +12,18 @@ import {
 } from '../repositories/userRepository.js';
 
 export async function register(req, res) {
-  const { username, email, password, displayedName, displayed_name, avatar } = req.body;
+  const {
+    username,
+    email,
+    password,
+    displayedName,
+    displayed_name,
+    avatar,
+    avatarFrame,
+    avatar_frame,
+  } = req.body;
   const normalizedDisplayName = displayedName ?? displayed_name ?? null;
+  const normalizedAvatarFrame = avatarFrame ?? avatar_frame ?? null;
 
   if (!username || !email || !password) {
     return res.status(400).json({ message: 'Username, email, and password are required' });
@@ -41,6 +51,7 @@ export async function register(req, res) {
       password,
       displayedName: normalizedDisplayName,
       avatar,
+      avatarFrame: normalizedAvatarFrame,
     });
     return res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
