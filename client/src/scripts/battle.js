@@ -17,6 +17,14 @@ function getMyPlayerId() {
   return myEntry ? myEntry[0] : null;
 }
 
+function syncHandVisibilityByPhase(phase) {
+  const shouldHideHands = phase === 'coin_toss';
+  ['opp-hand-zone', 'player-hand-zone'].forEach((zoneId) => {
+    const handZone = document.getElementById(zoneId);
+    if (handZone) handZone.classList.toggle('hand-hidden', shouldHideHands);
+  });
+}
+
 function syncLocalTimer(state) {
   if (battleState.timers.turn) clearInterval(battleState.timers.turn);
   if (state.phase === 'loading') {
@@ -49,6 +57,7 @@ async function startMatch(state) {
     if (loaderTitle) loaderTitle.textContent = 'WAITING FOR OPPONENT...';
   }
 
+  syncHandVisibilityByPhase(state.phase);
   BattleNetwork.sendReady();
   BattleUI.updateBoard(state, BattleNetwork.getSocketId(), battleState.drag, releaseLock);
   syncLocalTimer(state);
@@ -116,6 +125,8 @@ const networkCallbacks = {
       const board = document.querySelector('.game-board');
       if (board) board.classList.remove('hidden');
     }
+
+    syncHandVisibilityByPhase(state.phase);
 
     const myId = getMyPlayerId();
     BattleUI.renderVsScreen(state, myId);
