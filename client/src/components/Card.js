@@ -12,7 +12,8 @@ export function renderCard(props = {}) {
     traits = [],
   } = props;
 
-  const frameSrc = resolveCardFrame(traits, variant);
+  const isSpell = String(type).toLowerCase() === 'spell';
+  const frameSrc = resolveCardFrame(traits, variant, type);
 
   const cardDiv = document.createElement('div');
   cardDiv.classList.add('card');
@@ -30,16 +31,29 @@ export function renderCard(props = {}) {
       cardDiv.classList.add('anim-card-drop', 'anim-card-spawn');
     }
 
+    const tokenStats = isSpell
+      ? ''
+      : `
+      <div class="token-stat token-attack">${attack}</div>
+      <div class="token-stat token-defense">${defense}</div>
+    `;
+
     cardDiv.innerHTML = `
       <div class="token-art" style="background-image: url('${art}');"></div>
       <img src="${frameSrc}" class="token-border">
-      <div class="token-stat token-attack">${attack}</div>
-      <div class="token-stat token-defense">${defense}</div>
+      ${tokenStats}
     `;
     return cardDiv;
   }
 
   // === ЛОГИКА ДЛЯ РУКИ (ПОЛНОЦЕННАЯ КАРТА) ===
+  const statBadges = isSpell
+    ? ''
+    : `
+    <div class="card-attack">${attack}</div>
+    <div class="card-defense">${defense}</div>
+  `;
+
   cardDiv.innerHTML = `
     <div class="card-art" style="background-image: url('${art}');"></div>
     <img src="${frameSrc}" class="card-frame">
@@ -47,15 +61,15 @@ export function renderCard(props = {}) {
     <div class="card-cost">${cost}</div>
     <div class="card-type">${type}</div>
     <div class="card-description">${description}</div>
-    <div class="card-attack">${attack}</div>
-    <div class="card-defense">${defense}</div>
+    ${statBadges}
   `;
 
   return cardDiv;
 }
 
-function resolveCardFrame(traits, variant) {
-  if (variant === 'hand') return '/assets/images/card-frame.png';
+function resolveCardFrame(traits, variant, type) {
+  const isSpell = String(type).toLowerCase() === 'spell';
+  if (variant === 'hand') return isSpell ? '/assets/images/card-frame-spell.png' : '/assets/images/card-frame.png';
 
   const normalized = Array.isArray(traits)
     ? traits.map((trait) => String(trait).toLowerCase())

@@ -28,11 +28,11 @@ export function registerGameHandlers(io, socket) {
     }
   });
 
-  socket.on('play_card', ({ roomId, cardInstanceId, targetIndex }) => {
+  socket.on('play_card', ({ roomId, cardInstanceId, targetIndex, targetId, targetType }) => {
     try {
       const game = gameService.getGame(roomId);
       if (game) {
-        game.playCard(socket.user.id, cardInstanceId, targetIndex);
+        game.playCard(socket.user.id, cardInstanceId, targetIndex, targetId, targetType);
       }
     } catch (e) {
       console.error('Error in play_card:', e);

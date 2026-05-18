@@ -90,7 +90,7 @@ function triggerTauntFlash(cardEl) {
 }
 
 function handleMouseDown(e) {
-  // if (battleState.ui.isAnimating) return;
+  if (battleState.ui.isAnimating) return;
 
   const cardEl = e.target.closest('.card, .card-slot');
   if (!cardEl) return;
@@ -162,7 +162,9 @@ function handleMouseDown(e) {
     if (!isMyTurn()) return BattleUI.showMessage('Wait for your turn!', battleState.elements);
     if (me.mana < cardData.cost)
       return BattleUI.showMessage('Not enough mana!', battleState.elements);
-    if (me.table.length >= 7) return BattleUI.showMessage('Table is full!', battleState.elements);
+    const isSpell = String(cardData.type).toLowerCase() === 'spell';
+    if (!isSpell && me.table.length >= 7)
+      return BattleUI.showMessage('Table is full!', battleState.elements);
 
     e.preventDefault();
     battleState.drag.playCardId = instanceId;
@@ -181,7 +183,7 @@ function handleMouseDown(e) {
     document.body.appendChild(ghost);
     battleState.drag.ghostElement = ghost;
 
-    BattleUI.updateBoard(battleState.match, null, { playCardId: instanceId });
+    BattleUI.updateBoard(battleState.match, null, { playCardId: instanceId }, { allowAnimations: false });
   }
 }
 
@@ -189,6 +191,31 @@ function handleMouseMove(e) {
   if (battleState.drag.playCardId && battleState.drag.ghostElement) {
     battleState.drag.ghostElement.style.left = e.clientX + 'px';
     battleState.drag.ghostElement.style.top = e.clientY + 'px';
+  }
+
+  if (battleState.drag.playCardId && !battleState.drag.attackCardId && attackReticle) {
+    const cardData = findCardInState(battleState.drag.playCardId);
+    const isSpell = String(cardData?.type).toLowerCase() === 'spell';
+
+    if (!isSpell) {
+      attackReticle.classList.remove('show', 'snapped', 'lethal');
+    } else {
+      const targetInfo = resolveSpellTarget(cardData, e.clientX, e.clientY);
+      if (!targetInfo.needsTarget) {
+        attackReticle.classList.remove('show', 'snapped', 'lethal');
+      } else if (targetInfo.isValid && targetInfo.targetEl) {
+        const tRect = targetInfo.targetEl.getBoundingClientRect();
+        attackReticle.style.left = `${tRect.left + tRect.width / 2}px`;
+        attackReticle.style.top = `${tRect.top + tRect.height / 2}px`;
+        attackReticle.classList.add('show', 'snapped');
+        attackReticle.classList.remove('lethal');
+      } else {
+        attackReticle.style.left = `${e.clientX}px`;
+        attackReticle.style.top = `${e.clientY}px`;
+        attackReticle.classList.add('show');
+        attackReticle.classList.remove('snapped', 'lethal');
+      }
+    }
   }
 
   if (battleState.drag.attackCardId) {
@@ -269,7 +296,49 @@ function handleMouseMove(e) {
 function handleMouseUp(e) {
   document.body.classList.remove('is-dragging');
 
+  if (battleState.ui.isAnimating) {
+    cancelDragInteraction();
+    return;
+  }
+
   if (battleState.drag.playCardId) {
+    const cardData = findCardInState(battleState.drag.playCardId);
+    if (!cardData) {
+      if (battleState.drag.ghostElement) {
+        battleState.drag.ghostElement.remove();
+        battleState.drag.ghostElement = null;
+      }
+      battleState.drag.playCardId = null;
+      if (attackReticle) attackReticle.classList.remove('show', 'snapped', 'lethal');
+      BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
+      return;
+    }
+    const isSpell = String(cardData?.type).toLowerCase() === 'spell';
+
+    if (isSpell) {
+      const targetInfo = resolveSpellTarget(cardData, e.clientX, e.clientY);
+      if (targetInfo.needsTarget && !targetInfo.isValid) {
+        BattleUI.showMessage('Select a valid target!', battleState.elements);
+      } else {
+        networkActions.playCard({
+          roomId: battleState.match.roomId,
+          cardInstanceId: battleState.drag.playCardId,
+          targetIndex: null,
+          targetId: targetInfo.targetId ?? null,
+          targetType: targetInfo.targetType ?? null,
+        });
+      }
+
+      if (battleState.drag.ghostElement) {
+        battleState.drag.ghostElement.remove();
+        battleState.drag.ghostElement = null;
+      }
+      battleState.drag.playCardId = null;
+      if (attackReticle) attackReticle.classList.remove('show', 'snapped', 'lethal');
+      BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
+      return;
+    }
+
     const tableZone = document.getElementById('player-table-zone');
     let isOverTable = false;
     if (tableZone) {
@@ -304,7 +373,7 @@ function handleMouseUp(e) {
       battleState.drag.ghostElement = null;
     }
     battleState.drag.playCardId = null;
-    BattleUI.updateBoard(battleState.match, null, battleState.drag);
+    BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
   }
 
   if (battleState.drag.attackCardId) {
@@ -349,25 +418,50 @@ function handleMouseUp(e) {
         const attackId = battleState.drag.attackCardId;
         const targetEl = cardTarget || avatarTarget;
 
-        document.body.style.pointerEvents = 'none'; // Блокируем клики на время самой атаки
-        if (networkActions.setAnimationLock) networkActions.setAnimationLock();
+        const runAttackAnimation = (cancelToken) =>
+          new Promise((resolve) => {
+            let finished = false;
+            const originalStyles = {
+              zIndex: attackerEl?.style.zIndex,
+              transition: attackerEl?.style.transition,
+              transform: attackerEl?.style.transform,
+              filter: attackerEl?.style.filter,
+            };
 
-        BattleUI.playAttackAnimation(
-          attackerEl,
-          targetEl,
-          () => {
-            networkActions.attackTarget({
-              roomId: battleState.match.roomId,
-              attackerInstanceId: attackId,
-              targetId,
-              targetType,
-            });
-          },
-          () => {
-            document.body.style.pointerEvents = 'auto';
-            if (networkActions.releaseLock) networkActions.releaseLock();
-          }
-        );
+            const cleanup = () => {
+              if (finished) return;
+              finished = true;
+              document.body.style.pointerEvents = 'auto';
+              if (attackerEl) {
+                attackerEl.classList.remove('anim-attacking', 'anim-attack-return');
+                attackerEl.style.zIndex = originalStyles.zIndex || '';
+                attackerEl.style.transition = originalStyles.transition || '';
+                attackerEl.style.transform = originalStyles.transform || '';
+                attackerEl.style.filter = originalStyles.filter || '';
+              }
+              if (targetEl) targetEl.classList.remove('anim-target-hit');
+              resolve();
+            };
+
+            if (cancelToken?.onCancel) cancelToken.onCancel(cleanup);
+            document.body.style.pointerEvents = 'none';
+            BattleUI.playAttackAnimation(
+              attackerEl,
+              targetEl,
+              () => {
+                networkActions.attackTarget({
+                  roomId: battleState.match.roomId,
+                  attackerInstanceId: attackId,
+                  targetId,
+                  targetType,
+                });
+              },
+              cleanup
+            );
+          });
+
+        if (networkActions.queueAction) networkActions.queueAction(runAttackAnimation);
+        else runAttackAnimation();
       }
     }
 
@@ -401,11 +495,141 @@ function hideTooltip() {
   }
 }
 
+function getSpellTargetConfig(cardData) {
+  const effect = String(cardData?.spellEffect || '').toLowerCase();
+  switch (effect) {
+    case 'add_mana':
+      return { needsTarget: false, allowCard: false, allowAvatar: false, allowFriendly: false, allowEnemy: false };
+    case 'damage':
+      return { needsTarget: true, allowCard: true, allowAvatar: true, allowFriendly: true, allowEnemy: true };
+    case 'heal_card':
+    case 'buff_card':
+      return { needsTarget: true, allowCard: true, allowAvatar: false, allowFriendly: true, allowEnemy: false };
+    case 'heal_avatar':
+      return { needsTarget: true, allowCard: false, allowAvatar: true, allowFriendly: true, allowEnemy: false };
+    default:
+      return { needsTarget: true, allowCard: true, allowAvatar: true, allowFriendly: true, allowEnemy: true };
+  }
+}
+
+function getElementUnderCursor(x, y) {
+  const ghost = battleState.drag.ghostElement;
+  let previousDisplay = null;
+  if (ghost) {
+    previousDisplay = ghost.style.display;
+    ghost.style.display = 'none';
+  }
+  const element = document.elementFromPoint(x, y);
+  if (ghost) ghost.style.display = previousDisplay;
+  return element;
+}
+
+function resolveSpellTarget(cardData, x, y) {
+  const config = getSpellTargetConfig(cardData);
+  if (!config.needsTarget) {
+    return { needsTarget: false, isValid: true, targetId: null, targetType: null, targetEl: null };
+  }
+
+  const elementBelow = getElementUnderCursor(x, y);
+  if (!elementBelow) return { needsTarget: true, isValid: false, targetId: null, targetType: null, targetEl: null };
+
+  const cardTarget = elementBelow.closest('.card-slot, .enemy-card');
+  if (cardTarget && config.allowCard) {
+    const isEnemy = cardTarget.classList.contains('enemy-card');
+    const targetId = cardTarget.dataset.instanceId;
+    if (targetId && ((isEnemy && config.allowEnemy) || (!isEnemy && config.allowFriendly))) {
+      return {
+        needsTarget: true,
+        isValid: true,
+        targetId,
+        targetType: 'card',
+        targetEl: cardTarget,
+      };
+    }
+  }
+
+  if (config.allowAvatar) {
+    const selfAvatar = elementBelow.closest(
+      '#player-avatar-zone, #player-avatar, #player-hp, #player-username-zone'
+    );
+    const oppAvatar = elementBelow.closest(
+      '#opp-avatar-zone, #opp-avatar, #opp-health-zone, #opp-username-zone'
+    );
+
+    if (selfAvatar && config.allowFriendly) {
+      const selfZone = document.getElementById('player-avatar-zone') || selfAvatar;
+      return {
+        needsTarget: true,
+        isValid: Boolean(getMyPlayerId()),
+        targetId: getMyPlayerId(),
+        targetType: 'avatar',
+        targetEl: selfZone,
+      };
+    }
+
+    if (oppAvatar && config.allowEnemy) {
+      const opponentId = getOpponentId();
+      const oppZone = document.getElementById('opp-avatar-zone') || oppAvatar;
+      return {
+        needsTarget: true,
+        isValid: Boolean(opponentId),
+        targetId: opponentId,
+        targetType: 'avatar',
+        targetEl: oppZone,
+      };
+    }
+  }
+
+  return { needsTarget: true, isValid: false, targetId: null, targetType: null, targetEl: null };
+}
+
+function cancelDragInteraction() {
+  if (battleState.drag.playCardId) {
+    if (battleState.drag.ghostElement) {
+      battleState.drag.ghostElement.remove();
+      battleState.drag.ghostElement = null;
+    }
+    battleState.drag.playCardId = null;
+    if (attackReticle) attackReticle.classList.remove('show', 'snapped', 'lethal');
+    BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
+  }
+
+  if (battleState.drag.attackCardId) {
+    const svg = document.getElementById('attack-arrow-svg');
+    if (svg) svg.style.display = 'none';
+    if (attackReticle) attackReticle.classList.remove('show', 'snapped', 'lethal');
+
+    const attackerEl = document.querySelector(
+      `[data-instance-id="${battleState.drag.attackCardId}"]`
+    );
+    if (attackerEl) attackerEl.classList.remove('is-attacking-active', 'is-preparing-attack');
+
+    document
+      .querySelectorAll('.taunt-target-glow')
+      .forEach((el) => el.classList.remove('taunt-target-glow'));
+    document
+      .querySelectorAll('.taunt-target-flash')
+      .forEach((el) => el.classList.remove('taunt-target-flash'));
+    document
+      .querySelectorAll('.forbidden-target')
+      .forEach((el) => el.classList.remove('forbidden-target'));
+
+    battleState.drag.attackCardId = null;
+  }
+}
+
 function getMyPlayerId() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const entries = Object.entries(battleState.match?.players ?? {});
   const myEntry = entries.find(([id]) => String(id) === String(user.id));
   return myEntry ? myEntry[0] : null;
+}
+
+function getOpponentId() {
+  const myId = getMyPlayerId();
+  const entries = Object.entries(battleState.match?.players ?? {});
+  const opponentEntry = entries.find(([id]) => String(id) !== String(myId));
+  return opponentEntry ? opponentEntry[0] : null;
 }
 
 function getMyPlayer() {

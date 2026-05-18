@@ -6,8 +6,7 @@ export const battleState = {
   hasRenderedOnce: false,
 
   queue: {
-    pendingGameState: null,
-    pendingGameOverPayload: null,
+    actionQueue: null,
   },
 
   // --- Состояние Drag & Drop ---
@@ -76,7 +75,9 @@ export const battleState = {
     this.hasRenderedOnce = false;
     this.initialDrawDone = false;
     this.ui.lastBoardIds = { me: [], opp: [] };
-    this.queue = { pendingGameState: null, pendingGameOverPayload: null };
+    const actionQueue = this.queue.actionQueue;
+    if (actionQueue) actionQueue.clear();
+    this.queue = { actionQueue };
 
     if (this.drag.ghostElement) this.drag.ghostElement.remove();
     if (this.ui.activeTooltip) this.ui.activeTooltip.remove();
