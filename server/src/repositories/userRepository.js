@@ -11,6 +11,7 @@ const mapUserRow = (row) => {
     username: row.username,
     email: row.email,
     avatar: row.avatar,
+    avatarFrame: row.avatar_frame ?? null,
     rating: row.rating ?? 500,
     passwordHash: row.password_hash,
     createdAt: row.created_at,
@@ -57,13 +58,14 @@ export async function findConflictingUser({ userId, username, email }) {
   return rows[0] ?? null;
 }
 
-export async function createUser({ username, email, passwordHash, displayedName, avatar }) {
+export async function createUser({ username, email, passwordHash, displayedName, avatar, avatarFrame }) {
   const normalizedDisplayedName = displayedName ?? null;
   const normalizedAvatar = avatar ?? '/assets/default-avatar.svg';
+  const normalizedAvatarFrame = avatarFrame ?? null;
 
   const [result] = await pool.query(
-    'INSERT INTO users (username, email, password_hash, displayed_name, avatar) VALUES (?, ?, ?, ?, ?)',
-    [username, email, passwordHash, normalizedDisplayedName, normalizedAvatar]
+    'INSERT INTO users (username, email, password_hash, displayed_name, avatar, avatar_frame) VALUES (?, ?, ?, ?, ?, ?)',
+    [username, email, passwordHash, normalizedDisplayedName, normalizedAvatar, normalizedAvatarFrame]
   );
 
   return {
@@ -72,6 +74,7 @@ export async function createUser({ username, email, passwordHash, displayedName,
     email,
     displayedName: normalizedDisplayedName,
     avatar: normalizedAvatar,
+    avatarFrame: normalizedAvatarFrame,
     rating: 500,
   };
 }
@@ -95,6 +98,10 @@ export async function updateProfileData(userId, data) {
   if (data.avatar !== undefined) {
     fields.push('avatar = ?');
     values.push(data.avatar);
+  }
+  if (data.avatarFrame !== undefined) {
+    fields.push('avatar_frame = ?');
+    values.push(data.avatarFrame);
   }
 
   if (fields.length === 0) return;

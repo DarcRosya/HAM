@@ -3,16 +3,35 @@ import { userService } from '../../services/userService.js';
 
 let initialProfileValues = {};
 
+function resolveAvatarFrame(user) {
+  return user?.avatar_frame || user?.avatarFrame || '';
+}
+
+function applyAvatarFrame(frameEl, frameSrc) {
+  if (!frameEl) return;
+  if (frameSrc) {
+    frameEl.src = frameSrc;
+    frameEl.style.display = '';
+  } else {
+    frameEl.removeAttribute('src');
+    frameEl.style.display = 'none';
+  }
+}
+
 export function renderUserProfile() {
   const user = store.getUser();
   if (!user) return;
 
   const avatar = document.querySelector('.player-info .avatar');
+  const avatarFrame = document.getElementById('avatar-frame');
   const name = document.querySelector('.display-name');
   const username = document.querySelector('.username');
   const mmrValue = document.querySelector('.mmr-value');
 
   if (avatar) avatar.src = user.avatar || '/assets/avatars/avatar.png';
+
+  applyAvatarFrame(avatarFrame, resolveAvatarFrame(user));
+
   if (name) name.textContent = user.displayedName || 'Unknown';
   if (username) username.textContent = user.username ? `@${user.username}` : '@user';
   if (mmrValue) mmrValue.textContent = user.rating || 500;
@@ -37,6 +56,7 @@ function initEditModal(onProfileUpdated) {
   const emailInput = document.getElementById('edit-email');
   const displayNameInput = document.getElementById('edit-display-name');
   const avatarPreview = document.getElementById('edit-avatar-preview');
+  const avatarFramePreview = document.getElementById('edit-avatar-frame');
   const applyBtn = document.getElementById('apply-profile-btn');
 
   let isSubmitting = false;
@@ -47,7 +67,10 @@ function initEditModal(onProfileUpdated) {
   if (editBtn && editModal) {
     editBtn.onclick = () => {
       const user = store.getUser() || {};
+
       if (avatarPreview) avatarPreview.src = user.avatar || '/assets/avatars/avatar.png';
+      applyAvatarFrame(avatarFramePreview, resolveAvatarFrame(user));
+
       if (displayNameInput) displayNameInput.value = user.displayedName || '';
       if (usernameInput) usernameInput.value = user.username || '';
       if (emailInput) emailInput.value = user.email || '';
@@ -122,6 +145,12 @@ function initEditModal(onProfileUpdated) {
         payload.avatar = avatarPreview.src;
       }
 
+      const selectedFrame = avatarFramePreview?.getAttribute('src') || '';
+      const currentFrame = resolveAvatarFrame(currentUser);
+      if (selectedFrame && selectedFrame !== currentFrame) {
+        payload.avatar_frame = selectedFrame;
+      }
+
       isSubmitting = true;
       if (applyBtn) applyBtn.disabled = true;
 
@@ -156,13 +185,20 @@ function initEditModal(onProfileUpdated) {
 
 function initAvatarPicker() {
   const avatarPreview = document.getElementById('edit-avatar-preview');
+  const avatarFramePreview = document.getElementById('edit-avatar-frame');
   const mainContent = document.getElementById('edit-main-content');
   const pfpView = document.getElementById('pfp-selection-view');
   const grid = document.querySelector('.pfp-grid');
+  const frameGrid = document.querySelector('.frame-grid');
   const confirmBtn = document.getElementById('confirm-pfp-btn');
   const frame = document.querySelector('.edit-frame');
   const backPfpBtn = document.querySelector('.back-pfp-btn');
   let selectedAvatarUrl = '';
+  let selectedFrameUrl = '';
+  const fallbackFrames = [
+    '/assets/avatars/frames/frame-1.png',
+    '/assets/avatars/frames/frame-2.png',
+  ];
 
   async function loadAndRenderAvatars() {
     try {
@@ -192,6 +228,51 @@ function initAvatarPicker() {
     }
   }
 
+  async function loadAndRenderFrames() {
+    if (!frameGrid) return;
+
+    let frames = [];
+    const fallbackFrames = [
+      '/assets/avatars/frames/frame-1.png',
+      '/assets/avatars/frames/frame-2.png',
+    ];
+
+    try {
+      const res = await userService.getAvatarFrames();
+      // ФИКС: Если API возвращает объект { frames: [...] }, достаем массив
+      frames = Array.isArray(res) ? res : res.frames || fallbackFrames;
+    } catch (err) {
+      frames = fallbackFrames;
+    }
+
+    frameGrid.innerHTML = '';
+    if (!Array.isArray(frames) || frames.length === 0) {
+      frames = fallbackFrames; // Жесткая подстраховка
+    }
+
+    const currentFrame = avatarFramePreview?.getAttribute('src') || '';
+    selectedFrameUrl = currentFrame;
+
+    frames.forEach((src) => {
+      const img = document.createElement('img');
+      img.src = src;
+      img.className = 'frame-item';
+
+      if (selectedFrameUrl && selectedFrameUrl.includes(src)) {
+        img.classList.add('selected');
+      }
+
+      img.onclick = () => {
+        frameGrid.querySelectorAll('.frame-item').forEach((i) => i.classList.remove('selected'));
+        img.classList.add('selected');
+        selectedFrameUrl = src;
+        applyAvatarFrame(avatarFramePreview, src);
+      };
+
+      frameGrid.appendChild(img);
+    });
+  }
+
   if (avatarPreview) {
     avatarPreview.onclick = async () => {
       mainContent.classList.add('hidden');
@@ -199,12 +280,14 @@ function initAvatarPicker() {
       frame.classList.add('pfp-mode');
       backPfpBtn?.classList.remove('is-hidden');
       await loadAndRenderAvatars();
+      await loadAndRenderFrames();
     };
   }
 
   if (confirmBtn) {
     confirmBtn.onclick = () => {
       if (selectedAvatarUrl) avatarPreview.src = selectedAvatarUrl;
+      if (selectedFrameUrl) applyAvatarFrame(avatarFramePreview, selectedFrameUrl);
       pfpView.classList.add('hidden');
       mainContent.classList.remove('hidden');
       frame.classList.remove('pfp-mode');

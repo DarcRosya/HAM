@@ -329,7 +329,7 @@ body.is-dragging #opp-hand-zone .card {
   z-index: 15000 !important;
 }
 
-.anim-avatar-death .avatar {
+.anim-avatar-death .avatar-wrapper {
   animation: avatarShatter 1.2s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
 }
 
@@ -2101,17 +2101,14 @@ body.is-dragging #opp-hand-zone .card {
   position: fixed;
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(255, 50, 50, 0.8);
+  border: 3px solid rgba(255, 50, 50, 0.9);
   border-radius: 50%;
-  box-shadow:
-    0 0 12px rgba(255, 0, 0, 0.75),
-    inset 0 0 8px rgba(120, 0, 0, 0.45);
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
   pointer-events: none;
   z-index: 10010;
   display: flex;
   justify-content: center;
   align-items: center;
-  isolation: isolate;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.5);
   transition:
@@ -2127,14 +2124,11 @@ body.is-dragging #opp-hand-zone .card {
 }
 
 .attack-reticle.snapped {
-  width: 90px;
-  height: 90px;
-  border-width: 2px;
-  border-color: rgba(255, 222, 222, 0.95);
+  width: 80px;
+  height: 80px;
+  border: 3px solid rgba(255, 30, 30, 0.9);
   background: transparent;
-  box-shadow:
-    0 0 0 1px rgba(255, 120, 120, 0.5),
-    0 0 26px rgba(175, 5, 5, 0.9);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
   transform: translate(-50%, -50%) scale(1.05);
   animation: pulse-reticle 1.5s infinite;
 }
@@ -2153,20 +2147,21 @@ body.is-dragging #opp-hand-zone .card {
 }
 
 .attack-reticle.snapped::before {
-  border: 8px solid rgba(122, 9, 17, 0.98);
-  box-shadow:
-    inset 0 0 10px rgba(255, 90, 90, 0.35),
-    0 0 16px rgba(140, 0, 0, 0.85);
-  opacity: 1;
+  content: '';
+  position: absolute;
+  inset: 1px; /* Прозрачный зазор между кольцами */
+  border-radius: 10%;
+  border: 12px solid rgba(180, 10, 10, 0.9); /* Темно-красный толстый контур */
+  box-shadow: inset 0 0 10px rgba(100, 0, 0, 0.5);
 }
 
 .attack-reticle::after {
   content: '';
   position: relative;
   z-index: 1;
-  font-size: 45px;
+  font-size: 40px;
   line-height: 1;
-  filter: drop-shadow(0 4px 6px black);
+  filter: drop-shadow(0 3px 5px black);
   opacity: 0;
   transform: scale(0.5);
   transition:
@@ -2175,9 +2170,9 @@ body.is-dragging #opp-hand-zone .card {
 }
 
 .attack-reticle.snapped::after {
-  content: '❓';
+  content: '🔴';
   opacity: 1;
-  transform: scale(1);
+  transform: scale(0.4);
 }
 
 .attack-reticle.lethal::after {
@@ -2193,24 +2188,74 @@ body.is-dragging #opp-hand-zone .card {
   filter: drop-shadow(0 0 10px rgba(120, 0, 0, 0.9));
 }
 
-@keyframes pulse-reticle {
+.enemy-card.taunt-target-flash {
+  animation: taunt-error-shake-fixed 0.4s ease-out forwards !important;
+  z-index: 10015 !important;
+}
+
+@keyframes taunt-error-shake-fixed {
   0% {
-    box-shadow:
-      0 0 0 1px rgba(255, 120, 120, 0.5),
-      0 0 20px rgba(170, 0, 0, 0.8);
+    transform: translateX(0);
+    filter: drop-shadow(0 0 0 rgba(255, 0, 0, 0));
   }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(255, 150, 150, 0.75),
-      0 0 34px rgba(210, 0, 0, 1);
+  20% {
+    transform: translateX(-8px);
+    filter: drop-shadow(0 0 25px rgba(255, 10, 10, 1));
+  }
+  40% {
+    transform: translateX(8px);
+    filter: drop-shadow(0 0 25px rgba(255, 10, 10, 1));
+  }
+  60% {
+    transform: translateX(-5px);
+    filter: drop-shadow(0 0 15px rgba(255, 10, 10, 0.9));
+  }
+  80% {
+    transform: translateX(5px);
+    filter: drop-shadow(0 0 10px rgba(255, 10, 10, 0.7));
   }
   100% {
-    box-shadow:
-      0 0 0 1px rgba(255, 120, 120, 0.5),
-      0 0 20px rgba(170, 0, 0, 0.8);
+    transform: translateX(0);
+    filter: none;
+  }
+}
+
+@keyframes pulse-reticle {
+  0% {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.8);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+@keyframes taunt-error-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 0, 0, 1);
+  }
+  50% {
+    box-shadow: 0 0 25px 10px rgba(255, 0, 0, 0.9);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 10px 2px rgba(255, 0, 0, 0);
+    transform: scale(1);
   }
 }
 
 .card-board.forbidden-target:hover {
   transform: none;
+}
+
+.is-preparing-attack {
+  transform: translateY(-15px) scale(1.05) !important;
+  box-shadow: 0 15px 30px rgba(255, 30, 30, 0.4) !important;
+  z-index: 10010 !important; /* Чтобы была выше других карт на столе */
+  transition:
+    transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.15s ease-out !important;
 }

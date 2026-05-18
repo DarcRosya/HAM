@@ -4,7 +4,7 @@ import { BattleUI } from './ui.js';
 let boundHandlers = {};
 let networkActions = {};
 let attackReticle = null;
-const TAUNT_FLASH_DURATION_MS = 280;
+const TAUNT_FLASH_DURATION_MS = 400;
 
 // ==========================================
 // ЛОКАЛЬНЫЕ ОБРАБОТЧИКИ (Event Delegation)
@@ -70,12 +70,23 @@ function handleMouseOut(e) {
 }
 
 function triggerTauntFlash(cardEl) {
+  if (!cardEl) return;
+  if (cardEl._tauntFlashTimer) {
+    clearTimeout(cardEl._tauntFlashTimer);
+    cardEl._tauntFlashTimer = null;
+  }
+
   cardEl.classList.remove('taunt-target-flash');
-  void cardEl.offsetWidth;
-  cardEl.classList.add('taunt-target-flash');
-  setTimeout(() => {
-    cardEl.classList.remove('taunt-target-flash');
-  }, TAUNT_FLASH_DURATION_MS);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      cardEl.classList.add('taunt-target-flash');
+      cardEl._tauntFlashTimer = setTimeout(() => {
+        cardEl.classList.remove('taunt-target-flash');
+        cardEl._tauntFlashTimer = null;
+      }, TAUNT_FLASH_DURATION_MS);
+    });
+  });
 }
 
 function handleMouseDown(e) {
@@ -98,6 +109,8 @@ function handleMouseDown(e) {
     battleState.drag.attackCardId = instanceId;
     document.body.classList.add('is-dragging');
 
+    cardEl.classList.add('is-attacking-active');
+
     // СЧИТЫВАЕМ КООРДИНАТЫ ДО ПЕРЕРИСОВКИ DOM!
     const board = document.querySelector('.game-board');
     const boardRect = board.getBoundingClientRect();
@@ -107,24 +120,21 @@ function handleMouseDown(e) {
 
     const oppTableZone = document.getElementById('opp-table-zone');
     let hasTaunt = false;
-    const tauntIds = new Set();
     const entries = Object.entries(battleState.match?.players ?? {});
     const opponentEntry = entries.find(([id]) => String(id) !== String(getMyPlayerId()));
     const opponent = opponentEntry ? opponentEntry[1] : null;
 
     if (oppTableZone && opponent && opponent.table) {
       opponent.table.forEach((oppCard) => {
-        if (oppCard.traits?.includes('taunt')) {
-          hasTaunt = true;
-          tauntIds.add(String(oppCard.instanceId));
-          const oppUI = oppTableZone.querySelector(`[data-instance-id="${oppCard.instanceId}"]`);
-          if (oppUI) triggerTauntFlash(oppUI);
-        }
+        if (oppCard.traits?.includes('taunt')) hasTaunt = true;
       });
+
       if (hasTaunt) {
         oppTableZone.querySelectorAll('.enemy-card').forEach((enemyCardUI) => {
-          if (!tauntIds.has(String(enemyCardUI.dataset.instanceId)))
+          const cardData = findCardInState(enemyCardUI.dataset.instanceId);
+          if (!cardData?.traits?.includes('taunt')) {
             enemyCardUI.classList.add('forbidden-target');
+          }
         });
         document.getElementById('opp-avatar-zone')?.classList.add('forbidden-target');
         document.getElementById('opp-username-zone')?.classList.add('forbidden-target');
@@ -187,6 +197,18 @@ function handleMouseMove(e) {
     const attackerEl = document.querySelector(
       `[data-instance-id="${battleState.drag.attackCardId}"]`
     );
+
+    if (attackerEl) attackerEl.classList.add('is-attacking-active');
+
+    if (!isMyTurn()) {
+      BattleUI.showMessage('Time is up!', battleState.elements);
+      if (attackerEl) attackerEl.classList.remove('is-attacking-active');
+      document
+        .querySelectorAll('.forbidden-target')
+        .forEach((el) => el.classList.remove('forbidden-target'));
+      battleState.drag.attackCardId = null;
+      return;
+    }
 
     if (board && line && attackerEl) {
       const boardRect = board.getBoundingClientRect();
@@ -298,6 +320,16 @@ function handleMouseUp(e) {
 
     if (isForbidden) {
       BattleUI.showMessage('You must attack a unit with Taunt!', battleState.elements);
+
+      const oppTableZone = document.getElementById('opp-table-zone');
+      if (oppTableZone) {
+        oppTableZone.querySelectorAll('.enemy-card:not(.forbidden-target)').forEach((el) => {
+          const cardData = findCardInState(el.dataset.instanceId);
+          if (cardData && cardData.traits?.includes('taunt')) {
+            triggerTauntFlash(el);
+          }
+        });
+      }
     } else {
       const cardTarget = dropTarget?.closest('.enemy-card:not(.forbidden-target)');
       let avatarTarget = dropTarget?.closest(
@@ -339,7 +371,7 @@ function handleMouseUp(e) {
       }
     }
 
-    if (attackerEl) attackerEl.classList.remove('is-attacking-active');
+    if (attackerEl) attackerEl.classList.remove('is-attacking-active', 'is-preparing-attack');
     document
       .querySelectorAll('.taunt-target-glow')
       .forEach((el) => el.classList.remove('taunt-target-glow'));

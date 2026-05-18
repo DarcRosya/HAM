@@ -1,5 +1,6 @@
 import { renderCard } from '../../components/Card.js';
 import { battleState } from './state.js';
+import { store } from '../../core/store.js';
 
 let messageTimer = null;
 
@@ -13,6 +14,17 @@ const TRAITS_DESC = {
 
 function safeSetText(element, text) {
   if (element) element.textContent = text;
+}
+
+function applyAvatarFrame(frameEl, frameSrc) {
+  if (!frameEl) return;
+  if (frameSrc) {
+    frameEl.src = frameSrc;
+    frameEl.style.display = '';
+  } else {
+    frameEl.removeAttribute('src');
+    frameEl.style.display = 'none';
+  }
 }
 
 function resolvePlayers(state, socketId) {
@@ -117,21 +129,28 @@ export const BattleUI = {
         const opp = state.players[oppId];
 
         if (me) {
-          document.getElementById('vs-you-avatar').src =
-            me.avatar || '/assets/images/avatar-my.png';
+          document.getElementById('vs-you-avatar').src = me.avatar || '/assets/avatars/avatar.png';
           document.getElementById('vs-you-name').textContent = me.displayedName || me.username;
           document.getElementById('vs-you-mmr').textContent = `MMR: ${me.rating}`;
           document.getElementById('vs-you-sword').src =
             `/assets/images/sword-${me.swordId || 1}.png`;
+
+          const myFrame = document.getElementById('vs-you-frame');
+          const myFrameSrc = me.avatar_frame || me.avatarFrame || '';
+          applyAvatarFrame(myFrame, myFrameSrc);
         }
 
         if (opp) {
-          document.getElementById('vs-opp-avatar').src =
-            opp.avatar || '/assets/images/avatar-enemy.png';
+          document.getElementById('vs-opp-avatar').src = opp.avatar || '/assets/avatars/avatar.png';
           document.getElementById('vs-opp-name').textContent = opp.displayedName || opp.username;
           document.getElementById('vs-opp-mmr').textContent = `MMR: ${opp.rating}`;
           document.getElementById('vs-opp-sword').src =
             `/assets/images/sword-${opp.swordId || 1}.png`;
+
+          // Рендер рамки для противника
+          const oppFrame = document.getElementById('vs-opp-frame');
+          const oppFrameSrc = opp.avatar_frame || opp.avatarFrame || '';
+          applyAvatarFrame(oppFrame, oppFrameSrc);
         }
 
         // Возвращаем динамические элементы для эпичной анимации (искры, надпись)
@@ -374,6 +393,19 @@ export const BattleUI = {
     const playerAvatar = document.getElementById('player-avatar');
     if (playerAvatar && me.avatar) playerAvatar.src = me.avatar;
 
+    const oppFrame = document.getElementById('opp-avatar-frame');
+    const playerFrame = document.getElementById('player-avatar-frame');
+    const oppFrameSrc =
+      opponent.avatarFrame ||
+      opponent.avatar_frame ||
+      opponent.user?.avatar_frame ||
+      opponent.user?.avatarFrame ||
+      '';
+    const playerFrameSrc =
+      me.avatarFrame || me.avatar_frame || me.user?.avatar_frame || me.user?.avatarFrame || '';
+    applyAvatarFrame(oppFrame, oppFrameSrc);
+    applyAvatarFrame(playerFrame, playerFrameSrc);
+
     // 2. Колоды и Усталость
     safeSetText(document.getElementById('opp-deck'), opponent.deckCount);
     const playerDeck = document.getElementById('player-deck');
@@ -471,6 +503,10 @@ export const BattleUI = {
       const cardUI = renderCard({ ...card, variant: 'board' });
       cardUI.classList.add('card-slot');
       cardUI.dataset.instanceId = card.instanceId;
+
+      if (dragState.attackCardId && String(card.instanceId) === String(dragState.attackCardId)) {
+        cardUI.classList.add('is-attacking-active');
+      }
 
       if (isNewCard)
         this.playEpicSpawn(cardUI, card, dragState.lastDropCoords, dragState.ghostElement);
