@@ -332,6 +332,18 @@ const networkCallbacks = {
   onGameOver: (payload) => {
     actionQueue.clear();
     actionQueue.add((ctx) => applyGameOver(payload, ctx));
+    if (battleState.timers.turn) {
+      clearInterval(battleState.timers.turn);
+      battleState.timers.turn = null;
+    }
+
+    if (battleState.elements.bmoTextTop) {
+      battleState.elements.bmoTextTop.textContent = 'GAME';
+    }
+    if (battleState.elements.bmoTextBottom) {
+      battleState.elements.bmoTextBottom.textContent = 'OVER';
+      battleState.elements.bmoTextBottom.classList.remove('danger-tick');
+    }
   },
 
   onOpponentDisconnected: (payload) => {
@@ -377,7 +389,7 @@ export function mount() {
     battleContainer: document.querySelector('.game-board'),
     coinOverlay: document.getElementById('coin-toss-overlay'),
     coin: document.querySelector('.coin'),
-    surrenderBtn: document.getElementById('surrender-btn'),
+    surrenderBtn: document.getElementById('surrender-confirm-yes'),
     opponentStatus: document.getElementById('opponent-connection-status'),
     opponentStatusText: document.getElementById('opponent-connection-text'),
     battleMessage: document.getElementById('battle-message'),
@@ -386,6 +398,25 @@ export function mount() {
     bmoTextTop: document.getElementById('bmo-text-top'),
     bmoTextBottom: document.getElementById('bmo-text-bottom'),
   };
+
+  const triggerBtn = document.getElementById('surrender-trigger-btn');
+  const confirmOverlay = document.getElementById('surrender-confirm-overlay');
+  const noBtn = document.getElementById('surrender-confirm-no');
+  const yesBtn = document.getElementById('surrender-confirm-yes');
+  const closeBtn = document.getElementById('close-surrender-btn');
+  if (triggerBtn && confirmOverlay) {
+    triggerBtn.onclick = () => confirmOverlay.classList.remove('hidden');
+  }
+  const closeModal = () => confirmOverlay.classList.add('hidden');
+  if (noBtn) {
+    noBtn.onclick = closeModal;
+  }
+  if (closeBtn) {
+    closeBtn.onclick = closeModal;
+  }
+  if (yesBtn) {
+    yesBtn.addEventListener('click', closeModal);
+  }
 
   if (battleState.elements.loader) battleState.elements.loader.classList.remove('hidden');
   if (battleState.elements.coinOverlay) battleState.elements.coinOverlay.style.display = 'none';

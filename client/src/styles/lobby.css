@@ -347,7 +347,7 @@ body {
 }
 
 .edit-frame.pfp-mode {
-  height: 630px;
+  height: 550px;
 }
 
 .edit-frame.password-mode {
@@ -430,15 +430,37 @@ body {
   flex-direction: column;
   align-items: center;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 5px 5px 5px 45px;
+}
+
+.pfp-scroll-container {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-bottom: 10px;
+}
+
+.pfp-scroll-container::-webkit-scrollbar {
+  width: 4px;
+}
+.pfp-scroll-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+.pfp-scroll-container::-webkit-scrollbar-thumb {
+  background: #deb568;
+  border-radius: 10px;
 }
 
 .pfp-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 15px;
-  margin: 20px 0;
-  max-height: 250px;
-  overflow-y: auto;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px 20px;
+  margin: 0;
   padding: 10px;
 }
 
@@ -455,14 +477,12 @@ body {
   grid-template-columns: repeat(6, 1fr);
   gap: 12px;
   margin: 0 0 16px;
-  max-height: 180px;
-  overflow-y: auto;
   padding: 8px 10px;
 }
 
 .frame-item {
-  width: 85px;
-  height: 85px;
+  width: 95px;
+  height: 95px;
   border-radius: 12px;
   border: 3px solid #333;
   cursor: pointer;
@@ -490,15 +510,19 @@ body {
 }
 
 .edit-frame.pfp-mode .large-avatar.clickable {
-  width: 120px;
-  height: 98px;
   margin-bottom: 0;
-  margin-top: -5px;
-  cursor: default;
+  cursor: default !important;
 }
 
-.edit-frame:not(.pfp-mode) .large-avatar.clickable:hover {
-  transform: scale(1.2);
+/* Добавляем плавность анимации для всей коробки */
+.edit-avatar-container .avatar-wrapper {
+  transition: transform 0.2s ease;
+}
+
+/* Увеличиваем всю коробку (аватар + рамка) при наведении */
+.edit-frame:not(.pfp-mode) .edit-avatar-container .avatar-wrapper:hover {
+  transform: scale(1.1);
+  cursor: pointer;
 }
 
 .pfp-item.selected {
@@ -899,6 +923,9 @@ body {
   height: 60px; /* ЖЕСТКИЙ КВАДРАТ */
   flex-shrink: 0; /* СПАСАЕТ ОТ ЯЙЦА */
   margin-right: 15px;
+}
+.edit-avatar-container .avatar-wrapper {
+  margin-top: 10px; /* попробуй 2–10px */
 }
 
 .player-info .avatar-wrapper img.avatar {

@@ -119,7 +119,8 @@
     </div>
 
     <div class="sidebar-left">
-      <button class="text-btn" id="surrender-btn" style="margin-bottom: 20px;">SURRENDER</button>
+      <div id="surrender-trigger-btn" class="surrender-img-btn"></div>
+
       <div class="his-deck" id="opp-deck">30</div>
       <div class="player-deck" id="player-deck" data-count="30"></div>
       <div id="fatigue-info" class="hidden" style="color: red; font-weight: bold; text-align: center;">Fatigue: <span
@@ -158,6 +159,11 @@
         </div>
       </div>
 
+      <div id="player-round-zone" class="round-counter-badge">
+        <span class="round-label">ROUND</span>
+        <span id="round-number" class="round-value">1</span>
+      </div>
+
     </div>
 
     <svg id="attack-arrow-svg"
@@ -190,6 +196,36 @@
           <button id="play-again-btn" class="result-action-btn">PLAY AGAIN</button>
           <button id="back-lobby-btn" class="result-action-btn">BACK TO LOBBY</button>
         </div>
+      </div>
+    </div>
+
+    <div id="surrender-confirm-overlay" class="hidden">
+
+      <div class="surrender-modal-frame">
+        <button id="close-surrender-btn" class="close-btn"></button>
+
+        <div class="surrender-modal-header">SURRENDER</div>
+
+        <div class="surrender-wooden-board">
+          <div class="surrender-warning-text">
+            <span>Are you sure you<br>want to surrender?</span><br><br>
+            <span class="danger-text">Surrendering will count as a defeat <br>and may affect your rank.</span>
+          </div>
+
+          <div class="surrender-actions">
+            <button id="surrender-confirm-yes" class="surrender-action-btn">YES</button>
+            <button id="surrender-confirm-no" class="surrender-action-btn">NO</button>
+          </div>
+        </div>
+
+        <div class="surrender-bmo-container">
+          <div class="surrender-bmo-btn"></div>
+          <div class="surrender-speech-bubble">
+            <span class="surrender-speech-text">Are you sure you want to <span
+                class="surrender-red-word">leave</span>?</span>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>

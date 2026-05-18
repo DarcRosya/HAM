@@ -24,6 +24,8 @@ export class GameRoom {
     this.onGameEnd = onGameEnd;
 
     this.activeTurn = Math.random() > 0.5 ? player1.user.id : player2.user.id;
+    this.initialPlayer = this.activeTurn;
+    this.round = 1;
 
     this.turnDuration = 30000;
     this.coinTossDuration = 7500;
@@ -348,6 +350,7 @@ export class GameRoom {
       roomId: this.roomId,
       activeTurn: this.activeTurn,
       phase: this.phase,
+      round: this.round,
       turnEndsInMs: this.turnExpiresAt > 0 ? Math.max(0, this.turnExpiresAt - Date.now()) : 0,
       players: sanitizedPlayers,
     };
@@ -357,6 +360,9 @@ export class GameRoom {
     try {
       const playerIds = Object.keys(this.players);
       this.activeTurn = playerIds.find((id) => id !== String(this.activeTurn));
+      if (String(this.activeTurn) === String(this.initialPlayer)) {
+        this.round++;
+      }
       const currentPlayer = this.players[this.activeTurn];
 
       currentPlayer.maxMana = Math.min(currentPlayer.maxMana + 1, 10);
