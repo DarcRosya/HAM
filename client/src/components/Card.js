@@ -12,7 +12,8 @@ export function renderCard(props = {}) {
     traits = [],
   } = props;
 
-  const frameSrc = resolveCardFrame(traits, variant);
+  const isSpell = String(type).toLowerCase() === 'spell';
+  const frameSrc = resolveCardFrame(traits, variant, type);
 
   const cardDiv = document.createElement('div');
   cardDiv.classList.add('card');
@@ -30,32 +31,47 @@ export function renderCard(props = {}) {
       cardDiv.classList.add('anim-card-drop', 'anim-card-spawn');
     }
 
+    const tokenStats = isSpell
+      ? ''
+      : `
+      <div class="token-stat token-attack">${attack}</div>
+      <div class="token-stat token-defense">${defense}</div>
+    `;
+
     cardDiv.innerHTML = `
       <div class="token-art" style="background-image: url('${art}');"></div>
       <img src="${frameSrc}" class="token-border">
-      <div class="token-stat token-attack">${attack}</div>
-      <div class="token-stat token-defense">${defense}</div>
+      ${tokenStats}
     `;
     return cardDiv;
   }
 
   // === ЛОГИКА ДЛЯ РУКИ (ПОЛНОЦЕННАЯ КАРТА) ===
+  const statBadges = isSpell
+    ? ''
+    : `
+    <div class="card-attack">${attack}</div>
+    <div class="card-defense">${defense}</div>
+  `;
+
+  const descriptionHtml = highlightKeywords(description);
+
   cardDiv.innerHTML = `
     <div class="card-art" style="background-image: url('${art}');"></div>
     <img src="${frameSrc}" class="card-frame">
     <div class="card-title">${name}</div>
     <div class="card-cost">${cost}</div>
     <div class="card-type">${type}</div>
-    <div class="card-description">${description}</div>
-    <div class="card-attack">${attack}</div>
-    <div class="card-defense">${defense}</div>
+    <div class="card-description">${descriptionHtml}</div>
+    ${statBadges}
   `;
 
   return cardDiv;
 }
 
-function resolveCardFrame(traits, variant) {
-  if (variant === 'hand') return '/assets/images/card-frame.png';
+function resolveCardFrame(traits, variant, type) {
+  const isSpell = String(type).toLowerCase() === 'spell';
+  if (variant === 'hand') return isSpell ? '/assets/images/card-frame-spell.png' : '/assets/images/card-frame.png';
 
   const normalized = Array.isArray(traits)
     ? traits.map((trait) => String(trait).toLowerCase())
@@ -66,4 +82,24 @@ function resolveCardFrame(traits, variant) {
   if (normalized.includes('poison')) return '/assets/images/poison-frame.png';
 
   return '/assets/images/default-frame.png';
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function highlightKeywords(description) {
+  const safeText = escapeHtml(description || '');
+  const keywords = ['taunt', 'charge', 'poison', 'berserk', 'damage', 'defense', 'attack', 'mana'];
+  const regex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'gi');
+
+  return safeText.replace(regex, (match) => {
+    const key = match.toLowerCase();
+    return `<span class="card-keyword" data-keyword="${key}">${match}</span>`;
+  });
 }

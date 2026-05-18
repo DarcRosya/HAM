@@ -3,8 +3,69 @@ import { battleState } from './battle/state.js';
 import { BattleUI } from './battle/ui.js';
 import { BattleInput } from './battle/input.js';
 import { BattleNetwork } from './battle/network.js';
+import { ActionQueue } from './battle/actionQueue.js';
 
 const COIN_TOSS_DURATION_MS = 7500;
+
+const actionQueue = new ActionQueue({
+  onChange: (isActive) => {
+    battleState.ui.isAnimating = isActive;
+  },
+});
+
+battleState.queue.actionQueue = actionQueue;
+
+function delay(ms, cancelToken) {
+  return new Promise((resolve) => {
+    let finished = false;
+    const done = () => {
+      if (finished) return;
+      finished = true;
+      resolve();
+    };
+
+    const timer = setTimeout(done, ms);
+    if (cancelToken?.onCancel) {
+      cancelToken.onCancel(() => {
+        clearTimeout(timer);
+        done();
+      });
+    }
+  });
+}
+
+function runAttackAnimation(attackerEl, targetEl, onImpact, cancelToken) {
+  return new Promise((resolve) => {
+    if (!attackerEl || !targetEl) {
+      if (onImpact) onImpact();
+      resolve();
+      return;
+    }
+
+    let finished = false;
+    const originalStyles = {
+      zIndex: attackerEl.style.zIndex,
+      transition: attackerEl.style.transition,
+      transform: attackerEl.style.transform,
+      filter: attackerEl.style.filter,
+    };
+
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      attackerEl.classList.remove('anim-attacking', 'anim-attack-return');
+      attackerEl.style.zIndex = originalStyles.zIndex;
+      attackerEl.style.transition = originalStyles.transition;
+      attackerEl.style.transform = originalStyles.transform;
+      attackerEl.style.filter = originalStyles.filter;
+      targetEl.classList.remove('anim-target-hit');
+      resolve();
+    };
+
+    if (cancelToken?.onCancel) cancelToken.onCancel(cleanup);
+    BattleUI.playAttackAnimation(attackerEl, targetEl, onImpact, cleanup);
+  });
+}
 
 // ==========================================
 // ЛОКАЛЬНАЯ БИЗНЕС-ЛОГИКА (Таймеры и Монетка)
@@ -59,33 +120,137 @@ async function startMatch(state) {
 
   syncHandVisibilityByPhase(state.phase);
   BattleNetwork.sendReady();
-  BattleUI.updateBoard(state, BattleNetwork.getSocketId(), battleState.drag, releaseLock);
+  actionQueue.add((ctx) =>
+    BattleUI.updateBoard(state, BattleNetwork.getSocketId(), battleState.drag, {
+      cancelToken: ctx,
+    })
+  );
   syncLocalTimer(state);
 }
 
-// --- СИСТЕМА ОЧЕРЕДЕЙ И БЛОКИРОВОК ---
-function setAnimationLock() {
-  battleState.ui.isAnimating = true;
-  if (battleState.timers.animationSafety) clearTimeout(battleState.timers.animationSafety);
-  // Защита от зависания: жесткий сброс через 2.5 сек, если onComplete не сработал
-  battleState.timers.animationSafety = setTimeout(() => {
-    releaseLock();
-  }, 2500);
+async function applyGameState(state, cancelToken) {
+  if (!store.isInBattle()) return;
+  if (cancelToken?.signal?.aborted) return;
+
+  battleState.setMatch(state);
+  store.setMatchState(state);
+
+  if (state.phase !== 'loading') {
+    BattleUI.reveal(battleState.elements);
+    const board = document.querySelector('.game-board');
+    if (board) board.classList.remove('hidden');
+  }
+
+  syncHandVisibilityByPhase(state.phase);
+
+  const myId = getMyPlayerId();
+  BattleUI.renderVsScreen(state, myId);
+  syncLocalTimer(state);
+
+  const entries = Object.entries(state.players || {});
+  const opponentEntry = entries.find(([id]) => String(id) !== String(myId));
+  const opponent = opponentEntry ? opponentEntry[1] : null;
+
+  if (opponent && opponent.isConnected === false) {
+    BattleUI.setFrozen(
+      true,
+      "Opponent left. Waiting for reconnect...<br>You will win automatically if they don't return.",
+      battleState.elements
+    );
+  } else {
+    BattleUI.setFrozen(false, '', battleState.elements);
+  }
+
+  const boardPromise = BattleUI.updateBoard(state, BattleNetwork.getSocketId(), battleState.drag, {
+    cancelToken,
+  });
+
+  if (state.phase === 'coin_toss' || state.phase === 'playing') {
+    const board = document.querySelector('.game-board');
+    if (board) {
+      board.classList.remove('hidden');
+      board.style.pointerEvents = 'auto';
+      requestAnimationFrame(() => {
+        if (!board.classList.contains('board-visible')) board.classList.add('board-visible');
+      });
+    }
+  }
+  if (state.phase === 'coin_toss') {
+    if (battleState.elements.coinOverlay && myId) {
+      battleState.elements.coinOverlay.style.display = '';
+      battleState.elements.coinOverlay.classList.add('is-active');
+      battleState.elements.coin.classList.remove('coin--you', 'coin--opp');
+      void battleState.elements.coin.offsetWidth;
+      const isMyTurn = String(state.activeTurn) === String(myId);
+      battleState.elements.coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
+    }
+  } else if (state.phase === 'playing') BattleUI.resetCoin(battleState.elements);
+
+  await boardPromise;
 }
 
-function releaseLock() {
-  battleState.ui.isAnimating = false;
-  if (battleState.timers.animationSafety) clearTimeout(battleState.timers.animationSafety);
+async function applyGameOver(payload, cancelToken) {
+  BattleUI.setFrozen(false, '', battleState.elements);
+  BattleUI.hideStatus(battleState.elements);
+  store.clearMatchState();
 
-  if (battleState.queue.pendingGameOverPayload) {
-    const payload = battleState.queue.pendingGameOverPayload;
-    battleState.queue.pendingGameOverPayload = null;
-    payload.forceExecute = true;
-    networkCallbacks.onGameOver(payload);
-  } else if (battleState.queue.pendingGameState) {
-    const state = battleState.queue.pendingGameState;
-    battleState.queue.pendingGameState = null;
-    networkCallbacks.onGameState(state);
+  const myId = getMyPlayerId();
+  const isWinner = String(payload.winnerId) === String(myId);
+
+  const targetAvatarZoneId = isWinner ? 'opp-avatar-zone' : 'player-avatar-zone';
+  const avatarZone = document.getElementById(targetAvatarZoneId);
+  if (avatarZone) {
+    const hpBadge = avatarZone.querySelector('.health-badge');
+    if (hpBadge) hpBadge.style.opacity = '0';
+    avatarZone.classList.add('anim-avatar-death');
+    const board = document.querySelector('.game-board');
+    if (board) board.classList.add('board-shake-heavy');
+  }
+
+  await delay(1500, cancelToken);
+  if (cancelToken?.signal?.aborted) return;
+
+  const overlay = document.getElementById('game-result-overlay');
+  const banner = document.getElementById('result-banner');
+  const mmrValue = document.getElementById('result-mmr-value');
+  const durationText = document.getElementById('result-duration');
+  const playAgainBtn = document.getElementById('play-again-btn');
+  const backLobbyBtn = document.getElementById('back-lobby-btn');
+
+  if (overlay && banner && mmrValue) {
+    overlay.classList.remove('hidden');
+    banner.className = `result-banner ${isWinner ? 'victory' : 'defeat'}`;
+    const mmrChange = Number(payload.ratingChange ?? payload.mmrChange ?? 0);
+    const displayMmr = isWinner ? Math.abs(mmrChange) : -Math.abs(mmrChange);
+    mmrValue.textContent = displayMmr > 0 ? `+${displayMmr}` : `${displayMmr}`;
+
+    if (durationText) {
+      const durationSeconds = Number(payload.duration ?? payload.matchDuration ?? 0);
+      if (!Number.isFinite(durationSeconds) || durationSeconds < 0)
+        durationText.textContent = '0:00';
+      else {
+        const minutes = Math.floor(durationSeconds / 60);
+        const seconds = Math.floor(durationSeconds % 60);
+        durationText.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }
+
+    const autoRedirectTimer = setTimeout(() => {
+      window.location.hash = '#lobby';
+    }, 10000);
+    if (backLobbyBtn)
+      backLobbyBtn.onclick = () => {
+        clearTimeout(autoRedirectTimer);
+        window.location.hash = '#lobby';
+      };
+    if (playAgainBtn)
+      playAgainBtn.onclick = () => {
+        clearTimeout(autoRedirectTimer);
+        localStorage.setItem('autoQueue', 'true');
+        window.location.hash = '#lobby';
+      };
+  } else {
+    window.location.hash = '#lobby';
   }
 }
 
@@ -116,151 +281,63 @@ const networkCallbacks = {
   },
 
   onGameState: (state) => {
-    if (!store.isInBattle()) return;
-    battleState.setMatch(state);
-    store.setMatchState(state);
-
-    if (state.phase !== 'loading') {
-      BattleUI.reveal(battleState.elements);
-      const board = document.querySelector('.game-board');
-      if (board) board.classList.remove('hidden');
-    }
-
-    syncHandVisibilityByPhase(state.phase);
-
-    const myId = getMyPlayerId();
-    BattleUI.renderVsScreen(state, myId);
-    syncLocalTimer(state);
-
-    const entries = Object.entries(state.players || {});
-    const opponentEntry = entries.find(([id]) => String(id) !== String(myId));
-    const opponent = opponentEntry ? opponentEntry[1] : null;
-
-    if (opponent && opponent.isConnected === false)
-      BattleUI.setFrozen(
-        true,
-        'Opponent disconnected...<br>Waiting for reconnect.',
-        battleState.elements
-      );
-    else BattleUI.setFrozen(false, '', battleState.elements);
-
-    // Логика очередей: Если идет анимация - сохраняем стейт в очередь
-    if (battleState.ui.isAnimating) {
-      battleState.queue.pendingGameState = state;
-    } else {
-      BattleUI.updateBoard(state, BattleNetwork.getSocketId(), battleState.drag, releaseLock);
-    }
-
-    if (state.phase === 'coin_toss' || state.phase === 'playing') {
-      const board = document.querySelector('.game-board');
-      if (board) {
-        board.classList.remove('hidden');
-        board.style.pointerEvents = 'auto';
-        requestAnimationFrame(() => {
-          if (!board.classList.contains('board-visible')) board.classList.add('board-visible');
-        });
-      }
-    }
-    if (state.phase === 'coin_toss') {
-      if (battleState.elements.coinOverlay && myId) {
-        battleState.elements.coinOverlay.style.display = '';
-        battleState.elements.coinOverlay.classList.add('is-active');
-        battleState.elements.coin.classList.remove('coin--you', 'coin--opp');
-        void battleState.elements.coin.offsetWidth;
-        const isMyTurn = String(state.activeTurn) === String(myId);
-        battleState.elements.coin.classList.add(isMyTurn ? 'coin--you' : 'coin--opp');
-      }
-    } else if (state.phase === 'playing') BattleUI.resetCoin(battleState.elements);
+    actionQueue.add((ctx) => applyGameState(state, ctx));
   },
 
   onOpponentAttack: (payload) => {
-    if (!store.isInBattle()) return;
-    const attackerEl = document.querySelector(`[data-instance-id="${payload.attackerInstanceId}"]`);
-    let targetEl =
-      payload.targetType === 'avatar'
-        ? document.getElementById('player-avatar') || document.getElementById('player-hp')
-        : document.querySelector(`[data-instance-id="${payload.targetId}"]`);
+    actionQueue.add((ctx) => {
+      if (!store.isInBattle()) return Promise.resolve();
+      const attackerEl = document.querySelector(
+        `[data-instance-id="${payload.attackerInstanceId}"]`
+      );
+      const targetEl =
+        payload.targetType === 'avatar'
+          ? document.getElementById('player-avatar') || document.getElementById('player-hp')
+          : document.querySelector(`[data-instance-id="${payload.targetId}"]`);
 
-    if (!attackerEl || !targetEl) return;
-    setAnimationLock();
-    BattleUI.playAttackAnimation(attackerEl, targetEl, null, releaseLock);
+      if (!attackerEl || !targetEl) return Promise.resolve();
+      return runAttackAnimation(attackerEl, targetEl, null, ctx);
+    });
+  },
+
+  onSpellCast: (payload) => {
+    actionQueue.add((ctx) => {
+      if (!store.isInBattle()) return Promise.resolve();
+
+      return new Promise((resolve) => {
+        let targetEl = null;
+        const myId = getMyPlayerId();
+
+        if (payload.targetType === 'avatar') {
+          targetEl =
+            String(payload.targetId) === String(myId)
+              ? document.getElementById('player-avatar-zone') ||
+                document.getElementById('player-avatar')
+              : document.getElementById('opp-avatar-zone') || document.getElementById('opp-avatar');
+        } else if (payload.targetType === 'card') {
+          targetEl = document.querySelector(`[data-instance-id="${payload.targetId}"]`);
+        } else if (!payload.targetType) {
+          targetEl =
+            String(payload.casterId) === String(myId)
+              ? document.getElementById('player-avatar-zone') ||
+                document.getElementById('player-avatar')
+              : document.getElementById('opp-avatar-zone') || document.getElementById('opp-avatar');
+        }
+
+        BattleUI.playSpellAnimation(payload.card.spellEffect, targetEl, resolve);
+      });
+    });
   },
 
   onGameOver: (payload) => {
-    if (battleState.ui.isAnimating && !payload.forceExecute) {
-      battleState.queue.pendingGameOverPayload = payload;
-      return;
-    }
-
-    BattleUI.hideStatus(battleState.elements);
-    store.clearMatchState();
-
-    const myId = getMyPlayerId();
-    const isWinner = String(payload.winnerId) === String(myId);
-
-    const targetAvatarZoneId = isWinner ? 'opp-avatar-zone' : 'player-avatar-zone';
-    const avatarZone = document.getElementById(targetAvatarZoneId);
-    if (avatarZone) {
-      const hpBadge = avatarZone.querySelector('.health-badge');
-      if (hpBadge) hpBadge.style.opacity = '0';
-      avatarZone.classList.add('anim-avatar-death');
-      const board = document.querySelector('.game-board');
-      if (board) board.classList.add('board-shake-heavy');
-    }
-
-    setTimeout(() => {
-      const overlay = document.getElementById('game-result-overlay');
-      const banner = document.getElementById('result-banner');
-      const mmrValue = document.getElementById('result-mmr-value');
-      const durationText = document.getElementById('result-duration');
-      const playAgainBtn = document.getElementById('play-again-btn');
-      const backLobbyBtn = document.getElementById('back-lobby-btn');
-
-      if (overlay && banner && mmrValue) {
-        overlay.classList.remove('hidden');
-        banner.className = `result-banner ${isWinner ? 'victory' : 'defeat'}`;
-        const mmrChange = Number(payload.ratingChange ?? payload.mmrChange ?? 0);
-        const displayMmr = isWinner ? Math.abs(mmrChange) : -Math.abs(mmrChange);
-        mmrValue.textContent = displayMmr > 0 ? `+${displayMmr}` : `${displayMmr}`;
-
-        if (durationText) {
-          const durationSeconds = Number(payload.duration ?? payload.matchDuration ?? 0);
-          if (!Number.isFinite(durationSeconds) || durationSeconds < 0)
-            durationText.textContent = '0:00';
-          else {
-            const minutes = Math.floor(durationSeconds / 60);
-            const seconds = Math.floor(durationSeconds % 60);
-            durationText.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-          }
-        }
-
-        const autoRedirectTimer = setTimeout(() => {
-          window.location.hash = '#lobby';
-        }, 10000);
-        if (backLobbyBtn)
-          backLobbyBtn.onclick = () => {
-            clearTimeout(autoRedirectTimer);
-            window.location.hash = '#lobby';
-          };
-        if (playAgainBtn)
-          playAgainBtn.onclick = () => {
-            clearTimeout(autoRedirectTimer);
-            localStorage.setItem('autoQueue', 'true');
-            window.location.hash = '#lobby';
-          };
-      } else {
-        window.location.hash = '#lobby';
-      }
-    }, 1500);
+    actionQueue.clear();
+    actionQueue.add((ctx) => applyGameOver(payload, ctx));
   },
 
   onOpponentDisconnected: (payload) => {
-    const attempts = payload.attemptsLeft ?? 0;
-    const max = payload.maxAttempts ?? 3;
-    const wait = payload.graceSeconds ?? 30;
-    BattleUI.setFrozen(true, '', battleState.elements);
-    BattleUI.showStatus(
-      `Opponent disconnected. Waiting ${wait}s. Attempts left: ${attempts} / ${max}.`,
+    BattleUI.setFrozen(
+      true,
+      "Opponent left. Waiting for reconnect...<br>You will win automatically if they don't return in 30 seconds.",
       battleState.elements
     );
   },
@@ -269,10 +346,6 @@ const networkCallbacks = {
     const attempts = payload.attemptsLeft ?? 0;
     const max = payload.maxAttempts ?? 3;
     BattleUI.setFrozen(false, '', battleState.elements);
-    BattleUI.showStatus(
-      `Opponent reconnected. Attempts left: ${attempts} / ${max}.`,
-      battleState.elements
-    );
 
     if (battleState.timers.opponentStatus) clearTimeout(battleState.timers.opponentStatus);
     battleState.timers.opponentStatus = setTimeout(() => {
@@ -324,14 +397,14 @@ export function mount() {
     surrender: (roomId) => BattleNetwork.surrender(roomId),
     attackTarget: (payload) => BattleNetwork.attackTarget(payload),
     playCard: (payload) => BattleNetwork.playCard(payload),
-    releaseLock: releaseLock,
-    setAnimationLock: setAnimationLock,
+    queueAction: (action) => actionQueue.add(action),
   });
 }
 
 export function unmount() {
   if (!battleState.isMounted) return;
   battleState.setMounted(false);
+  actionQueue.clear();
   BattleInput.cleanup();
   BattleNetwork.cleanup();
 

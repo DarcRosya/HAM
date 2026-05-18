@@ -8,6 +8,8 @@ let messageTimer = null;
 const TRAITS_DESC = {
   taunt: { title: 'Taunt', desc: 'Enemies must attack this unit first.' },
   charge: { title: 'Charge', desc: 'Can attack the same turn it is played.' },
+  berserk: { title: 'Berserk', desc: 'Gains +1 attack when it takes damage.' },
+  poison: { title: 'Poison', desc: 'Instantly destroys any card it damages.' },
 };
 
 // --- Вспомогательные функции ---
@@ -25,6 +27,25 @@ function applyAvatarFrame(frameEl, frameSrc) {
     frameEl.removeAttribute('src');
     frameEl.style.display = 'none';
   }
+}
+
+function wait(ms, cancelToken) {
+  return new Promise((resolve) => {
+    let finished = false;
+    const done = () => {
+      if (finished) return;
+      finished = true;
+      resolve();
+    };
+
+    const timer = setTimeout(done, ms);
+    if (cancelToken?.onCancel) {
+      cancelToken.onCancel(() => {
+        clearTimeout(timer);
+        done();
+      });
+    }
+  });
 }
 
 function resolvePlayers(state, socketId) {
@@ -111,7 +132,6 @@ export const BattleUI = {
       vsOverlay.classList.remove('vs-active');
       vsOverlay.style.display = 'none';
 
-      // ВОТ ЭТО ВАЖНО: Снимаем блокировку мыши со стола
       const gameBoard = document.querySelector('.game-board');
       if (gameBoard) {
         gameBoard.style.pointerEvents = '';
@@ -175,7 +195,6 @@ export const BattleUI = {
           particleWrapper = document.createElement('div');
           particleWrapper.id = 'vs-particles-wrapper';
 
-          // Данные по ударам: время (сек) и CSS-переменные для их координат
           const clashes = [
             { time: 6.51, varX: 'var(--impact1-x)', varY: 'var(--impact1-y)' },
             { time: 7.44, varX: 'var(--impact2-x)', varY: 'var(--impact2-y)' },
@@ -186,7 +205,6 @@ export const BattleUI = {
           clashes.forEach((clash, index) => {
             const container = document.createElement('div');
             container.className = 'vs-particles-container';
-            // Жестко привязываем контейнер к переменной удара!
             container.style.setProperty('--impact-x', clash.varX);
             container.style.setProperty('--impact-y', clash.varY);
 
@@ -219,16 +237,13 @@ export const BattleUI = {
         vsOverlay.style.display = '';
         vsOverlay.classList.remove('hidden');
 
-        // Вызываем reflow браузера
         void vsOverlay.offsetWidth;
         vsOverlay.classList.add('vs-active');
 
-        // 3. ПРО-ХАК: СИНХРОНИЗАЦИЯ (теперь ВНУТРИ if, чтобы не сбивать анимацию при обновлении стейта)
         const totalPhaseDuration = 15500;
         const passedTimeMs = totalPhaseDuration - (state.turnEndsInMs || totalPhaseDuration);
         const passedSeconds = Math.max(0, passedTimeMs / 1000);
 
-        // Синхронизируем базовые статичные 15.5s анимации (аватары, мечи, фон)
         const animatedElements = vsOverlay.querySelectorAll(
           '.vs-background-blur, .vs-opp, .vs-you, .vs-info, .vs-sword, .vs-text, .vs-wipe'
         );
@@ -367,7 +382,10 @@ export const BattleUI = {
     }
   },
 
-  updateBoard(state, socketId, dragState = {}, releaseLockCallback = null) {
+  async updateBoard(state, socketId, dragState = {}, options = {}) {
+    const { allowAnimations = true, cancelToken = null } = options;
+    let cancelled = false;
+    if (cancelToken?.onCancel) cancelToken.onCancel(() => (cancelled = true));
     const { myPlayerId, me, opponent } = resolvePlayers(state, socketId);
     if (!myPlayerId || !me || !opponent) return;
 
@@ -440,11 +458,7 @@ export const BattleUI = {
     const myDeaths = oldMyCardIds.filter((id) => !newMyCardIds.includes(id));
     const oppDeaths = oldOppCardIds.filter((id) => !newOppCardIds.includes(id));
 
-    if ((myDeaths.length > 0 || oppDeaths.length > 0) && !battleState.ui.isAnimating) {
-      // Блокируем очередь для анимации смерти
-      battleState.ui.isAnimating = true;
-      if (releaseLockCallback) battleState.queue.pendingGameState = state;
-
+    if ((myDeaths.length > 0 || oppDeaths.length > 0) && allowAnimations) {
       const processDeadCards = (deadIds, tableEl) => {
         if (!tableEl || !boardContainer) return;
         const boardRect = boardContainer.getBoundingClientRect();
@@ -484,11 +498,8 @@ export const BattleUI = {
       processDeadCards(myDeaths, myTable);
       processDeadCards(oppDeaths, oppTable);
 
-      setTimeout(() => {
-        battleState.ui.lastBoardIds = { me: newMyCardIds, opp: newOppCardIds };
-        if (releaseLockCallback) releaseLockCallback();
-      }, 950);
-      return; // Прерываем рендер, он запустится снова из очереди
+      await wait(950, cancelToken);
+      if (cancelled) return;
     }
 
     // Если нет смертей, обновляем ID
@@ -497,9 +508,13 @@ export const BattleUI = {
     if (myTable) myTable.innerHTML = '';
     if (oppTable) oppTable.innerHTML = '';
 
+    const spawnPromises = [];
+
     me.table.forEach((card) => {
       const isNewCard =
-        !oldMyCardIds.includes(String(card.instanceId)) && state.phase === 'playing';
+        !oldMyCardIds.includes(String(card.instanceId)) &&
+        state.phase === 'playing' &&
+        battleState.hasRenderedOnce;
       const cardUI = renderCard({ ...card, variant: 'board' });
       cardUI.classList.add('card-slot');
       cardUI.dataset.instanceId = card.instanceId;
@@ -508,8 +523,17 @@ export const BattleUI = {
         cardUI.classList.add('is-attacking-active');
       }
 
-      if (isNewCard)
-        this.playEpicSpawn(cardUI, card, dragState.lastDropCoords, dragState.ghostElement);
+      if (isNewCard && allowAnimations) {
+        spawnPromises.push(
+          this.playEpicSpawn(
+            cardUI,
+            card,
+            dragState.lastDropCoords,
+            dragState.ghostElement,
+            cancelToken
+          )
+        );
+      }
 
       if (card.canAttack && isMyTurn) cardUI.classList.add('can-attack');
       else {
@@ -521,23 +545,17 @@ export const BattleUI = {
 
     opponent.table.forEach((card) => {
       const isNewCard =
-        !oldOppCardIds.includes(String(card.instanceId)) && state.phase === 'playing';
+        !oldOppCardIds.includes(String(card.instanceId)) &&
+        state.phase === 'playing' &&
+        battleState.hasRenderedOnce;
       const cardUI = renderCard({ ...card, variant: 'board' });
       cardUI.classList.add('card-slot', 'enemy-card');
       cardUI.dataset.instanceId = card.instanceId;
 
-      if (isNewCard) this.playEpicSpawn(cardUI, card, null, null);
+      if (isNewCard && allowAnimations)
+        spawnPromises.push(this.playEpicSpawn(cardUI, card, null, null, cancelToken));
       oppTable.appendChild(cardUI);
     });
-
-    // Массивы для сбора нод, которые нужно анимировать в этом кадре
-    const newOppCards = [];
-    const newPlayerCards = [];
-
-    // ГВАРД ФАЗ ДЛЯ БАГА 0: Анимируем раздачу только если фаза матча перешла в активную игру ('playing')
-    // Если игрок делает реконнект посреди матча (таймер уже вовсю тикает), анимацию стартовой раздачи блокируем
-
-    const canAnimateDraw = isPlaying && !battleState.ui.isAnimating;
 
     // 5. Рука противника
     const oppHand = document.getElementById('opp-hand-zone');
@@ -553,7 +571,7 @@ export const BattleUI = {
       Array.from(oppHand.children).forEach((cardUI, index) => {
         if (!battleState.ui.initialDrawDone && state.phase !== 'playing')
           cardUI.style.opacity = '0';
-        else if (!battleState.ui.isAnimating) cardUI.style.opacity = '1';
+        else cardUI.style.opacity = '1';
         applyFanMath(cardUI, index, opponent.handCount, false, !isMyTurn);
       });
     }
@@ -586,7 +604,7 @@ export const BattleUI = {
         if (isBeingDragged) {
           cardUI.style.opacity = '0';
           cardUI.style.pointerEvents = 'none';
-        } else if (!battleState.ui.isAnimating) {
+        } else {
           if (!battleState.ui.initialDrawDone && state.phase !== 'playing')
             cardUI.style.opacity = '0';
           else cardUI.style.opacity = '1';
@@ -613,125 +631,188 @@ export const BattleUI = {
       Array.from(handDisplay?.children || []).forEach((c) => (c.dataset.drawn = 'true'));
     }
 
-    if (isPlaying && !battleState.ui.isAnimating) {
+    if (isPlaying && allowAnimations) {
       battleState.ui.initialDrawDone = true;
       const newOppCards = Array.from(oppHand?.children || []).filter((c) => !c.dataset.drawn);
       const newPlayerCards = Array.from(handDisplay?.children || []).filter(
         (c) => !c.dataset.drawn
       );
 
-      if (newOppCards.length > 0) this.animateDraw(newOppCards, 'opp-deck', true);
-      if (newPlayerCards.length > 0) this.animateDraw(newPlayerCards, 'player-deck', false);
+      if (newOppCards.length > 0)
+        spawnPromises.push(this.animateDraw(newOppCards, 'opp-deck', true, cancelToken));
+      if (newPlayerCards.length > 0)
+        spawnPromises.push(this.animateDraw(newPlayerCards, 'player-deck', false, cancelToken));
     }
+
+    battleState.hasRenderedOnce = true;
+
+    if (spawnPromises.length > 0) await Promise.all(spawnPromises);
   },
 
-  animateDraw(cards, deckId, isOpponent = false) {
+  animateDraw(cards, deckId, isOpponent = false, cancelToken = null) {
     const deck = document.getElementById(deckId);
-    if (!deck || cards.length === 0) return;
+    if (!deck || cards.length === 0) return Promise.resolve();
 
-    battleState.ui.isAnimating = true;
-    const deckRect = deck.getBoundingClientRect();
+    return new Promise((resolve) => {
+      const timeouts = [];
+      let finished = false;
+      const done = () => {
+        if (finished) return;
+        finished = true;
+        resolve();
+      };
 
-    cards.forEach((cardUI, index) => {
-      cardUI.dataset.drawn = 'true'; // МАРКЕР: Эта карта отстреляла, больше не трогаем
+      const schedule = (fn, ms) => {
+        const id = setTimeout(fn, ms);
+        timeouts.push(id);
+        return id;
+      };
 
-      const cardRect = cardUI.getBoundingClientRect();
-      const deltaX = deckRect.left - cardRect.left;
-      const deltaY = deckRect.top - cardRect.top;
+      if (cancelToken?.onCancel) {
+        cancelToken.onCancel(() => {
+          timeouts.forEach((id) => clearTimeout(id));
+          timeouts.length = 0;
+          done();
+        });
+      }
 
-      cardUI.style.transition = 'none';
-      cardUI.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.2) rotate(180deg)`;
-      cardUI.style.opacity = '0';
-      cardUI.style.zIndex = '9999';
+      const deckRect = deck.getBoundingClientRect();
 
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          const fanX = cardUI.style.getPropertyValue('--fan-x') || '0px';
-          const fanY = cardUI.style.getPropertyValue('--fan-y') || '0px';
-          const fanRot = cardUI.style.getPropertyValue('--fan-rot') || '0deg';
+      cards.forEach((cardUI, index) => {
+        cardUI.dataset.drawn = 'true'; // МАРКЕР: Эта карта отстреляла, больше не трогаем
 
-          // Пружина для тебя, плавная кривая для противника
-          const easing = isOpponent ? 'ease-out' : 'cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        const cardRect = cardUI.getBoundingClientRect();
+        const deltaX = deckRect.left - cardRect.left;
+        const deltaY = deckRect.top - cardRect.top;
 
-          cardUI.style.transition = `transform 0.6s ${easing}, opacity 0.3s ease-out`;
-          cardUI.style.transform = `translate(${fanX}, ${fanY}) rotate(${fanRot}) scale(1)`;
-          cardUI.style.opacity = '1';
+        cardUI.style.transition = 'none';
+        cardUI.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.2) rotate(180deg)`;
+        cardUI.style.opacity = '0';
+        cardUI.style.zIndex = '9999';
 
-          setTimeout(() => {
-            cardUI.style.transform = '';
-            cardUI.style.transition = '';
-            cardUI.style.opacity = '';
-            cardUI.style.zIndex = '';
+        requestAnimationFrame(() => {
+          schedule(() => {
+            const fanX = cardUI.style.getPropertyValue('--fan-x') || '0px';
+            const fanY = cardUI.style.getPropertyValue('--fan-y') || '0px';
+            const fanRot = cardUI.style.getPropertyValue('--fan-rot') || '0deg';
 
-            if (index === cards.length - 1) {
-              battleState.ui.isAnimating = false;
-            }
-          }, 600);
-        }, index * 150);
+            // Пружина для тебя, плавная кривая для противника
+            const easing = isOpponent ? 'ease-out' : 'cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+            cardUI.style.transition = `transform 0.6s ${easing}, opacity 0.3s ease-out`;
+            cardUI.style.transform = `translate(${fanX}, ${fanY}) rotate(${fanRot}) scale(1)`;
+            cardUI.style.opacity = '1';
+
+            schedule(() => {
+              cardUI.style.transform = '';
+              cardUI.style.transition = '';
+              cardUI.style.opacity = '';
+              cardUI.style.zIndex = '';
+
+              if (index === cards.length - 1) done();
+            }, 600);
+          }, index * 150);
+        });
       });
     });
   },
 
-  playEpicSpawn(cardUI, cardData, dropCoords, ghostEl) {
-    cardUI.style.opacity = '0';
-    requestAnimationFrame(() => {
-      let startX = window.innerWidth / 2;
-      let startY = window.innerHeight;
+  playEpicSpawn(cardUI, cardData, dropCoords, ghostEl, cancelToken = null) {
+    return new Promise((resolve) => {
+      const timeouts = [];
+      let finished = false;
+      let ghostCard = null;
+      let shockwave = null;
 
-      if (dropCoords) {
-        startX = dropCoords.x;
-        startY = dropCoords.y;
-      } else if (ghostEl) {
-        const ghostRect = ghostEl.getBoundingClientRect();
-        startX = ghostRect.left + ghostRect.width / 2;
-        startY = ghostRect.top + ghostRect.height / 2;
+      const done = () => {
+        if (finished) return;
+        finished = true;
+        resolve();
+      };
+
+      const schedule = (fn, ms) => {
+        const id = setTimeout(fn, ms);
+        timeouts.push(id);
+        return id;
+      };
+
+      if (cancelToken?.onCancel) {
+        cancelToken.onCancel(() => {
+          timeouts.forEach((id) => clearTimeout(id));
+          timeouts.length = 0;
+          if (ghostCard?.parentNode) ghostCard.remove();
+          if (shockwave?.parentNode) shockwave.remove();
+          cardUI.style.opacity = '1';
+          cardUI.classList.remove('epic-spawn-token');
+          done();
+        });
       }
 
-      const boardContainer = document.querySelector('.battle-center-column');
-      if (!boardContainer) return;
+      cardUI.style.opacity = '0';
+      requestAnimationFrame(() => {
+        let startX = window.innerWidth / 2;
+        let startY = window.innerHeight;
 
-      const boardRect = boardContainer.getBoundingClientRect();
-      const rect = cardUI.getBoundingClientRect();
-
-      const targetX = rect.left - boardRect.left + rect.width / 2;
-      const targetY = rect.top - boardRect.top + rect.height / 2;
-      const startRelX = startX - boardRect.left;
-      const startRelY = startY - boardRect.top;
-
-      const ghostCard = renderCard({ ...cardData, variant: 'hand' });
-      ghostCard.classList.add('epic-spawn-glowing');
-      ghostCard.style.left = `${startRelX}px`;
-      ghostCard.style.top = `${startRelY}px`;
-      boardContainer.appendChild(ghostCard);
-
-      void ghostCard.offsetWidth;
-      ghostCard.style.left = `${targetX}px`;
-      ghostCard.style.top = `${targetY}px`;
-
-      setTimeout(() => {
-        if (ghostCard.parentNode) ghostCard.remove();
-        cardUI.style.opacity = '1';
-        cardUI.classList.add('epic-spawn-token');
-
-        const board = document.querySelector('.game-board');
-        if (board) {
-          board.classList.add('board-shake');
-          setTimeout(() => board.classList.remove('board-shake'), 300);
+        if (dropCoords) {
+          startX = dropCoords.x;
+          startY = dropCoords.y;
+        } else if (ghostEl) {
+          const ghostRect = ghostEl.getBoundingClientRect();
+          startX = ghostRect.left + ghostRect.width / 2;
+          startY = ghostRect.top + ghostRect.height / 2;
         }
 
-        const shockwave = document.createElement('div');
-        shockwave.className = 'epic-spawn-shockwave';
-        shockwave.style.left = `${targetX}px`;
-        shockwave.style.top = `${targetY}px`;
-        boardContainer.appendChild(shockwave);
+        const boardContainer = document.querySelector('.battle-center-column');
+        if (!boardContainer) {
+          cardUI.style.opacity = '1';
+          done();
+          return;
+        }
 
-        setTimeout(() => {
-          if (shockwave.parentNode) shockwave.remove();
-        }, 400);
-        setTimeout(() => {
-          cardUI.classList.remove('epic-spawn-token');
-        }, 400);
-      }, 350);
+        const boardRect = boardContainer.getBoundingClientRect();
+        const rect = cardUI.getBoundingClientRect();
+
+        const targetX = rect.left - boardRect.left + rect.width / 2;
+        const targetY = rect.top - boardRect.top + rect.height / 2;
+        const startRelX = startX - boardRect.left;
+        const startRelY = startY - boardRect.top;
+
+        ghostCard = renderCard({ ...cardData, variant: 'hand' });
+        ghostCard.classList.add('epic-spawn-glowing');
+        ghostCard.style.left = `${startRelX}px`;
+        ghostCard.style.top = `${startRelY}px`;
+        boardContainer.appendChild(ghostCard);
+
+        void ghostCard.offsetWidth;
+        ghostCard.style.left = `${targetX}px`;
+        ghostCard.style.top = `${targetY}px`;
+
+        schedule(() => {
+          if (ghostCard?.parentNode) ghostCard.remove();
+          cardUI.style.opacity = '1';
+          cardUI.classList.add('epic-spawn-token');
+
+          const board = document.querySelector('.game-board');
+          if (board) {
+            board.classList.add('board-shake');
+            schedule(() => board.classList.remove('board-shake'), 300);
+          }
+
+          shockwave = document.createElement('div');
+          shockwave.className = 'epic-spawn-shockwave';
+          shockwave.style.left = `${targetX}px`;
+          shockwave.style.top = `${targetY}px`;
+          boardContainer.appendChild(shockwave);
+
+          schedule(() => {
+            if (shockwave?.parentNode) shockwave.remove();
+          }, 400);
+          schedule(() => {
+            cardUI.classList.remove('epic-spawn-token');
+            done();
+          }, 400);
+        }, 350);
+      });
     });
   },
 
@@ -944,6 +1025,53 @@ export const BattleUI = {
         elements.bmoTextBottom.classList.remove('danger-tick');
       }
     }
+  },
+
+  playSpellAnimation(effectType, targetEl, onComplete) {
+    if (!targetEl) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    let effectClass = '';
+    switch (effectType) {
+      case 'damage':
+        effectClass = 'anim-spell-damage';
+        break;
+      case 'heal_card':
+      case 'heal_avatar':
+        effectClass = 'anim-spell-heal';
+        break;
+      case 'buff_card':
+        effectClass = 'anim-spell-buff';
+        break;
+      case 'add_mana':
+        effectClass = 'anim-spell-mana';
+        break;
+      default:
+        effectClass = 'anim-spell-damage';
+    }
+
+    // Считываем точные координаты цели на экране
+    const rect = targetEl.getBoundingClientRect();
+    const effectEl = document.createElement('div');
+    effectEl.className = `spell-effect-overlay ${effectClass}`;
+
+    // Абсолютное позиционирование поверх экрана
+    effectEl.style.position = 'fixed';
+    effectEl.style.left = `${rect.left + rect.width / 2}px`;
+    effectEl.style.top = `${rect.top + rect.height / 2}px`;
+    effectEl.style.zIndex = '15000'; // Точно поверх всего UI
+
+    document.body.appendChild(effectEl);
+    targetEl.classList.add('anim-target-hit');
+
+    // Ожидаем завершения анимации
+    setTimeout(() => {
+      if (effectEl.parentNode) effectEl.remove();
+      targetEl.classList.remove('anim-target-hit');
+      if (onComplete) onComplete();
+    }, 800);
   },
 
   // Анимация вибрации BMO при клике

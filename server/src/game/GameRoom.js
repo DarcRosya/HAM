@@ -134,6 +134,7 @@ export class GameRoom {
       table: [],
       deck: shuffleArray(CARDS).map((card) => ({
         ...card,
+        traits: Array.isArray(card.traits) ? [...card.traits] : [],
         instanceId: `card-${card.id}-${Math.random().toString(36).substring(2, 9)}`,
       })),
       fatigue: 0,
@@ -277,6 +278,11 @@ export class GameRoom {
       this.players[normalizedId].socketId = socket.id;
     }
 
+    if (this.status === 'finished' && this.gameOverResult) {
+      this.emitToPlayer(userId, 'game_over', this.gameOverResult);
+      return;
+    }
+
     if (this.disconnectGraceTimers[normalizedId]) {
       this.clearDisconnectTimer(normalizedId);
       this.notifyOpponentReconnected(normalizedId);
@@ -384,7 +390,106 @@ export class GameRoom {
     }
   }
 
-  playCard(playerId, cardInstanceId, targetIndex) {
+  _hasTrait(card, trait) {
+    return Array.isArray(card?.traits) && card.traits.includes(trait);
+  }
+
+  _consumeTrait(card, trait) {
+    if (!Array.isArray(card?.traits)) return;
+    const index = card.traits.indexOf(trait);
+    if (index !== -1) card.traits.splice(index, 1);
+  }
+
+  _removeDeadCards(player) {
+    player.table = player.table.filter((c) => c.defense > 0);
+  }
+
+  _resolveAvatarTarget(targetId, casterId, opponentId) {
+    if (!targetId) return null;
+    if (String(targetId) === String(casterId)) return this.players[String(casterId)];
+    if (String(targetId) === String(opponentId)) return this.players[String(opponentId)];
+    return null;
+  }
+
+  _resolveCardTarget(targetId, caster, opponent) {
+    if (!targetId) return null;
+
+    const friendly = caster.table.find((c) => c.instanceId === targetId);
+    if (friendly) return { owner: caster, card: friendly };
+
+    const enemy = opponent.table.find((c) => c.instanceId === targetId);
+    if (enemy) return { owner: opponent, card: enemy };
+
+    return null;
+  }
+
+  _applySpellEffect(casterId, opponentId, caster, opponent, card, targetData = {}) {
+    const effect = card?.spellEffect;
+    const spellValue = Number(card?.spellValue ?? 0);
+    const spellStats = card?.spellStats || {};
+    const targetType = targetData?.targetType;
+    const targetId = targetData?.targetId;
+
+    switch (effect) {
+      case 'add_mana': {
+        caster.mana = Math.min(10, caster.mana + spellValue);
+        return { ok: true };
+      }
+      case 'damage': {
+        if (targetType !== 'card' && targetType !== 'avatar') {
+          return { ok: false, message: 'Invalid spell target.' };
+        }
+
+        if (targetType === 'avatar') {
+          const targetPlayer = this._resolveAvatarTarget(targetId, casterId, opponentId);
+          if (!targetPlayer) return { ok: false, message: 'Invalid spell target.' };
+
+          targetPlayer.hp -= spellValue;
+          if (targetPlayer.hp <= 0) {
+            const winnerId =
+              String(targetPlayer === caster ? opponentId : casterId) || String(casterId);
+            this.endGame(winnerId);
+            return { ok: true, gameOver: true };
+          }
+          return { ok: true };
+        }
+
+        const resolved = this._resolveCardTarget(targetId, caster, opponent);
+        if (!resolved) return { ok: false, message: 'Invalid spell target.' };
+
+        resolved.card.defense -= spellValue;
+        if (resolved.card.defense <= 0) this._removeDeadCards(resolved.owner);
+        return { ok: true };
+      }
+      case 'heal_card': {
+        if (targetType !== 'card') return { ok: false, message: 'Invalid spell target.' };
+        const targetCard = caster.table.find((c) => c.instanceId === targetId);
+        if (!targetCard) return { ok: false, message: 'Invalid spell target.' };
+
+        targetCard.defense += spellValue;
+        return { ok: true };
+      }
+      case 'buff_card': {
+        if (targetType !== 'card') return { ok: false, message: 'Invalid spell target.' };
+        const targetCard = caster.table.find((c) => c.instanceId === targetId);
+        if (!targetCard) return { ok: false, message: 'Invalid spell target.' };
+
+        const attackBuff = Number(spellStats.attack ?? 0);
+        const defenseBuff = Number(spellStats.defense ?? 0);
+        targetCard.attack += attackBuff;
+        targetCard.defense += defenseBuff;
+        return { ok: true };
+      }
+      case 'heal_avatar': {
+        caster.hp += spellValue;
+        return { ok: true };
+      }
+      default:
+        return { ok: false, message: 'Unknown spell effect.' };
+    }
+  }
+
+  playCard(playerId, cardInstanceId, targetIndex, targetId, targetType) {
     const player = this.players[String(playerId)];
     if (!player) {
       console.warn(`Action ignored: Player ${playerId} not found in room ${this.roomId}`);
@@ -415,6 +520,49 @@ export class GameRoom {
       return;
     }
 
+    if (card.type !== 'unit' && card.type !== 'spell') {
+      this.emitToPlayer(playerId, 'error', { message: 'Unknown card type.' });
+      return;
+    }
+
+    if (card.type === 'spell') {
+      const opponentId = this.getOpponentId(playerId);
+      const opponent = opponentId ? this.players[opponentId] : null;
+      if (!opponent) return;
+
+      const effectResult = this._applySpellEffect(
+        playerId,
+        opponentId,
+        activePlayer,
+        opponent,
+        card,
+        { targetId, targetType }
+      );
+
+      if (!effectResult.ok) {
+        this.emitToPlayer(playerId, 'error', {
+          message: effectResult.message || 'Invalid spell target.',
+        });
+        return;
+      }
+
+      activePlayer.mana -= card.cost;
+      activePlayer.hand.splice(cardIndex, 1);
+
+      for (const targetPlayerId of Object.keys(this.players)) {
+        this.emitToPlayer(targetPlayerId, 'spell_cast', {
+          casterId: playerId,
+          card,
+          targetId,
+          targetType,
+        });
+      }
+
+      if (this.status === 'finished' || effectResult.gameOver) return;
+      this.broadcastState();
+      return;
+    }
+
     if (activePlayer.table.length >= 7) {
       this.emitToPlayer(playerId, 'error', { message: 'There is no space on the table!' });
       return;
@@ -423,7 +571,7 @@ export class GameRoom {
     activePlayer.mana -= card.cost;
     activePlayer.hand.splice(cardIndex, 1);
 
-    card.canAttack = false;
+    card.canAttack = this._hasTrait(card, 'charge');
 
     let insertIndex = activePlayer.table.length;
     if (
@@ -466,7 +614,7 @@ export class GameRoom {
       return;
     }
 
-    const hasTaunt = opponentPlayer.table.some((c) => c.traits.includes('taunt'));
+    const hasTaunt = opponentPlayer.table.some((c) => this._hasTrait(c, 'taunt'));
 
     if (targetType === 'avatar') {
       if (hasTaunt) {
@@ -485,7 +633,7 @@ export class GameRoom {
       const targetCard = opponentPlayer.table.find((c) => c.instanceId === targetId);
       if (!targetCard) return;
 
-      if (hasTaunt && !targetCard.traits.includes('taunt')) {
+      if (hasTaunt && !this._hasTrait(targetCard, 'taunt')) {
         this.emitToPlayer(playerId, 'error', { message: 'You must attack a card with Taunt!' });
         return;
       }
@@ -493,10 +641,28 @@ export class GameRoom {
       targetCard.defense -= attackerCard.attack;
       attackerCard.defense -= targetCard.attack;
 
+      let attackerUsedPoison = false;
+      let defenderUsedPoison = false;
+
+      if (this._hasTrait(attackerCard, 'poison') && attackerCard.attack > 0) {
+        targetCard.defense = 0;
+        attackerUsedPoison = true;
+      }
+      if (this._hasTrait(targetCard, 'poison') && targetCard.attack > 0) {
+        attackerCard.defense = 0;
+        defenderUsedPoison = true;
+      }
+
       attackerCard.canAttack = false;
 
-      attackerPlayer.table = attackerPlayer.table.filter((c) => c.defense > 0);
-      opponentPlayer.table = opponentPlayer.table.filter((c) => c.defense > 0);
+      if (attackerUsedPoison) this._consumeTrait(attackerCard, 'poison');
+      if (defenderUsedPoison) this._consumeTrait(targetCard, 'poison');
+
+      this._removeDeadCards(attackerPlayer);
+      this._removeDeadCards(opponentPlayer);
+    } else {
+      this.emitToPlayer(playerId, 'error', { message: 'Invalid attack target.' });
+      return;
     }
 
     this.broadcastState();
@@ -580,12 +746,15 @@ export class GameRoom {
     }
 
     const durationSeconds = Math.floor((Date.now() - this.startedAt.getTime()) / 1000);
+
+    this.gameOverResult = {
+      winnerId: winnerId,
+      ratingChange: ratingChange,
+      duration: durationSeconds,
+    };
+
     for (const playerId of Object.keys(this.players)) {
-      this.emitToPlayer(playerId, 'game_over', {
-        winnerId: winnerId,
-        ratingChange: ratingChange,
-        duration: durationSeconds,
-      });
+      this.emitToPlayer(playerId, 'game_over', this.gameOverResult);
     }
   }
 }
