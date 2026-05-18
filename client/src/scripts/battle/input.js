@@ -21,8 +21,7 @@ function handleEndTurn() {
 
 function handleSurrender() {
   if (!battleState.match) return;
-  if (window.confirm('Are you sure you want to surrender? You will lose MMR!'))
-    networkActions.surrender(battleState.match.roomId);
+  networkActions.surrender(battleState.match.roomId);
 }
 
 function handleMouseOver(e) {
@@ -920,9 +919,11 @@ export const BattleInput = {
       attackReticle = document.createElement('div');
       attackReticle.id = 'attack-reticle';
       attackReticle.className = 'attack-reticle';
+      attackReticle.style.zIndex = '99998';
       document.body.appendChild(attackReticle);
     } else {
       attackReticle = document.getElementById('attack-reticle');
+      attackReticle.style.zIndex = '99998';
     }
   },
 

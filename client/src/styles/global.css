@@ -51,8 +51,8 @@ body {
 
 /* Индивидуальная подгонка РАМКИ именно для шапки лобби */
 .wrapper-lobby-header .avatar-frame {
-  width: 155%;
-  height: 146%;
+  width: 130%;
+  height: 130%;
   top: 47%;
   left: 50%;
 }
@@ -67,9 +67,9 @@ body {
 }
 
 .wrapper-modal-large .avatar-frame {
-  width: 137%;
-  height: 173%;
-  top: 40%;
+  width: 135%;
+  height: 135%;
+  top: 45%;
   left: 50%;
 }
 /* =========================================

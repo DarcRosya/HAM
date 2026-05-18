@@ -354,3 +354,44 @@ body {
   cursor: pointer;
   z-index: 10;
 }
+
+#player-round-zone {
+  position: absolute;
+  bottom: 65px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-left: 288px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  background: url('/assets/images/round.png') no-repeat center center;
+  width: 140px;
+  height: 130px;
+  background-size: contain;
+}
+
+.round-label {
+  font-family: 'Luckiest Guy', 'Fredoka One', 'Arial Black', sans-serif;
+  font-size: 14px;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+  margin-top: 3px;
+}
+
+.round-value {
+  font-size: 57px;
+  color: #ffffff;
+  line-height: 1;
+  font-weight: 400;
+  margin-top: 3px;
+  text-shadow:
+    1px 0 0 black,
+    -1px 0 0 black,
+    0 1px 0 black,
+    0 -1px 0 black;
+}
