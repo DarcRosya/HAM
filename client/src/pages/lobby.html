@@ -42,6 +42,8 @@
     <div id="edit-modal" class="modal-overlay hidden">
       <div class="edit-frame">
         <button id="close-edit-modal" class="close-btn"></button>
+        <button class="back-btn is-hidden back-pfp-btn"></button>
+        <button class="back-btn is-hidden back-pw-btn"></button>
 
         <div class="edit-avatar-container">
           <div class="avatar-wrapper wrapper-modal-large">
@@ -78,7 +80,6 @@
         </div>
 
         <div id="pfp-selection-view" class="hidden">
-          <button id="back-to-lobby-btn" class="back-btn is-hidden back-pfp-btn"></button>
           <div class="pfp-grid">
           </div>
           <hr class="pfp-divider">
@@ -89,7 +90,6 @@
         </div>
 
         <form id="password-change-view" class="hidden">
-          <button id="back-to-lobby-btn" class="back-btn is-hidden back-pw-btn"></button>
           <div class="edit-header">Change password</div>
 
           <div class="password-form-container">
@@ -132,7 +132,7 @@
     </div>
   </div>
 
-  <div id="search-overlay" class="search-overlay is-hidden">
+  <div id="search-overlay" class="search-overlay is-hidden screen-scan">
     <div class="search-content">
 
       <div class="animation-zone">

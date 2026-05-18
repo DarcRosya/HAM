@@ -219,6 +219,7 @@ export function mount() {
   initRegister();
   initForgotPassword();
   initResetPassword();
+  initPasswordToggles();
 
   // 3. Вешаем слушатели на статические кнопки
   const startBtn = document.getElementById('start-game-btn');
@@ -398,5 +399,20 @@ function initResetPassword() {
     } catch (err) {
       BMO.showError('Server error!');
     }
+  });
+}
+
+function initPasswordToggles() {
+  document.querySelectorAll('.toggle-pass').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const wrapper = btn.closest('.pass-wrapper');
+      const input = wrapper.querySelector('input');
+      const isHidden = input.type === 'password';
+
+      input.type = isHidden ? 'text' : 'password';
+      btn.classList.toggle('visible-pass', isHidden);
+      btn.classList.toggle('invisible-pass', !isHidden);
+    });
   });
 }

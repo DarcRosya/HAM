@@ -4,7 +4,15 @@ let tipInterval = null;
 let frameInterval = null;
 
 const frameIntervalMs = 320;
-const searchTips = ['loading message', 'text2', 'text3'];
+const searchTips = [
+  'Searching for an opponent...',
+  'Estimating player strength...',
+  'Synchronizing game session...',
+  'Allocating server resources...',
+  'Preparing battlefield...',
+  'Loading combat environment...',
+  'Finalizing match setup...',
+];
 const matchFramePaths = Array.from(
   { length: 8 },
   (_, index) => `/assets/images/find_match/${index + 1}.png`
@@ -71,7 +79,10 @@ function handlePlayClick() {
 
   clearTipAnimation();
   tipInterval = setInterval(() => {
-    if (!activeElements?.searchOverlay || activeElements.searchOverlay.classList.contains('is-hidden')) {
+    if (
+      !activeElements?.searchOverlay ||
+      activeElements.searchOverlay.classList.contains('is-hidden')
+    ) {
       clearTipAnimation();
       return;
     }

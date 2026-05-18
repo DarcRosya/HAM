@@ -81,8 +81,7 @@ function initEditModal(onProfileUpdated) {
 
   if (closeBtn && editModal) {
     closeBtn.onclick = () => {
-      resetEditModalState();
-      editModal.classList.add('hidden');
+      closeEditModalSmoothly(editModal);
     };
   }
 
@@ -160,8 +159,7 @@ function initEditModal(onProfileUpdated) {
         // Успех
         localStorage.setItem('user', JSON.stringify(data.user));
         renderUserProfile();
-        editModal.classList.add('hidden');
-        resetEditModalState();
+        closeEditModalSmoothly(editModal);
 
         if (typeof onProfileUpdated === 'function') {
           onProfileUpdated();
@@ -275,9 +273,7 @@ function initAvatarPicker() {
 
   if (avatarPreview) {
     avatarPreview.onclick = async () => {
-      mainContent.classList.add('hidden');
-      pfpView.classList.remove('hidden');
-      frame.classList.add('pfp-mode');
+      switchViewSmoothly(mainContent, pfpView, 'pfp-mode');
       backPfpBtn?.classList.remove('is-hidden');
       await loadAndRenderAvatars();
       await loadAndRenderFrames();
@@ -308,9 +304,7 @@ function initPasswordChange() {
 
   if (changeBtn) {
     changeBtn.onclick = () => {
-      mainContent.classList.add('hidden');
-      pwView.classList.remove('hidden');
-      frame.classList.add('password-mode');
+      switchViewSmoothly(mainContent, pwView, 'password-mode');
       backPwBtn?.classList.remove('is-hidden');
     };
   }
@@ -344,9 +338,7 @@ function initPasswordChange() {
         await userService.updatePassword(token, oldPassword, newPassword);
 
         [oldInput, newInput, confirmInput].forEach((i) => (i.value = ''));
-        pwView.classList.add('hidden');
-        mainContent.classList.remove('hidden');
-        frame.classList.remove('password-mode');
+        switchViewSmoothly(pwView, mainContent, '');
         if (backPwBtn) backPwBtn.classList.add('is-hidden');
       } catch (err) {
         const msg = (err.message || '').toLowerCase();
@@ -456,4 +448,27 @@ function resetEditModalState() {
     applyBtn.disabled = false;
     applyBtn.style.opacity = '1';
   }
+}
+
+function closeEditModalSmoothly(modal) {
+  modal.classList.add('is-closing');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    modal.classList.remove('is-closing');
+    resetEditModalState();
+  }, 250);
+}
+
+function switchViewSmoothly(viewToHide, viewToShow, frameMode) {
+  const frame = document.querySelector('.edit-frame');
+  viewToHide.classList.add('is-fading-out');
+  setTimeout(() => {
+    viewToHide.classList.remove('is-fading-out');
+    viewToHide.classList.add('hidden');
+
+    frame.classList.remove('pfp-mode', 'password-mode');
+    if (frameMode) frame.classList.add(frameMode);
+
+    viewToShow.classList.remove('hidden');
+  }, 200);
 }
