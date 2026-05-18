@@ -17,6 +17,10 @@ export async function mount() {
 
     allCards.forEach((cardData) => {
       const cardElement = renderCard(cardData);
+      
+      cardElement.addEventListener('mousemove', handleMouseMove);
+      cardElement.addEventListener('mouseleave', handleMouseLeave);
+
       cardsGrid.appendChild(cardElement);
     });
   } catch (error) {
@@ -29,4 +33,27 @@ export async function mount() {
 export function unmount() {
   const cardsGrid = document.querySelector('.cards-grid');
   if (cardsGrid) cardsGrid.innerHTML = '';
+}
+
+function handleMouseMove(e) {
+  const card = e.currentTarget;
+  const rect = card.getBoundingClientRect();
+  
+  const x = e.clientX - rect.left; 
+  const y = e.clientY - rect.top;  
+  
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  
+  const maxRotate = 15; 
+  
+  const rotateY = ((x - centerX) / centerX) * maxRotate;
+  const rotateX = -((y - centerY) / centerY) * maxRotate; 
+  
+  card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.08)`;
+}
+
+function handleMouseLeave(e) {
+  const card = e.currentTarget;
+  card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
 }
