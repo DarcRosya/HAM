@@ -48,7 +48,10 @@
                         </div>
                         <div class="input-group">
                             <span class="icon lock-icon"></span>
-                            <input type="password" id="login-password" placeholder="PASSWORD">
+                            <div class="pass-wrapper">
+                                <input type="password" id="login-password" placeholder="PASSWORD">
+                                <button type="button" class="toggle-pass invisible-pass"></button>
+                            </div>
                         </div>
                         <button id="login-btn" class="action-btn">LOG IN</button>
                         <button class="forgot-password">FORGOT PASSWORD?</button>
@@ -70,11 +73,17 @@
                             </div>
                             <div class="input-group">
                                 <span class="icon lock-icon"></span>
-                                <input type="password" id="password" placeholder="PASSWORD">
+                                <div class="pass-wrapper">
+                                    <input type="password" id="password" placeholder="PASSWORD">
+                                    <button type="button" class="toggle-pass invisible-pass"></button>
+                                </div>
                             </div>
                             <div class="input-group">
                                 <span class="icon shield-icon"></span>
-                                <input type="password" id="confirmPassword" placeholder="CONFIRM PASSWORD">
+                                <div class="pass-wrapper">
+                                    <input type="password" id="confirmPassword" placeholder="CONFIRM PASSWORD">
+                                    <button type="button" class="toggle-pass invisible-pass"></button>
+                                </div>
                             </div>
                             <button id="register-btn" class="action-btn">SIGN UP</button>
                         </div>
@@ -115,11 +124,17 @@
                         <div id="reset-inputs-group">
                             <div class="input-group">
                                 <span class="icon lock-reset-icon"></span>
-                                <input type="password" id="new-password" placeholder="NEW PASSWORD">
+                                <div class="pass-wrapper">
+                                    <input type="password" id="new-password" placeholder="NEW PASSWORD">
+                                    <button type="button" class="toggle-pass invisible-pass"></button>
+                                </div>
                             </div>
                             <div class="input-group">
                                 <span class="icon shield-reset-icon"></span>
-                                <input type="password" id="confirm-new-password" placeholder="CONFIRM PASSWORD">
+                                <div class="pass-wrapper">
+                                    <input type="password" id="confirm-new-password" placeholder="CONFIRM PASSWORD">
+                                    <button type="button" class="toggle-pass invisible-pass"></button>
+                                </div>
                             </div>
                         </div>
                         <div id="success-message" class="is-hidden">
