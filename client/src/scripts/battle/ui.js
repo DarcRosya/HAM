@@ -388,6 +388,10 @@ export const BattleUI = {
     );
     safeSetText(document.getElementById('player-hp'), me.hp);
 
+    if (state.round) {
+      safeSetText(document.getElementById('round-number'), state.round);
+    }
+
     const oppAvatar = document.getElementById('opp-avatar');
     if (oppAvatar && opponent.avatar) oppAvatar.src = opponent.avatar;
     const playerAvatar = document.getElementById('player-avatar');

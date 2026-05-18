@@ -521,3 +521,203 @@ body {
   pointer-events: none;
   z-index: 2;
 }
+
+.surrender-img-btn {
+  width: 180px;
+  height: 80px;
+  background: url('/assets/images/surrender.png') no-repeat center;
+  background-size: contain;
+  cursor: pointer;
+  margin-left: 20px;
+  transition: transform 0.1s;
+}
+
+.surrender-img-btn:hover {
+  background: url('/assets/images/surrender-hover.png') no-repeat center;
+  background-size: contain;
+  transform: scale(1.03);
+}
+
+.surrender-img-btn:active {
+  transform: scale(1.1);
+}
+
+#surrender-confirm-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(30, 40, 50, 0.8);
+  z-index: 99998;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#surrender-confirm-overlay.hidden {
+  display: none !important;
+}
+
+.surrender-modal-frame {
+  position: relative;
+  width: 450px;
+  height: 580px;
+  background-image: url('/assets/images/metal-frame.png');
+  background-size: 100% 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 20px;
+  font-weight: bold;
+}
+
+.surrender-modal-header {
+  color: white;
+  font-size: 32px;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 0 black;
+  letter-spacing: 2px;
+}
+
+.close-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 50px;
+  height: 50px;
+  background-image: url('/assets/images/close-btn.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+  z-index: 10;
+}
+
+.close-btn:hover {
+  transform: scale(1.1);
+}
+
+.surrender-wooden-board {
+  width: 360px;
+  height: 280px;
+  background-image: url('/assets/images/board-signup.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  z-index: 2;
+}
+
+.surrender-actions {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.surrender-action-btn {
+  width: 130px;
+  height: 55px;
+  background-image: url('/assets/images/red-btn.png');
+  background-size: 100% 100%;
+  background-color: transparent;
+  border: none;
+  color: white;
+  font-size: 22px;
+  font-family: 'Londrina Solid', serif;
+  cursor: pointer;
+  text-shadow: 1px 1px 0 black;
+  transition: transform 0.2s;
+}
+
+.surrender-action-btn:hover {
+  transform: scale(1.05);
+}
+
+.surrender-bmo-container {
+  position: absolute;
+  bottom: 35px;
+  left: 30px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 5;
+}
+
+.surrender-bmo-btn {
+  width: 140px;
+  height: 160px;
+  background-image: url('/assets/images/sad_bmo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: bottom;
+}
+
+.surrender-speech-bubble {
+  background-image: url('/assets/images/speech-bubble1.png');
+  background-size: 100% 100%;
+  padding: 10px 20px 25px 20px;
+  font-family: 'Londrina Solid', sans-serif;
+  font-size: 16px;
+  line-height: 1.2;
+  text-align: center;
+  font-weight: 700;
+  margin-top: -70px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: auto;
+}
+
+.surrender-speech-text {
+  display: block;
+  width: 100%;
+  text-align: center;
+  word-break: break-word;
+  color: #1a3b32;
+}
+
+.surrender-warning-text {
+  color: white;
+  font-size: 30px;
+  text-align: center;
+  text-shadow:
+    -1.5px -1.5px 0 #000,
+    1.5px -1.5px 0 #000,
+    -1.5px 1.5px 0 #000,
+    1.5px 1.5px 0 #000;
+  margin-top: 25px;
+}
+
+.danger-text {
+  color: white;
+  font-size: 17px;
+  text-align: center;
+  line-height: 1.1;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  display: block;
+  margin-top: -10px;
+}
+
+.surrender-speech-text {
+  display: block;
+  width: 100%;
+  text-align: center;
+  word-break: break-word;
+  color: black;
+  font-size: 18px;
+}
+
+.surrender-red-word {
+  color: red !important;
+}
