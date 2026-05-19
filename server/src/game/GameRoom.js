@@ -58,10 +58,20 @@ export class GameRoom {
       if (u1 && this.players[id1]) {
         this.players[id1].avatarFrame = u1.avatarFrame;
         this.players[id1].avatar = u1.avatar;
+        this.players[id1].username = u1.username;
+        this.players[id1].displayedName = u1.displayedName;
+        if (u1.rating !== undefined && u1.rating !== null) {
+          this.players[id1].rating = u1.rating;
+        }
       }
       if (u2 && this.players[id2]) {
         this.players[id2].avatarFrame = u2.avatarFrame;
         this.players[id2].avatar = u2.avatar;
+        this.players[id2].username = u2.username;
+        this.players[id2].displayedName = u2.displayedName;
+        if (u2.rating !== undefined && u2.rating !== null) {
+          this.players[id2].rating = u2.rating;
+        }
       }
 
       this.broadcastState();

@@ -67,10 +67,6 @@ function runAttackAnimation(attackerEl, targetEl, onImpact, cancelToken) {
   });
 }
 
-// ==========================================
-// ЛОКАЛЬНАЯ БИЗНЕС-ЛОГИКА (Таймеры и Монетка)
-// ==========================================
-
 function getMyPlayerId() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const entries = Object.entries(battleState.match?.players ?? {});
@@ -267,10 +263,6 @@ async function applyGameOver(payload, cancelToken) {
   }
 }
 
-// ==========================================
-// КОЛЛБЭКИ ДЛЯ СЕТИ (Реакция на сервер)
-// ==========================================
-
 const networkCallbacks = {
   onMatchFound: (state) => {
     if (!battleState.isMatchStarted) startMatch(state);
@@ -389,26 +381,14 @@ const networkCallbacks = {
   },
 
   onFatigueDamage: (data) => {
-    console.log('🏁 [ORCHESTRATOR] Ивент пойман, ставим в очередь!', data);
-
-    // Используем actionQueue.add, как во всем остальном файле
     actionQueue.add(async (ctx) => {
-      console.log('🎬 [ACTION QUEUE] Запуск анимации усталости!');
-
       const userStr = localStorage.getItem('user');
       const myId = userStr ? JSON.parse(userStr).id : null;
 
-      // Вызываем UI и ждем завершения анимации
       await BattleUI.playFatigueAnimation(data, myId);
-
-      console.log('✅ [ACTION QUEUE] Анимация усталости завершена!');
     });
   },
 };
-
-// ==========================================
-// ЖИЗНЕННЫЙ ЦИКЛ (Экспорт для Router)
-// ==========================================
 
 export function mount() {
   if (battleState.isMounted) return;
