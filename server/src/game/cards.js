@@ -11,7 +11,7 @@ export const CARDS = [
     defense: 1,
     cost: 1,
     traits: ['charge'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/gunter.jpg',
   },
   {
     id: 2,
@@ -22,7 +22,7 @@ export const CARDS = [
     defense: 1,
     cost: 1,
     traits: ['poison'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/snail.png',
   },
   {
     id: 3,
@@ -33,7 +33,7 @@ export const CARDS = [
     defense: 4,
     cost: 1,
     traits: ['taunt'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/treetrunks.png',
   },
   {
     id: 4,
@@ -44,7 +44,7 @@ export const CARDS = [
     defense: 3,
     cost: 2,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/bmo.jpg',
   },
   {
     id: 5,
@@ -55,7 +55,7 @@ export const CARDS = [
     defense: 1,
     cost: 2,
     traits: ['poison'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/peppermint-butler.jpg',
   },
   {
     id: 6,
@@ -66,7 +66,7 @@ export const CARDS = [
     defense: 2,
     cost: 2,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/neptr.jpg',
   },
   {
     id: 7,
@@ -77,7 +77,7 @@ export const CARDS = [
     defense: 4,
     cost: 2,
     traits: ['taunt'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/cinnabon.jpg',
   },
   {
     id: 8,
@@ -99,7 +99,7 @@ export const CARDS = [
     defense: 4,
     cost: 3,
     traits: ['taunt'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/lumpy.jpg',
   },
   {
     id: 10,
@@ -110,7 +110,7 @@ export const CARDS = [
     defense: 2,
     cost: 3,
     traits: ['charge'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/lemon.jpg',
   },
   {
     id: 11,
@@ -121,7 +121,7 @@ export const CARDS = [
     defense: 5,
     cost: 3,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/Ricardio.jpg',
   },
   {
     id: 12,
@@ -132,7 +132,7 @@ export const CARDS = [
     defense: 5,
     cost: 4,
     traits: ['taunt'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/jake.png',
   },
   {
     id: 13,
@@ -143,7 +143,7 @@ export const CARDS = [
     defense: 5,
     cost: 4,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/rainicorn.png',
   },
   {
     id: 14,
@@ -154,7 +154,7 @@ export const CARDS = [
     defense: 3,
     cost: 4,
     traits: ['poison'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/magicman.png',
   },
   {
     id: 15,
@@ -165,7 +165,7 @@ export const CARDS = [
     defense: 3,
     cost: 4,
     traits: ['charge'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/huntress.jpg',
   },
   {
     id: 16,
@@ -176,7 +176,7 @@ export const CARDS = [
     defense: 7,
     cost: 5,
     traits: ['taunt'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/bubblegum.png',
   },
   {
     id: 17,
@@ -187,7 +187,7 @@ export const CARDS = [
     defense: 6,
     cost: 5,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/iceking.png',
   },
   {
     id: 18,
@@ -198,7 +198,7 @@ export const CARDS = [
     defense: 2,
     cost: 5,
     traits: ['charge'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/flameprincess.png',
   },
   {
     id: 19,
@@ -209,7 +209,7 @@ export const CARDS = [
     defense: 5,
     cost: 5,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/susanstrong.png',
   },
   {
     id: 20,
@@ -220,7 +220,7 @@ export const CARDS = [
     defense: 6,
     cost: 6,
     traits: ['poison'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/marceline.jpg',
   },
   {
     id: 21,
@@ -231,7 +231,7 @@ export const CARDS = [
     defense: 7,
     cost: 6,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/martin.png',
   },
   {
     id: 22,
@@ -242,7 +242,7 @@ export const CARDS = [
     defense: 10,
     cost: 7,
     traits: ['taunt'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/Prismo.png',
   },
   {
     id: 23,
@@ -253,7 +253,7 @@ export const CARDS = [
     defense: 8,
     cost: 8,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/cosmicowl.png',
   },
   {
     id: 24,
@@ -264,7 +264,7 @@ export const CARDS = [
     defense: 8,
     cost: 9,
     traits: ['taunt'],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/thelich.png',
   },
   {
     id: 25,
@@ -275,7 +275,7 @@ export const CARDS = [
     defense: 12,
     cost: 10,
     traits: [],
-    art: '/assets/cards-art/finn.png',
+    art: '/assets/cards-art/golb.png',
   },
 
   // ==========================================
@@ -290,7 +290,7 @@ export const CARDS = [
     spellEffect: 'add_mana',
     spellValue: 1,
     traits: [],
-    art: '/assets/cards-art/bubblegum.png',
+    art: '/assets/cards-art/sweater.png',
   },
   {
     id: 27,
@@ -301,7 +301,7 @@ export const CARDS = [
     spellEffect: 'add_mana',
     spellValue: 1,
     traits: [],
-    art: '/assets/cards-art/bubblegum.png',
+    art: '/assets/cards-art/sweater.png',
   },
   {
     id: 28,
@@ -312,7 +312,7 @@ export const CARDS = [
     spellEffect: 'add_mana',
     spellValue: 1,
     traits: [],
-    art: '/assets/cards-art/bubblegum.png',
+    art: '/assets/cards-art/sweater.png',
   },
   {
     id: 29,
@@ -323,7 +323,7 @@ export const CARDS = [
     spellEffect: 'damage',
     spellValue: 2,
     traits: [],
-    art: '/assets/cards-art/bubblegum.png',
+    art: '/assets/cards-art/fireball.png',
   },
   {
     id: 30,
@@ -334,7 +334,7 @@ export const CARDS = [
     spellEffect: 'heal_card',
     spellValue: 4,
     traits: [],
-    art: '/assets/cards-art/bubblegum.png',
+    art: '/assets/cards-art/pancakes.png',
   },
   {
     id: 31,
@@ -345,7 +345,7 @@ export const CARDS = [
     spellEffect: 'buff_card',
     spellStats: { attack: 2, defense: 2 },
     traits: [],
-    art: '/assets/cards-art/bubblegum.png',
+    art: '/assets/cards-art/Enchiridion.png',
   },
   {
     id: 32,
@@ -356,6 +356,6 @@ export const CARDS = [
     spellEffect: 'heal_avatar',
     spellValue: 5,
     traits: [],
-    art: '/assets/cards-art/bubblegum.png',
+    art: '/assets/cards-art/tears.png',
   },
 ];
