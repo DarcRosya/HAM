@@ -140,7 +140,7 @@ export const BattleUI = {
         const opp = state.players[oppId];
 
         if (me) {
-          document.getElementById('vs-you-avatar').src = me.avatar || '/assets/avatars/avatar.png';
+          document.getElementById('vs-you-avatar').src = me.avatar || '/assets/default-avatar.svg';
           document.getElementById('vs-you-name').textContent = me.displayedName || me.username;
           document.getElementById('vs-you-mmr').textContent = `MMR: ${me.rating}`;
           document.getElementById('vs-you-sword').src =
@@ -152,7 +152,7 @@ export const BattleUI = {
         }
 
         if (opp) {
-          document.getElementById('vs-opp-avatar').src = opp.avatar || '/assets/avatars/avatar.png';
+          document.getElementById('vs-opp-avatar').src = opp.avatar || '/assets/default-avatar.svg';
           document.getElementById('vs-opp-name').textContent = opp.displayedName || opp.username;
           document.getElementById('vs-opp-mmr').textContent = `MMR: ${opp.rating}`;
           document.getElementById('vs-opp-sword').src =

@@ -398,10 +398,23 @@ function handleMouseUp(e) {
           battleState.drag.ghostElement = null;
         }
       }
+
+      const playedCardId = battleState.drag.playCardId;
       battleState.drag.playCardId = null;
       hideSpellArrow();
       clearSpellReticle();
-      BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
+
+      if (shouldCast) {
+        const handCard = document.querySelector(
+          `#player-hand-zone [data-instance-id="${playedCardId}"]`
+        );
+        if (handCard) {
+          handCard.style.opacity = '0';
+          handCard.style.pointerEvents = 'none';
+        }
+      } else {
+        BattleUI.updateBoard(battleState.match, null, battleState.drag, { allowAnimations: false });
+      }
       return;
     }
 
