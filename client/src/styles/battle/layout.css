@@ -141,7 +141,7 @@ body {
   margin-left: -135px;
   width: 160px;
   height: 45px;
-  z-index: 20;
+  z-index: 7;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -196,7 +196,7 @@ body {
   transform: translateX(-50%);
   width: 106px;
   height: 80px;
-  z-index: 20;
+  z-index: 14;
   scale: 0.8;
 }
 
@@ -237,7 +237,7 @@ body {
   margin-left: -135px;
   width: 160px;
   height: 45px;
-  z-index: 20;
+  z-index: 7;
   display: flex;
   justify-content: center;
   align-items: center;
