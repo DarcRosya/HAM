@@ -58,10 +58,20 @@ export class GameRoom {
       if (u1 && this.players[id1]) {
         this.players[id1].avatarFrame = u1.avatarFrame;
         this.players[id1].avatar = u1.avatar;
+        this.players[id1].username = u1.username;
+        this.players[id1].displayedName = u1.displayedName;
+        if (u1.rating !== undefined && u1.rating !== null) {
+          this.players[id1].rating = u1.rating;
+        }
       }
       if (u2 && this.players[id2]) {
         this.players[id2].avatarFrame = u2.avatarFrame;
         this.players[id2].avatar = u2.avatar;
+        this.players[id2].username = u2.username;
+        this.players[id2].displayedName = u2.displayedName;
+        if (u2.rating !== undefined && u2.rating !== null) {
+          this.players[id2].rating = u2.rating;
+        }
       }
 
       this.broadcastState();
@@ -87,7 +97,6 @@ export class GameRoom {
 
   handleLoadingTimeout() {
     if (this.phase !== 'loading') return;
-    console.log(`[ROOM ${this.roomId}] Match aborted: Players failed to load UI in time.`);
     this.endGame(null);
   }
 
@@ -239,7 +248,6 @@ export class GameRoom {
       this.lastDisconnectTime[normalizedId] &&
       now - this.lastDisconnectTime[normalizedId] < 2000
     ) {
-      console.log(`[ROOM ${this.roomId}] Игнорируем двойной дисконнект для ${normalizedId}`);
       return;
     }
     this.lastDisconnectTime[normalizedId] = now;
@@ -258,12 +266,7 @@ export class GameRoom {
 
     if (this.phase === 'playing') {
       this.clearTurnTimer();
-      this.pausedAt = Date.now(); // Запоминаем точное время паузы
-      console.log(`[ROOM ${this.roomId}] Игра поставлена на паузу в фазе playing.`);
-    } else {
-      console.log(
-        `[ROOM ${this.roomId}] Дисконнект в фазе ${this.phase}. Таймер НЕ остановлен (идет интро).`
-      );
+      this.pausedAt = Date.now();
     }
 
     this.startDisconnectTimer(normalizedId);
@@ -291,16 +294,12 @@ export class GameRoom {
 
       if (this.phase === 'playing' && this.pausedAt) {
         const pausedDuration = Date.now() - this.pausedAt;
-        this.turnExpiresAt += pausedDuration; // Компенсируем время простоя
+        this.turnExpiresAt += pausedDuration;
         this.pausedAt = null;
 
         const remainingMs = Math.max(0, this.turnExpiresAt - Date.now());
         console.log(`[ROOM ${this.roomId}] Таймер возобновлен. Осталось: ${remainingMs}мс`);
         this.startPhaseTimer(remainingMs, 'next_turn');
-      } else {
-        console.log(
-          `[ROOM ${this.roomId}] Реконнект в фазе ${this.phase}. Таймер продолжает идти синхронно.`
-        );
       }
     }
 
@@ -369,18 +368,32 @@ export class GameRoom {
       currentPlayer.mana = currentPlayer.maxMana;
 
       let cardsNeeded = STARTING_CARDS_COUNT - currentPlayer.hand.length;
+      let fatigueAppliedThisTurn = false;
 
       while (cardsNeeded > 0) {
         if (currentPlayer.deck.length > 0) {
           currentPlayer.hand.push(currentPlayer.deck.shift());
         } else {
-          currentPlayer.fatigue += 1;
-          currentPlayer.hp -= currentPlayer.fatigue;
-          if (currentPlayer.hp <= 0) {
-            const winnerId = playerIds.find((id) => id !== String(this.activeTurn));
-            this.endGame(winnerId);
-            return;
+          if (!fatigueAppliedThisTurn) {
+            currentPlayer.fatigue += 1;
+            currentPlayer.hp -= currentPlayer.fatigue;
+            fatigueAppliedThisTurn = true;
+
+            for (const pId of Object.keys(this.players)) {
+              this.emitToPlayer(pId, 'fatigue_damage', {
+                playerId: this.activeTurn,
+                damage: currentPlayer.fatigue,
+                hpAfter: currentPlayer.hp,
+              });
+            }
+
+            if (currentPlayer.hp <= 0) {
+              const winnerId = playerIds.find((id) => id !== String(this.activeTurn));
+              this.endGame(winnerId);
+              return;
+            }
           }
+          break;
         }
         cardsNeeded--;
       }
@@ -707,6 +720,8 @@ export class GameRoom {
     this.status = 'finished';
     this.clearTurnTimer();
     clearTimeout(this.loadingWatchdog);
+
+    this.broadcastState();
 
     const playerIds = Object.keys(this.players);
     this.clearDisconnectTimer(playerIds[0]);

@@ -11,8 +11,6 @@ let elements = {};
 export function mount() {
   if (isMounted) return;
   isMounted = true;
-
-  // 1. Кешируем элементы DOM
   elements = {
     playBtn: document.querySelector('.play-btn'),
     searchOverlay: document.getElementById('search-overlay'),
@@ -46,6 +44,14 @@ export function mount() {
     }
 
     initHistory(elements.historyList);
+
+    if (socket) {
+      if (socket.connected) {
+        socket.emit('join-lobby');
+      } else {
+        socket.once('connect', () => socket.emit('join-lobby'));
+      }
+    }
   });
 
   socket = socketService.connect();
@@ -89,8 +95,6 @@ export function unmount() {
 
   elements = {};
 }
-
-// --- Обработчики событий ---
 
 function handleMatchFound(state) {
   if (elements.tipElement) {

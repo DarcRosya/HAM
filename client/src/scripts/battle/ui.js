@@ -4,15 +4,11 @@ import { store } from '../../core/store.js';
 
 let messageTimer = null;
 
-// --- Константы ---
 const TRAITS_DESC = {
   taunt: { title: 'Taunt', desc: 'Enemies must attack this unit first.' },
   charge: { title: 'Charge', desc: 'Can attack the same turn it is played.' },
-  berserk: { title: 'Berserk', desc: 'Gains +1 attack when it takes damage.' },
   poison: { title: 'Poison', desc: 'Instantly destroys any card it damages.' },
 };
-
-// --- Вспомогательные функции ---
 
 function safeSetText(element, text) {
   if (element) element.textContent = text;
@@ -105,10 +101,6 @@ function syncHandVisibilityByPhase(phase) {
   });
 }
 
-// ==========================================
-// ЭКСПОРТИРУЕМЫЙ API ДЛЯ ОРКЕСТРАТОРА
-// ==========================================
-
 export const BattleUI = {
   reveal(elements) {
     if (elements.loader && !elements.loader.classList.contains('hidden')) {
@@ -139,7 +131,6 @@ export const BattleUI = {
       return;
     }
 
-    // 2. ОТРИСОВКА ЭКРАНА (СТРОГО ОДИН РАЗ)
     if (state.phase === 'vs_screen') {
       if (!vsOverlay.classList.contains('vs-active')) {
         const playerIds = Object.keys(state.players);
@@ -167,13 +158,11 @@ export const BattleUI = {
           document.getElementById('vs-opp-sword').src =
             `/assets/images/sword-${opp.swordId || 1}.png`;
 
-          // Рендер рамки для противника
           const oppFrame = document.getElementById('vs-opp-frame');
           const oppFrameSrc = opp.avatar_frame || opp.avatarFrame || '';
           applyAvatarFrame(oppFrame, oppFrameSrc);
         }
 
-        // Возвращаем динамические элементы для эпичной анимации (искры, надпись)
         let finaleTitle = document.getElementById('vs-finale-title');
         if (!finaleTitle) {
           finaleTitle = document.createElement('div');
@@ -263,7 +252,6 @@ export const BattleUI = {
           word.style.animationDelay = `${delayToStart}s`;
         });
 
-        // ДИНАМИЧЕСКАЯ СИНХРОНИЗАЦИЯ ИСКР
         const particles = vsOverlay.querySelectorAll('.vs-particle');
         particles.forEach((p) => {
           const clashTimeSec = parseFloat(p.getAttribute('data-clash-time') || '0');
@@ -393,7 +381,6 @@ export const BattleUI = {
     const isPlaying = state.phase === 'playing';
     syncHandVisibilityByPhase(state.phase);
 
-    // 1. Базовое инфо
     safeSetText(document.getElementById('info-turn'), isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN");
     safeSetText(
       document.getElementById('opp-username-zone'),
@@ -407,7 +394,7 @@ export const BattleUI = {
     safeSetText(document.getElementById('player-hp'), me.hp);
 
     if (state.round) {
-      safeSetText(document.getElementById('round-number'), state.round);
+      updateRoundDisplay(state.round);
     }
 
     const oppAvatar = document.getElementById('opp-avatar');
@@ -428,10 +415,11 @@ export const BattleUI = {
     applyAvatarFrame(oppFrame, oppFrameSrc);
     applyAvatarFrame(playerFrame, playerFrameSrc);
 
-    // 2. Колоды и Усталость
     safeSetText(document.getElementById('opp-deck'), opponent.deckCount);
     const playerDeck = document.getElementById('player-deck');
-    if (playerDeck) playerDeck.dataset.count = me.deckCount;
+    if (playerDeck) {
+      playerDeck.dataset.count = `${me.deckCount} cards left`;
+    }
 
     const fatigueInfo = document.getElementById('fatigue-info');
     if (fatigueInfo) {
@@ -445,11 +433,9 @@ export const BattleUI = {
       }
     }
 
-    // 3. Мана
     this.renderMana('opp-mana-zone', opponent.mana, opponent.maxMana);
     this.renderMana('player-mana-zone', me.mana, me.maxMana, dragState.hoveredCardCost || 0);
 
-    // --- DIFFING И АНИМАЦИИ СМЕРТИ ---
     const myTable = document.getElementById('player-table-zone');
     const oppTable = document.getElementById('opp-table-zone');
     const boardContainer = document.querySelector('.battle-center-column');
@@ -506,62 +492,93 @@ export const BattleUI = {
       if (cancelled) return;
     }
 
-    // Если нет смертей, обновляем ID
     battleState.ui.lastBoardIds = { me: newMyCardIds, opp: newOppCardIds };
-
-    if (myTable) myTable.innerHTML = '';
-    if (oppTable) oppTable.innerHTML = '';
 
     const spawnPromises = [];
 
-    me.table.forEach((card) => {
-      const isNewCard =
-        !oldMyCardIds.includes(String(card.instanceId)) &&
-        state.phase === 'playing' &&
-        battleState.hasRenderedOnce;
-      const cardUI = renderCard({ ...card, variant: 'board' });
-      cardUI.classList.add('card-slot');
-      cardUI.dataset.instanceId = card.instanceId;
+    const updateCardDOM = (tableEl, cardData, isMine, isNewCard, index) => {
+      let cardUI = tableEl.querySelector(`[data-instance-id="${cardData.instanceId}"]`);
 
-      if (dragState.attackCardId && String(card.instanceId) === String(dragState.attackCardId)) {
-        cardUI.classList.add('is-attacking-active');
+      if (!cardUI) {
+        cardUI = renderCard({ ...cardData, variant: 'board' });
+        cardUI.classList.add('card-slot');
+        if (!isMine) cardUI.classList.add('enemy-card');
+        cardUI.dataset.instanceId = cardData.instanceId;
+
+        if (isNewCard && allowAnimations) {
+          const dropCoords = isMine ? dragState.lastDropCoords : null;
+          const ghostEl = isMine ? dragState.ghostElement : null;
+          spawnPromises.push(
+            this.playEpicSpawn(cardUI, cardData, dropCoords, ghostEl, cancelToken)
+          );
+        }
+      } else {
+        const atkEl = cardUI.querySelector('.token-attack');
+        const defEl = cardUI.querySelector('.token-defense');
+        const borderEl = cardUI.querySelector('.token-border');
+
+        if (atkEl) atkEl.textContent = cardData.attack;
+        if (defEl) defEl.textContent = cardData.defense;
+
+        const dummy = renderCard({ ...cardData, variant: 'board' });
+        const newBorder = dummy.querySelector('.token-border');
+        if (borderEl && newBorder && borderEl.src !== newBorder.src) {
+          borderEl.src = newBorder.src;
+        }
       }
 
-      if (isNewCard && allowAnimations) {
-        spawnPromises.push(
-          this.playEpicSpawn(
-            cardUI,
-            card,
-            dragState.lastDropCoords,
-            dragState.ghostElement,
-            cancelToken
-          )
-        );
+      if (tableEl.children[index] !== cardUI) {
+        tableEl.insertBefore(cardUI, tableEl.children[index]);
       }
 
-      if (card.canAttack && isMyTurn) cardUI.classList.add('can-attack');
-      else {
-        cardUI.classList.add('exhausted');
-        cardUI.style.pointerEvents = 'none';
+      if (isMine) {
+        if (
+          dragState.attackCardId &&
+          String(cardData.instanceId) === String(dragState.attackCardId)
+        ) {
+          cardUI.classList.add('is-attacking-active');
+        } else {
+          cardUI.classList.remove('is-attacking-active');
+        }
+
+        if (cardData.canAttack && isMyTurn) {
+          cardUI.classList.add('can-attack');
+          cardUI.classList.remove('exhausted');
+          cardUI.style.pointerEvents = 'auto';
+        } else {
+          cardUI.classList.remove('can-attack');
+          cardUI.classList.add('exhausted');
+          cardUI.style.pointerEvents = 'none';
+        }
+      } else {
+        if (cardData.canAttack === false) {
+          cardUI.classList.add('exhausted');
+        } else {
+          cardUI.classList.remove('exhausted');
+        }
       }
-      myTable.appendChild(cardUI);
-    });
+    };
 
-    opponent.table.forEach((card) => {
-      const isNewCard =
-        !oldOppCardIds.includes(String(card.instanceId)) &&
-        state.phase === 'playing' &&
-        battleState.hasRenderedOnce;
-      const cardUI = renderCard({ ...card, variant: 'board' });
-      cardUI.classList.add('card-slot', 'enemy-card');
-      cardUI.dataset.instanceId = card.instanceId;
+    if (myTable) {
+      me.table.forEach((card, index) => {
+        const isNewCard =
+          !oldMyCardIds.includes(String(card.instanceId)) &&
+          state.phase === 'playing' &&
+          battleState.hasRenderedOnce;
+        updateCardDOM(myTable, card, true, isNewCard, index);
+      });
+    }
 
-      if (isNewCard && allowAnimations)
-        spawnPromises.push(this.playEpicSpawn(cardUI, card, null, null, cancelToken));
-      oppTable.appendChild(cardUI);
-    });
+    if (oppTable) {
+      opponent.table.forEach((card, index) => {
+        const isNewCard =
+          !oldOppCardIds.includes(String(card.instanceId)) &&
+          state.phase === 'playing' &&
+          battleState.hasRenderedOnce;
+        updateCardDOM(oppTable, card, false, isNewCard, index);
+      });
+    }
 
-    // 5. Рука противника
     const oppHand = document.getElementById('opp-hand-zone');
     if (oppHand) {
       const existingOpp = Array.from(oppHand.children);
@@ -580,7 +597,6 @@ export const BattleUI = {
       });
     }
 
-    // 6. Наша рука
     const handDisplay = document.getElementById('player-hand-zone');
     if (handDisplay) {
       const existingNodes = Array.from(handDisplay.children);
@@ -622,10 +638,6 @@ export const BattleUI = {
       });
     }
 
-    // 7. ЗАПУСК АНИМАЦИИ (ЦЕНТРАЛИЗОВАННО ЧЕРЕЗ DATA-MARKERS)
-
-    // Защита от реконнекта: если мы влетели в середину игры (прошло уже > 3 сек хода),
-    // мы тихо помечаем все карты как "отрисованные" и отменяем стартовый залп анимаций.
     const isReconnectingNow =
       isPlaying && !battleState.ui.initialDrawDone && state.turnEndsInMs < 27000;
 
@@ -683,7 +695,7 @@ export const BattleUI = {
       const deckRect = deck.getBoundingClientRect();
 
       cards.forEach((cardUI, index) => {
-        cardUI.dataset.drawn = 'true'; // МАРКЕР: Эта карта отстреляла, больше не трогаем
+        cardUI.dataset.drawn = 'true';
 
         const cardRect = cardUI.getBoundingClientRect();
         const deltaX = deckRect.left - cardRect.left;
@@ -700,7 +712,6 @@ export const BattleUI = {
             const fanY = cardUI.style.getPropertyValue('--fan-y') || '0px';
             const fanRot = cardUI.style.getPropertyValue('--fan-rot') || '0deg';
 
-            // Пружина для тебя, плавная кривая для противника
             const easing = isOpponent ? 'ease-out' : 'cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
             cardUI.style.transition = `transform 0.6s ${easing}, opacity 0.3s ease-out`;
@@ -726,7 +737,6 @@ export const BattleUI = {
       const timeouts = [];
       let finished = false;
       let ghostCard = null;
-      let shockwave = null;
 
       const done = () => {
         if (finished) return;
@@ -742,10 +752,8 @@ export const BattleUI = {
 
       if (cancelToken?.onCancel) {
         cancelToken.onCancel(() => {
-          timeouts.forEach((id) => clearTimeout(id));
-          timeouts.length = 0;
+          timeouts.forEach(clearTimeout);
           if (ghostCard?.parentNode) ghostCard.remove();
-          if (shockwave?.parentNode) shockwave.remove();
           cardUI.style.opacity = '1';
           cardUI.classList.remove('epic-spawn-token');
           done();
@@ -753,6 +761,7 @@ export const BattleUI = {
       }
 
       cardUI.style.opacity = '0';
+
       requestAnimationFrame(() => {
         let startX = window.innerWidth / 2;
         let startY = window.innerHeight;
@@ -764,6 +773,15 @@ export const BattleUI = {
           const ghostRect = ghostEl.getBoundingClientRect();
           startX = ghostRect.left + ghostRect.width / 2;
           startY = ghostRect.top + ghostRect.height / 2;
+        } else if (cardUI.classList.contains('enemy-card')) {
+          const oppHand = document.getElementById('opp-hand-zone');
+          if (oppHand) {
+            const oppRect = oppHand.getBoundingClientRect();
+            startX = oppRect.left + oppRect.width / 2;
+            startY = oppRect.top + oppRect.height / 2;
+          } else {
+            startY = -100;
+          }
         }
 
         const boardContainer = document.querySelector('.battle-center-column');
@@ -774,43 +792,60 @@ export const BattleUI = {
         }
 
         const boardRect = boardContainer.getBoundingClientRect();
-        const rect = cardUI.getBoundingClientRect();
+        const targetRect = cardUI.getBoundingClientRect();
 
-        const targetX = rect.left - boardRect.left + rect.width / 2;
-        const targetY = rect.top - boardRect.top + rect.height / 2;
+        const targetX = targetRect.left - boardRect.left + targetRect.width / 2;
+        const targetY = targetRect.top - boardRect.top + targetRect.height / 2;
         const startRelX = startX - boardRect.left;
         const startRelY = startY - boardRect.top;
 
         ghostCard = renderCard({ ...cardData, variant: 'hand' });
-        ghostCard.classList.add('epic-spawn-glowing');
+        ghostCard.className = 'card anim-card-fly-arc';
+
         ghostCard.style.left = `${startRelX}px`;
         ghostCard.style.top = `${startRelY}px`;
+        ghostCard.style.transform = 'translate(-50%, -50%) scale(0.6) rotate(-10deg)';
+
         boardContainer.appendChild(ghostCard);
 
         void ghostCard.offsetWidth;
+
         ghostCard.style.left = `${targetX}px`;
         ghostCard.style.top = `${targetY}px`;
+        ghostCard.style.transform = 'translate(-50%, -50%) scale(0.8) rotate(5deg)';
 
         schedule(() => {
           if (ghostCard?.parentNode) ghostCard.remove();
+
+          const flash = document.createElement('div');
+          flash.className = 'morph-flash';
+          flash.style.left = `${targetX}px`;
+          flash.style.top = `${targetY}px`;
+          boardContainer.appendChild(flash);
+
+          schedule(() => {
+            if (flash.parentNode) flash.remove();
+          }, 300);
+
           cardUI.style.opacity = '1';
           cardUI.classList.add('epic-spawn-token');
 
-          const board = document.querySelector('.game-board');
-          if (board) {
-            board.classList.add('board-shake');
-            schedule(() => board.classList.remove('board-shake'), 300);
-          }
-
-          shockwave = document.createElement('div');
+          const shockwave = document.createElement('div');
           shockwave.className = 'epic-spawn-shockwave';
           shockwave.style.left = `${targetX}px`;
           shockwave.style.top = `${targetY}px`;
           boardContainer.appendChild(shockwave);
 
           schedule(() => {
-            if (shockwave?.parentNode) shockwave.remove();
-          }, 400);
+            if (shockwave.parentNode) shockwave.remove();
+          }, 500);
+
+          const board = document.querySelector('.game-board');
+          if (board) {
+            board.classList.add('board-shake-light');
+            schedule(() => board.classList.remove('board-shake-light'), 250);
+          }
+
           schedule(() => {
             cardUI.classList.remove('epic-spawn-token');
             done();
@@ -852,8 +887,17 @@ export const BattleUI = {
       attackerEl.style.transform = `translate(${deltaX * 0.85}px, ${deltaY * 0.85}px) scale(1.15) rotate(${tilt}deg)`;
 
       setTimeout(() => {
-        // ДОБАВЛЕНО: Теперь удар (и отправка на сервер) регистрируется точно в момент столкновения
         if (onImpact) onImpact();
+
+        const checkAndBreakPoison = (cardEl) => {
+          if (cardEl && cardEl.dataset.isPoison === 'true') {
+            const borderEl = cardEl.querySelector('.token-border');
+            if (borderEl) borderEl.src = '/assets/images/break-poison-frame.png';
+          }
+        };
+
+        checkAndBreakPoison(attackerEl);
+        checkAndBreakPoison(targetEl);
 
         attackerEl.style.transition = 'all 0.05s ease-out';
         attackerEl.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.3)`;
@@ -915,7 +959,6 @@ export const BattleUI = {
     }, 1000);
   },
 
-  // Чисто визуальный рендер тултипа. Вызывать его будет input.js
   renderTooltip(cardData, isBoard, rect) {
     let activeElement = document.createElement('div');
     activeElement.className = 'card-tooltip-container';
@@ -997,18 +1040,15 @@ export const BattleUI = {
       elements.bmoTextTop.textContent = '30';
       elements.bmoTextBottom.className = 'bmo-large-font';
 
-      // Вычисляем, сколько миллисекунд осталось чисто на интро (от 2000 до 0)
       const introTimeLeft = remainingMs - 30000;
 
       if (isMyTurn) {
-        // Жесткие тайминги для 2 слов (по 1000мс на фазу)
         if (introTimeLeft > 1000) {
           elements.bmoTextBottom.textContent = 'YOUR';
         } else {
           elements.bmoTextBottom.textContent = 'TURN';
         }
       } else {
-        // Жесткие тайминги для 3 слов (по ~666мс на фазу)
         if (introTimeLeft > 1333) {
           elements.bmoTextBottom.textContent = 'OPPO';
         } else if (introTimeLeft > 666) {
@@ -1018,7 +1058,6 @@ export const BattleUI = {
         }
       }
     } else {
-      // Игровая фаза
       elements.bmoTextTop.textContent = isMyTurn ? 'YOUR TURN' : 'OPPONENT';
       elements.bmoTextBottom.className = 'bmo-timer-font';
       elements.bmoTextBottom.textContent = displaySeconds;
@@ -1056,21 +1095,18 @@ export const BattleUI = {
         effectClass = 'anim-spell-damage';
     }
 
-    // Считываем точные координаты цели на экране
     const rect = targetEl.getBoundingClientRect();
     const effectEl = document.createElement('div');
     effectEl.className = `spell-effect-overlay ${effectClass}`;
 
-    // Абсолютное позиционирование поверх экрана
     effectEl.style.position = 'fixed';
     effectEl.style.left = `${rect.left + rect.width / 2}px`;
     effectEl.style.top = `${rect.top + rect.height / 2}px`;
-    effectEl.style.zIndex = '15000'; // Точно поверх всего UI
+    effectEl.style.zIndex = '15000';
 
     document.body.appendChild(effectEl);
     targetEl.classList.add('anim-target-hit');
 
-    // Ожидаем завершения анимации
     setTimeout(() => {
       if (effectEl.parentNode) effectEl.remove();
       targetEl.classList.remove('anim-target-hit');
@@ -1078,11 +1114,113 @@ export const BattleUI = {
     }, 800);
   },
 
-  // Анимация вибрации BMO при клике
   triggerBmoVibration(elements) {
     if (!elements.bmoBody) return;
     elements.bmoBody.classList.remove('bmo-vibrate');
-    void elements.bmoBody.offsetWidth; // Форсируем Reflow
+    void elements.bmoBody.offsetWidth;
     elements.bmoBody.classList.add('bmo-vibrate');
   },
+
+  playFatigueAnimation(data, myPlayerId) {
+    return new Promise((resolve) => {
+      const isMe = String(data.playerId) === String(myPlayerId);
+
+      if (!isMe) {
+        const oppAvatarContainer =
+          document.querySelector('.opp-avatar-container') || document.getElementById('opp-avatar');
+        if (oppAvatarContainer) {
+          oppAvatarContainer.classList.add('anim-target-hit');
+          this.showFloatingDamage(oppAvatarContainer, data.damage);
+          setTimeout(() => {
+            oppAvatarContainer.classList.remove('anim-target-hit');
+            resolve();
+          }, 600);
+        } else {
+          resolve();
+        }
+        return;
+      }
+
+      const overlay = document.createElement('div');
+      overlay.className = 'fatigue-overlay';
+
+      const card = document.createElement('div');
+      card.className = 'fatigue-card';
+      card.innerHTML = `<div class="fatigue-text">Out of cards!<br>Take ${data.damage} damage</div>`;
+
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      const deckEl = document.getElementById('player-deck');
+      let startX = 0;
+      let startY = window.innerHeight;
+
+      if (deckEl) {
+        const deckRect = deckEl.getBoundingClientRect();
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        startX = deckRect.left + deckRect.width / 2 - centerX;
+        startY = deckRect.top + deckRect.height / 2 - centerY;
+      }
+
+      card.style.transition = 'none';
+      card.style.transform = `translate(${startX}px, ${startY}px) scale(0.2) rotate(180deg)`;
+      card.style.opacity = '0';
+
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          overlay.style.opacity = '1';
+
+          card.style.transition =
+            'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out';
+          card.style.transform = `translate(0px, 0px) scale(1) rotate(0deg)`;
+          card.style.opacity = '1';
+
+          setTimeout(() => {
+            card.classList.add('anim-fatigue-burn');
+
+            setTimeout(() => {
+              const myAvatar =
+                document.querySelector('.player-avatar-container') ||
+                document.getElementById('player-avatar');
+              if (myAvatar) {
+                myAvatar.classList.add('anim-target-hit');
+                this.showFloatingDamage(myAvatar, data.damage);
+
+                const board = document.querySelector('.game-board');
+                if (board) {
+                  board.classList.add('board-shake');
+                  setTimeout(() => board.classList.remove('board-shake'), 300);
+                }
+                setTimeout(() => myAvatar.classList.remove('anim-target-hit'), 500);
+              }
+            }, 500);
+
+            setTimeout(() => {
+              overlay.style.opacity = '0';
+              setTimeout(() => {
+                if (overlay.parentNode) overlay.remove();
+                resolve();
+              }, 300);
+            }, 1000);
+          }, 2000);
+        }, 50);
+      });
+    });
+  },
 };
+
+function updateRoundDisplay(newRound) {
+  const roundValue = document.getElementById('round-number');
+  if (!roundValue) return;
+  if (roundValue.innerText !== String(newRound)) {
+    roundValue.classList.add('round-change-anim');
+    setTimeout(() => {
+      roundValue.innerText = newRound;
+    }, 150);
+    setTimeout(() => {
+      roundValue.classList.remove('round-change-anim');
+    }, 600);
+  }
+}

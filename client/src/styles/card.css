@@ -29,7 +29,6 @@
   height: 100%;
   z-index: 2;
   pointer-events: none;
-  /* Tuning: adjust inset/size here if your frame PNG needs padding. */
 }
 
 .card-title {
@@ -43,6 +42,13 @@
   color: #fff;
   letter-spacing: 2px;
   text-shadow: 1px 1px 2px #000;
+  white-space: nowrap;
+}
+
+.card-title.long-title {
+  font-size: 13px;
+  transform: scaleX(0.9) translateX(17px);
+  transform-origin: center;
 }
 
 .card-cost {
@@ -155,50 +161,42 @@
 
 .token-stat {
   position: absolute;
-  z-index: 4; /* Всегда поверх рамки! */
+  z-index: 4; 
   display: flex;
   justify-content: center;
   align-items: center;
-
   font-family: 'Londrina Solid', sans-serif;
   font-weight: 400;
-  /* --- НАСТРАИВАЙ В DEVTOOLS --- */
-  font-size: 18px; /* Размер цифр */
-  width: 34px; /* Ширина контейнера цифры */
-  height: 34px; /* Высота контейнера цифры */
-  bottom: -12px; /* Насколько высоко/низко висят статы */
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  bottom: -12px;
 
-  /* Я убрал градиенты и рамки. Теперь цифры "парят" с красивой тенью.
-     Если хочешь вернуть кружочки фоном - напиши здесь background: red; */
+  
   background: transparent;
   border: none;
   box-shadow: none;
 
-  /* Жесткая тень для читаемости */
  -webkit-text-stroke: 1px #000000;
 }
 
 .token-attack {
   color: #ffd700;
 
-  /* --- НАСТРАИВАЙ В DEVTOOLS --- */
-  left: -4px; /* Двигай влево-вправо */
+  left: -4px;
 }
 
 .token-defense {
   color: #ff4d4d;
+  right: -1px;
 
-  /* --- НАСТРАИВАЙ В DEVTOOLS --- */
-  right: -1px; /* Двигай влево-вправо */
 }
 
-/* Если токен болеет (усталость призыва) - обесцвечиваем */
 .card-slot.exhausted .token-art,
 .card-slot.exhausted .token-border {
   filter: grayscale(0.6) brightness(0.7);
 }
 
-/* Свечение Таунта (Подготовка к шагу 5.4) */
 .card-slot.enemy-card.taunt-target-glow .token-border {
   border-color: #ff3333;
   box-shadow: 0 0 20px 5px #ff0000;

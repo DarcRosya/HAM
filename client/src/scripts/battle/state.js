@@ -1,5 +1,4 @@
 export const battleState = {
-  // --- Данные с сервера ---
   match: null,
   isMatchStarted: false,
   isMounted: false,
@@ -9,7 +8,6 @@ export const battleState = {
     actionQueue: null,
   },
 
-  // --- Состояние Drag & Drop ---
   drag: {
     attackCardId: null,
     playCardId: null,
@@ -17,7 +15,6 @@ export const battleState = {
     lastDropCoords: null,
   },
 
-  // --- Локальный UI State ---
   ui: {
     hoveredCardCost: 0,
     activeTooltip: null,
@@ -26,7 +23,6 @@ export const battleState = {
     lastBoardIds: { me: [], opp: [] },
   },
 
-  // --- Реестр таймеров (для защиты от утечек памяти) ---
   timers: {
     turn: null,
     watchdog: null,
@@ -36,12 +32,7 @@ export const battleState = {
     animationSafety: null,
   },
 
-  // --- Кеш DOM-элементов (чтобы не спамить document.getElementById) ---
   elements: {},
-
-  // ==========================================
-  // МЕТОДЫ УПРАВЛЕНИЯ
-  // ==========================================
 
   setMatch(newState) {
     this.match = newState;

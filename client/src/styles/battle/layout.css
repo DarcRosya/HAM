@@ -1,6 +1,3 @@
-/* =========================================
-   ФУНДАМЕНТ И РАЗМЕТКА (LAYOUT)
-========================================= */
 * {
   margin: 0;
   padding: 0;
@@ -15,7 +12,6 @@
 }
 
 :root {
-  /* НАСТРОЙ ЭТИ ПЕРЕМЕННЫЕ В БРАУЗЕРЕ (DEVTOOLS) ДЛЯ ИДЕАЛЬНОЙ ПОДГОНКИ! */
   --bmo-width: 259px;
   --bmo-height: 270px;
   --bmo-screen-top: 46px;
@@ -35,7 +31,7 @@ body {
 .game-board {
   width: 1414px;
   height: 780px;
-  position: relative; /* Все absolute внутри отсчитываются отсюда */
+  position: relative;
   user-select: none;
   -webkit-user-select: none;
   opacity: 0;
@@ -44,13 +40,10 @@ body {
   overflow: hidden;
 }
 
-/* =========================================
-   ЦЕНТРАЛЬНЫЙ СТОЛБЕЦ (ЗОНЫ)
-========================================= */
 .battle-center-column {
   position: absolute;
   inset: 0;
-  pointer-events: none; /* Пропускает клики сквозь пустые места */
+  pointer-events: none;
 }
 
 .battle-center-column > * {
@@ -66,9 +59,9 @@ body {
   align-items: center;
   gap: 15px;
   width: 100%;
-  min-height: 130px; /* Фикс схлопывания для приема drop-событий */
+  min-height: 130px;
   z-index: 10;
-  pointer-events: none; /* КРИТИЧЕСКИЙ ФИКС: Пропускает клики сквозь пустой стол прямо в BMO */
+  pointer-events: none;
 }
 
 #opp-table-zone {
@@ -97,9 +90,6 @@ body {
   bottom: -60px;
 }
 
-/* =========================================
-   БОКОВЫЕ ПАНЕЛИ
-========================================= */
 .sidebar-right {
   position: absolute;
   right: 30px;
@@ -143,16 +133,12 @@ body {
   margin-top: 20px;
 }
 
-/* =========================================
-   ПОЗИЦИОНИРОВАНИЕ ПРОФИЛЕЙ (АВАТАРЫ, ХП, НИКИ)
-========================================= */
-/* Враг */
 #opp-username-zone {
   position: absolute;
-  top: 145px;
+  top: 120px;
   left: 50%;
   transform: translateX(-50%);
-  margin-left: -175px;
+  margin-left: -135px;
   width: 160px;
   height: 45px;
   z-index: 20;
@@ -165,12 +151,12 @@ body {
 
 #opp-avatar-zone {
   position: absolute;
-  top: 134px;
+  top: 90px;
   left: 49%;
   transform: translateX(-50%);
   width: 68px;
   height: 67px;
-  z-index: 10;
+  z-index: 20;
   scale: 0.8;
 }
 
@@ -203,15 +189,14 @@ body {
   box-sizing: border-box;
 }
 
-/* Игрок */
 #player-avatar-zone {
   position: absolute;
-  bottom: 122px;
+  bottom: 128px;
   left: 50%;
   transform: translateX(-50%);
   width: 106px;
   height: 80px;
-  z-index: 10;
+  z-index: 20;
   scale: 0.8;
 }
 
@@ -246,11 +231,10 @@ body {
 
 #player-username-zone {
   position: absolute;
-  bottom: 125px; /* Высота над столом (рядом с аватаром) */
+  top: 600px;
   left: 50%;
   transform: translateX(-50%);
-  margin-left: -175px; /* Сдвиг влево от центра, как у оппонента */
-
+  margin-left: -135px;
   width: 160px;
   height: 45px;
   z-index: 20;
@@ -261,9 +245,6 @@ body {
   box-sizing: border-box;
 }
 
-/* =========================================
-   СТРУКТУРА КОЛБЫ МАНЫ
-========================================= */
 .flask-wrapper {
   position: relative;
   width: 260px;
@@ -302,9 +283,6 @@ body {
   border-radius: 10px 14px 14px 2px;
 }
 
-/* =========================================
-   BMO TIMER LAYOUT
-========================================= */
 .bmo-timer-wrapper {
   position: relative;
   display: flex;
@@ -329,12 +307,10 @@ body {
   width: var(--bmo-width);
   height: var(--bmo-height);
   background: url('/assets/images/bmo-timer.png') no-repeat center center;
-  /* Жесткая растяжка, чтобы экран не съезжал при ресайзе окна */
   background-size: 100% 100%;
   transition: transform 0.1s;
 }
 
-/* Экран BMO (подгони отступы под твою картинку bmo-timer.png) */
 .bmo-screen {
   position: absolute;
   top: var(--bmo-screen-top);
@@ -372,7 +348,7 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 20;
-  background: url('/assets/images/round.png') no-repeat center center;
+  background: url('/assets/images/round-view.png') no-repeat center center;
   width: 140px;
   height: 130px;
   background-size: contain;
@@ -400,4 +376,42 @@ body {
     -1px 0 0 black,
     0 1px 0 black,
     0 -1px 0 black;
+  display: inline-block;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.round-value.round-change-anim {
+  transform: scale(1.2);
+  color: #fff;
+  text-shadow: 0 0 15px #f8e274;
+}
+
+.username-zone {
+  width: 310px !important;
+  height: 40px !important;
+  background-image: url('/assets/images/username-frame.png') !important;
+  background-size: 100% 100% !important;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  pointer-events: none;
+  font-family: 'Londrina Solid', sans-serif;
+  font-size: 20px;
+  font-weight: 200;
+  color: #ffffff;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0px 3px 4px rgba(0, 0, 0, 0.7);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 5;
+  padding: 0 25px 0 0 !important;
 }

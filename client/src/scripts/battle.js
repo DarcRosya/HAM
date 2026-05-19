@@ -67,10 +67,6 @@ function runAttackAnimation(attackerEl, targetEl, onImpact, cancelToken) {
   });
 }
 
-// ==========================================
-// ЛОКАЛЬНАЯ БИЗНЕС-ЛОГИКА (Таймеры и Монетка)
-// ==========================================
-
 function getMyPlayerId() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const entries = Object.entries(battleState.match?.players ?? {});
@@ -194,10 +190,24 @@ async function applyGameOver(payload, cancelToken) {
   BattleUI.hideStatus(battleState.elements);
   store.clearMatchState();
 
+  if (battleState.timers.turn) {
+    clearInterval(battleState.timers.turn);
+    battleState.timers.turn = null;
+  }
+
+  if (battleState.elements.bmoTextTop) {
+    battleState.elements.bmoTextTop.textContent = 'GAME';
+  }
+  if (battleState.elements.bmoTextBottom) {
+    battleState.elements.bmoTextBottom.textContent = 'OVER';
+    battleState.elements.bmoTextBottom.classList.remove('danger-tick');
+  }
+
   const myId = getMyPlayerId();
   const isWinner = String(payload.winnerId) === String(myId);
 
   const targetAvatarZoneId = isWinner ? 'opp-avatar-zone' : 'player-avatar-zone';
+  const targetUsernameZoneId = isWinner ? 'opp-username-zone' : 'player-username-zone';
   const avatarZone = document.getElementById(targetAvatarZoneId);
   if (avatarZone) {
     const hpBadge = avatarZone.querySelector('.health-badge');
@@ -205,6 +215,11 @@ async function applyGameOver(payload, cancelToken) {
     avatarZone.classList.add('anim-avatar-death');
     const board = document.querySelector('.game-board');
     if (board) board.classList.add('board-shake-heavy');
+  }
+  const usernameZone = document.getElementById(targetUsernameZoneId);
+  if (usernameZone) {
+    usernameZone.style.transition = 'opacity 0.5s ease-out';
+    usernameZone.style.opacity = '0';
   }
 
   await delay(1500, cancelToken);
@@ -253,10 +268,6 @@ async function applyGameOver(payload, cancelToken) {
     window.location.hash = '#lobby';
   }
 }
-
-// ==========================================
-// КОЛЛБЭКИ ДЛЯ СЕТИ (Реакция на сервер)
-// ==========================================
 
 const networkCallbacks = {
   onMatchFound: (state) => {
@@ -330,8 +341,8 @@ const networkCallbacks = {
   },
 
   onGameOver: (payload) => {
-    actionQueue.clear();
     actionQueue.add((ctx) => applyGameOver(payload, ctx));
+
     if (battleState.timers.turn) {
       clearInterval(battleState.timers.turn);
       battleState.timers.turn = null;
@@ -374,11 +385,16 @@ const networkCallbacks = {
     store.clearMatchState();
     window.location.replace('#lobby');
   },
-};
 
-// ==========================================
-// ЖИЗНЕННЫЙ ЦИКЛ (Экспорт для Router)
-// ==========================================
+  onFatigueDamage: (data) => {
+    actionQueue.add(async (ctx) => {
+      const userStr = localStorage.getItem('user');
+      const myId = userStr ? JSON.parse(userStr).id : null;
+
+      await BattleUI.playFatigueAnimation(data, myId);
+    });
+  },
+};
 
 export function mount() {
   if (battleState.isMounted) return;
