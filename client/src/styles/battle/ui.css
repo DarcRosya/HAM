@@ -21,12 +21,10 @@ body {
 }
 
 #opp-username-zone {
-  background-image: url('/assets/images/scroll-name.png');
   background-size: 100% 100%;
 }
 #opp-mana-zone,
 #player-mana-zone {
-  background-image: url('/assets/images/scroll-mana.png');
   background-size: 100% 100%;
 }
 

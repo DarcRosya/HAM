@@ -131,6 +131,15 @@ const AuthUI = {
     } else if (viewName === 'reset') {
       this.board?.classList.add('is-hidden');
       this.bmoContainer?.classList.add('is-right');
+
+      document.getElementById('reset-inputs-group')?.classList.remove('is-hidden');
+      document.getElementById('confirm-reset-btn')?.classList.remove('is-hidden');
+      document.getElementById('success-message')?.classList.add('is-hidden');
+
+      const newPassInput = document.getElementById('new-password');
+      const confirmPassInput = document.getElementById('confirm-new-password');
+      if (newPassInput) newPassInput.value = '';
+      if (confirmPassInput) confirmPassInput.value = '';
     } else if (viewName === 'logout') {
       this.board?.classList.add('is-hidden');
     }
@@ -292,6 +301,12 @@ export function mount() {
       if (hash === '#login') window.location.hash = '#register';
       else if (hash === '#register') window.location.hash = '#login';
       else if (hash === '#forgot-password') window.location.hash = '#login';
+      else if (hash === '#reset-password') {
+        const successMsg = document.getElementById('success-message');
+        if (successMsg && !successMsg.classList.contains('is-hidden')) {
+          window.location.hash = '#login';
+        }
+      }
     });
   }
 

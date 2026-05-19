@@ -60,7 +60,7 @@ body {
   gap: 15px;
   width: 100%;
   min-height: 130px;
-  z-index: 10;
+  z-index: 25;
   pointer-events: none;
 }
 

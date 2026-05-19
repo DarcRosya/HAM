@@ -28,7 +28,7 @@ export function renderUserProfile() {
   const username = document.querySelector('.username');
   const mmrValue = document.querySelector('.mmr-value');
 
-  if (avatar) avatar.src = user.avatar || '/assets/avatars/avatar.png';
+  if (avatar) avatar.src = user.avatar || '/assets/default-avatar.svg';
 
   applyAvatarFrame(avatarFrame, resolveAvatarFrame(user));
 
@@ -57,6 +57,20 @@ function initEditModal(onProfileUpdated) {
   const avatarFramePreview = document.getElementById('edit-avatar-frame');
   const applyBtn = document.getElementById('apply-profile-btn');
 
+  function validateEditDisplayName(event) {
+    let value = event.target.value;
+    value = value.replace(/[^a-zA-Z0-9_()\- ]/g, '');
+    if (value.startsWith(' ')) {
+      value = value.trim();
+    }
+    value = value.replace(/\s{2,}/g, ' ');
+    event.target.value = value;
+  }
+
+  if (displayNameInput) {
+    displayNameInput.addEventListener('input', validateEditDisplayName);
+  }
+
   let isSubmitting = false;
   attachLiveClear('edit-display-name', 'display-name-error');
   attachLiveClear('edit-username', 'username-error');
@@ -66,7 +80,7 @@ function initEditModal(onProfileUpdated) {
     editBtn.onclick = () => {
       const user = store.getUser() || {};
 
-      if (avatarPreview) avatarPreview.src = user.avatar || '/assets/avatars/avatar.png';
+      if (avatarPreview) avatarPreview.src = user.avatar || '/assets/default-avatar.svg';
       applyAvatarFrame(avatarFramePreview, resolveAvatarFrame(user));
 
       if (displayNameInput) displayNameInput.value = user.displayedName || '';
@@ -296,6 +310,10 @@ function initPasswordChange() {
   const changeBtn = document.querySelector('.change-pw-btn');
   const frame = document.querySelector('.edit-frame');
   const backPwBtn = document.querySelector('.back-pw-btn');
+
+  attachLiveClear('old-password', 'old-pass-error');
+  attachLiveClear('new-password-input', 'new-pass-error');
+  attachLiveClear('confirm-new-password-input', 'pass-match-error');
 
   if (changeBtn) {
     changeBtn.onclick = () => {

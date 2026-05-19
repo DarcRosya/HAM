@@ -94,6 +94,7 @@ export function initRegister() {
 
     try {
       await authService.register(userData);
+      registerForm.reset();
       window.location.hash = '#login';
     } catch (err) {
       showBmoError(err.message || 'Server error');

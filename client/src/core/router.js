@@ -84,8 +84,6 @@ async function router() {
   const hash = fullHash.split('?')[0];
   const route = routes[hash];
 
-  console.log(`%c[ROUTER] Переход на хэш: ${hash}`, 'background: #222; color: #bada55');
-
   if (!route) {
     mainContainer.innerHTML = '<h1>404 - Not Found</h1>';
     return;
@@ -95,10 +93,6 @@ async function router() {
     for (const guard of route.guards) {
       const result = guard();
       if (result !== true) {
-        console.log(
-          `%c[ROUTER] Guard заблокировал переход. Редирект на: ${result}`,
-          'background: #222; color: #bada55'
-        );
         window.location.replace(window.location.pathname + window.location.search + result);
         return;
       }
@@ -106,10 +100,6 @@ async function router() {
   }
 
   if (currentRoutePath === route.path) {
-    console.log(
-      `%c[ROUTER] Путь не изменился, вызываем mount()`,
-      'background: #222; color: #bada55'
-    );
     if (route.mount) route.mount();
     return;
   }
