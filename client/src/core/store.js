@@ -11,7 +11,7 @@ export const store = {
       localStorage.setItem('pendingMatchState', JSON.stringify(state));
     }
     if (isFresh) {
-      localStorage.setItem('matchIsFresh', 'true'); // Одноразовый билет на монетку
+      localStorage.setItem('matchIsFresh', 'true');
     }
   },
 

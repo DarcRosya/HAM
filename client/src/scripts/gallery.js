@@ -15,7 +15,6 @@ export async function mount() {
     const allCards = await response.json();
     cardsGrid.innerHTML = '';
 
-    // the greatest crutch
     const uniqueCardsMap = new Map();
     allCards.forEach((card) => {
       if (!uniqueCardsMap.has(card.name)) {

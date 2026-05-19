@@ -516,12 +516,10 @@ body {
   cursor: default !important;
 }
 
-/* Добавляем плавность анимации для всей коробки */
 .edit-avatar-container .avatar-wrapper {
   transition: transform 0.2s ease;
 }
 
-/* Увеличиваем всю коробку (аватар + рамка) при наведении */
 .edit-frame:not(.pfp-mode) .edit-avatar-container .avatar-wrapper:hover {
   transform: scale(1.1);
   cursor: pointer;
@@ -914,21 +912,19 @@ body {
   animation: popDownModal 0.25s ease-in forwards;
 }
 
-/* =========================================
-   ЛОББИ: МАЛЕНЬКИЙ АВАТАР В ШАПКЕ
-========================================= */
 .player-info .avatar-wrapper {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 60px; /* ЖЕСТКИЙ КВАДРАТ */
-  height: 60px; /* ЖЕСТКИЙ КВАДРАТ */
-  flex-shrink: 0; /* СПАСАЕТ ОТ ЯЙЦА */
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
   margin-right: 15px;
 }
+
 .edit-avatar-container .avatar-wrapper {
-  margin-top: 10px; /* попробуй 2–10px */
+  margin-top: 10px;
 }
 
 .player-info .avatar-wrapper img.avatar {
@@ -939,17 +935,14 @@ body {
   object-fit: cover;
 }
 
-/* =========================================
-   ЛОББИ: БОЛЬШОЙ АВАТАР В МОДАЛКЕ
-========================================= */
 .edit-avatar-container .avatar-wrapper {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100px; /* ЖЕСТКИЙ КВАДРАТ */
-  height: 100px; /* ЖЕСТКИЙ КВАДРАТ */
-  flex-shrink: 0; /* СПАСАЕТ ОТ ЯЙЦА */
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
   margin-bottom: 20px;
 }
 
@@ -962,15 +955,12 @@ body {
   background-color: #fff;
 }
 
-/* =========================================
-   УНИВЕРСАЛЬНАЯ РАМКА ДЛЯ ЛОББИ
-========================================= */
 .avatar-frame {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 145%; /* НАСТРАИВАЙ МАСШТАБ РАМКИ ЗДЕСЬ (в DevTools) */
+  width: 145%;
   height: 145%;
   object-fit: contain;
   pointer-events: none;

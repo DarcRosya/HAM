@@ -3,7 +3,6 @@ import { userService } from '../../services/userService.js';
 
 export async function initHistory(historyListElement) {
   if (!historyListElement) {
-    console.warn('[History] Контейнер для истории не найден');
     return;
   }
 
@@ -29,7 +28,6 @@ export async function initHistory(historyListElement) {
       historyListElement.appendChild(createMatchCard(match));
     });
   } catch (e) {
-    console.error('[History] Ошибка загрузки:', e);
     showEmptyMessage('History temporarily unavailable.');
   }
 }

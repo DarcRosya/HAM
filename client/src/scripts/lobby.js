@@ -11,8 +11,6 @@ let elements = {};
 export function mount() {
   if (isMounted) return;
   isMounted = true;
-
-  // 1. Кешируем элементы DOM
   elements = {
     playBtn: document.querySelector('.play-btn'),
     searchOverlay: document.getElementById('search-overlay'),
@@ -89,8 +87,6 @@ export function unmount() {
 
   elements = {};
 }
-
-// --- Обработчики событий ---
 
 function handleMatchFound(state) {
   if (elements.tipElement) {
