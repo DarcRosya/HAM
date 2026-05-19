@@ -126,7 +126,7 @@ body {
   animation: fadeInUpCard 0.5s ease-out both;
 }
 
-.card::after {
+.cards-grid .card::after {
   content: '';
   position: absolute;
   top: 0;

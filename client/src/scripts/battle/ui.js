@@ -855,6 +855,16 @@ export const BattleUI = {
         // ДОБАВЛЕНО: Теперь удар (и отправка на сервер) регистрируется точно в момент столкновения
         if (onImpact) onImpact();
 
+        const checkAndBreakPoison = (cardEl) => {
+          if (cardEl && cardEl.dataset.isPoison === 'true') {
+            const borderEl = cardEl.querySelector('.token-border');
+            if (borderEl) borderEl.src = '/assets/images/break-poison-frame.png';
+          }
+        };
+
+        checkAndBreakPoison(attackerEl);
+        checkAndBreakPoison(targetEl);
+
         attackerEl.style.transition = 'all 0.05s ease-out';
         attackerEl.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.3)`;
         attackerEl.style.filter = 'brightness(2) drop-shadow(0 0 30px #ff3333)';
