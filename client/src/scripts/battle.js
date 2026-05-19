@@ -207,6 +207,7 @@ async function applyGameOver(payload, cancelToken) {
   const isWinner = String(payload.winnerId) === String(myId);
 
   const targetAvatarZoneId = isWinner ? 'opp-avatar-zone' : 'player-avatar-zone';
+  const targetUsernameZoneId = isWinner ? 'opp-username-zone' : 'player-username-zone';
   const avatarZone = document.getElementById(targetAvatarZoneId);
   if (avatarZone) {
     const hpBadge = avatarZone.querySelector('.health-badge');
@@ -214,6 +215,11 @@ async function applyGameOver(payload, cancelToken) {
     avatarZone.classList.add('anim-avatar-death');
     const board = document.querySelector('.game-board');
     if (board) board.classList.add('board-shake-heavy');
+  }
+  const usernameZone = document.getElementById(targetUsernameZoneId);
+  if (usernameZone) {
+    usernameZone.style.transition = 'opacity 0.5s ease-out';
+    usernameZone.style.opacity = '0';
   }
 
   await delay(1500, cancelToken);
