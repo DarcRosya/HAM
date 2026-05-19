@@ -239,11 +239,10 @@ body {
 
 #player-username-zone {
   position: absolute;
-  bottom: 125px; /* Высота над столом (рядом с аватаром) */
+  top: 600px;
   left: 50%;
   transform: translateX(-50%);
-  margin-left: -175px; /* Сдвиг влево от центра, как у оппонента */
-
+  margin-left: -165px;
   width: 160px;
   height: 45px;
   z-index: 20;
