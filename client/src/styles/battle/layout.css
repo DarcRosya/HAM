@@ -142,10 +142,10 @@ body {
 /* Враг */
 #opp-username-zone {
   position: absolute;
-  top: 145px;
+  top: 120px;
   left: 50%;
   transform: translateX(-50%);
-  margin-left: -175px;
+  margin-left: -135px;
   width: 160px;
   height: 45px;
   z-index: 20;
@@ -158,12 +158,12 @@ body {
 
 #opp-avatar-zone {
   position: absolute;
-  top: 114px;
+  top: 90px;
   left: 49%;
   transform: translateX(-50%);
   width: 68px;
   height: 67px;
-  z-index: 10;
+  z-index: 20;
   scale: 0.8;
 }
 
@@ -199,12 +199,12 @@ body {
 /* Игрок */
 #player-avatar-zone {
   position: absolute;
-  bottom: 122px;
+  bottom: 128px;
   left: 50%;
   transform: translateX(-50%);
   width: 106px;
   height: 80px;
-  z-index: 10;
+  z-index: 20;
   scale: 0.8;
 }
 
@@ -242,7 +242,7 @@ body {
   top: 600px;
   left: 50%;
   transform: translateX(-50%);
-  margin-left: -175px;
+  margin-left: -135px;
   width: 160px;
   height: 45px;
   z-index: 20;
@@ -365,7 +365,7 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 20;
-  background: url('/assets/images/round.png') no-repeat center center;
+  background: url('/assets/images/round-view.png') no-repeat center center;
   width: 140px;
   height: 130px;
   background-size: contain;
@@ -401,4 +401,34 @@ body {
   transform: scale(1.2);
   color: #fff;
   text-shadow: 0 0 15px #f8e274;
+}
+
+.username-zone {
+  width: 310px !important;
+  height: 40px !important;
+  background-image: url('/assets/images/username-frame.png') !important;
+  background-size: 100% 100% !important;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  pointer-events: none;
+  font-family: 'Londrina Solid', sans-serif;
+  font-size: 20px;
+  font-weight: 200;
+  color: #ffffff;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0px 3px 4px rgba(0, 0, 0, 0.7);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 5;
+  padding: 0 25px 0 0 !important;
 }
