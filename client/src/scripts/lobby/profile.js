@@ -45,8 +45,6 @@ export function initProfileUI(onProfileUpdated) {
   initBackButtons();
 }
 
-// --- Private functions of the module ---
-
 function initEditModal(onProfileUpdated) {
   const editBtn = document.querySelector('.edit-btn');
   const editModal = document.getElementById('edit-modal');
@@ -155,8 +153,6 @@ function initEditModal(onProfileUpdated) {
 
       try {
         const data = await userService.updateProfile(token, payload);
-
-        // Успех
         localStorage.setItem('user', JSON.stringify(data.user));
         renderUserProfile();
         closeEditModalSmoothly(editModal);
@@ -237,7 +233,6 @@ function initAvatarPicker() {
 
     try {
       const res = await userService.getAvatarFrames();
-      // ФИКС: Если API возвращает объект { frames: [...] }, достаем массив
       frames = Array.isArray(res) ? res : res.frames || fallbackFrames;
     } catch (err) {
       frames = fallbackFrames;
@@ -245,7 +240,7 @@ function initAvatarPicker() {
 
     frameGrid.innerHTML = '';
     if (!Array.isArray(frames) || frames.length === 0) {
-      frames = fallbackFrames; // Жесткая подстраховка
+      frames = fallbackFrames;
     }
 
     const currentFrame = avatarFramePreview?.getAttribute('src') || '';
@@ -401,8 +396,6 @@ function initBackButtons() {
     };
   });
 }
-
-// --- Verification and Cleaning Tools ---
 
 function attachLiveClear(inputId, errorId) {
   const input = document.getElementById(inputId);

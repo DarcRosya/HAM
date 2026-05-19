@@ -1,22 +1,16 @@
-/* =========================================
-   ДИЗАЙН ИНТЕРФЕЙСА (UI / SKIN)
-========================================= */
 body {
   background-color: #111;
   font-family: 'Londrina Solid', serif;
 }
 
 .game-board {
-  background-color: #1a2538; /* Спасательный круг, если картинка не загрузилась */
+  background-color: #1a2538;
   background-image: url('/assets/images/battle-bg3.PNG');
   background-size: cover;
   background-position: center;
   overflow: hidden;
 }
 
-/* =========================================
-   ЭЛЕМЕНТЫ ПРОФИЛЕЙ (АВАТАРЫ, ХП, ИМЕНА)
-========================================= */
 .username {
   font-size: 18px;
   color: #3e2723;
@@ -53,9 +47,6 @@ body {
   margin-top: -3px;
 }
 
-/* =========================================
-   КОЛБА МАНЫ И ИНДИКАТОРЫ
-========================================= */
 .mana-text-badge {
   position: absolute;
   right: -20px;
@@ -101,9 +92,6 @@ body {
   margin-bottom: 20px;
 }
 
-/* =========================================
-   КНОПКИ
-========================================= */
 .end-turn-btn {
   background: url('/assets/images/edit-bg.png') no-repeat center;
   background-size: contain;
@@ -141,9 +129,6 @@ body {
   opacity: 1;
 }
 
-/* =========================================
-   КОЛОДЫ
-========================================= */
 .his-deck,
 .player-deck {
   width: 130px;
@@ -189,9 +174,6 @@ body {
   transform: translateX(-50%) translateY(5px);
 }
 
-/* =========================================
-   СОСТОЯНИЯ КАРТ (ПОДСВЕТКИ)
-========================================= */
 .card.playable {
   border: 3px solid #33ff33 !important;
   border-radius: 12px;
@@ -239,16 +221,12 @@ body {
   }
 }
 
-/* Гарантия кликабельности токенов */
 .card-slot,
 .card-board {
   pointer-events: auto !important;
   cursor: pointer;
 }
 
-/* =========================================
-   ТУЛТИПЫ (ПОДСКАЗКИ ТРЕЙТОВ)
-========================================= */
 .traits-panel {
   display: flex;
   flex-direction: column;
@@ -284,9 +262,6 @@ body {
   color: #a6c7ff;
 }
 
-/* =========================================
-   СТАТУСЫ СЕТИ И РЕЗУЛЬТАТЫ
-========================================= */
 .opponent-connection-status {
   width: min(820px, 92vw);
   margin: 0 auto 18px;
@@ -343,7 +318,7 @@ body {
   position: relative;
   width: 550px;
   height: 380px;
-  background: url('/assets/images/board_endgame.png') no-repeat center; /* Используйте текстуру деревянной доски */
+  background: url('/assets/images/board_endgame.png') no-repeat center;
   background-size: 100% 100%;
   display: flex;
   flex-direction: column;
@@ -439,19 +414,16 @@ body {
   transform: scale(0.95);
 }
 
-/* =========================================
-   BMO TIMER UI & FONTS
-========================================= */
 .bmo-small-font {
   font-family: 'VT323', monospace;
-  font-size: 14px; /* Было 22, ужали под мелкий дисплей */
+  font-size: 14px;
   color: #1a3b32;
   line-height: 1;
 }
 
 .bmo-large-font {
   font-family: 'Londrina Solid', sans-serif;
-  font-size: 20px; /* Было 32, теперь должно влезть YOUR TURN */
+  font-size: 20px;
   color: #1a3b32;
   line-height: 1.1;
   text-transform: uppercase;
@@ -460,10 +432,10 @@ body {
 
 .bmo-timer-font {
   font-family: 'VT323', monospace;
-  font-size: 42px; /* Было 58. Должно идеально встать по центру 62px экрана */
+  font-size: 42px;
   color: #1a3b32;
   line-height: 1;
-  margin-top: -3px; /* Компенсация базовой линии шрифта */
+  margin-top: -3px;
 }
 
 .danger-tick {
@@ -486,19 +458,14 @@ body {
   }
 }
 
-/* =========================================
-   ПОЛЕ БОЯ: АВАТАРЫ ИГРОКОВ
-========================================= */
 .avatar-container .avatar-wrapper {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-
-  /* НАСТРАИВАЙ РАЗМЕР АВАТАРА В БОЮ ЗДЕСЬ */
   width: 85px;
   height: 85px;
-  flex-shrink: 0; /* СПАСАЕТ ОТ ЯЙЦА */
+  flex-shrink: 0;
 }
 
 .avatar-container .avatar-wrapper img.avatar {
