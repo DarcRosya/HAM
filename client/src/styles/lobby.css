@@ -282,6 +282,8 @@ body {
   justify-content: center;
   text-align: center;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  position: relative;
+  top: -8px;
 }
 
 #history-list.is-empty {
