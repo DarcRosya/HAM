@@ -551,11 +551,7 @@ export const BattleUI = {
           cardUI.style.pointerEvents = 'none';
         }
       } else {
-        if (cardData.canAttack === false) {
-          cardUI.classList.add('exhausted');
-        } else {
-          cardUI.classList.remove('exhausted');
-        }
+        cardUI.classList.remove('exhausted');
       }
     };
 
