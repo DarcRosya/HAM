@@ -8,7 +8,6 @@ let messageTimer = null;
 const TRAITS_DESC = {
   taunt: { title: 'Taunt', desc: 'Enemies must attack this unit first.' },
   charge: { title: 'Charge', desc: 'Can attack the same turn it is played.' },
-  berserk: { title: 'Berserk', desc: 'Gains +1 attack when it takes damage.' },
   poison: { title: 'Poison', desc: 'Instantly destroys any card it damages.' },
 };
 
@@ -506,60 +505,92 @@ export const BattleUI = {
       if (cancelled) return;
     }
 
-    // Если нет смертей, обновляем ID
     battleState.ui.lastBoardIds = { me: newMyCardIds, opp: newOppCardIds };
-
-    if (myTable) myTable.innerHTML = '';
-    if (oppTable) oppTable.innerHTML = '';
 
     const spawnPromises = [];
 
-    me.table.forEach((card) => {
-      const isNewCard =
-        !oldMyCardIds.includes(String(card.instanceId)) &&
-        state.phase === 'playing' &&
-        battleState.hasRenderedOnce;
-      const cardUI = renderCard({ ...card, variant: 'board' });
-      cardUI.classList.add('card-slot');
-      cardUI.dataset.instanceId = card.instanceId;
+    const updateCardDOM = (tableEl, cardData, isMine, isNewCard, index) => {
+      let cardUI = tableEl.querySelector(`[data-instance-id="${cardData.instanceId}"]`);
 
-      if (dragState.attackCardId && String(card.instanceId) === String(dragState.attackCardId)) {
-        cardUI.classList.add('is-attacking-active');
+      if (!cardUI) {
+        cardUI = renderCard({ ...cardData, variant: 'board' });
+        cardUI.classList.add('card-slot');
+        if (!isMine) cardUI.classList.add('enemy-card');
+        cardUI.dataset.instanceId = cardData.instanceId;
+
+        if (isNewCard && allowAnimations) {
+          const dropCoords = isMine ? dragState.lastDropCoords : null;
+          const ghostEl = isMine ? dragState.ghostElement : null;
+          spawnPromises.push(
+            this.playEpicSpawn(cardUI, cardData, dropCoords, ghostEl, cancelToken)
+          );
+        }
+      } else {
+        const atkEl = cardUI.querySelector('.token-attack');
+        const defEl = cardUI.querySelector('.token-defense');
+        const borderEl = cardUI.querySelector('.token-border');
+
+        if (atkEl) atkEl.textContent = cardData.attack;
+        if (defEl) defEl.textContent = cardData.defense;
+
+        const dummy = renderCard({ ...cardData, variant: 'board' });
+        const newBorder = dummy.querySelector('.token-border');
+        if (borderEl && newBorder && borderEl.src !== newBorder.src) {
+          borderEl.src = newBorder.src;
+        }
       }
 
-      if (isNewCard && allowAnimations) {
-        spawnPromises.push(
-          this.playEpicSpawn(
-            cardUI,
-            card,
-            dragState.lastDropCoords,
-            dragState.ghostElement,
-            cancelToken
-          )
-        );
+      if (tableEl.children[index] !== cardUI) {
+        tableEl.insertBefore(cardUI, tableEl.children[index]);
       }
 
-      if (card.canAttack && isMyTurn) cardUI.classList.add('can-attack');
-      else {
-        cardUI.classList.add('exhausted');
-        cardUI.style.pointerEvents = 'none';
+      if (isMine) {
+        if (
+          dragState.attackCardId &&
+          String(cardData.instanceId) === String(dragState.attackCardId)
+        ) {
+          cardUI.classList.add('is-attacking-active');
+        } else {
+          cardUI.classList.remove('is-attacking-active');
+        }
+
+        if (cardData.canAttack && isMyTurn) {
+          cardUI.classList.add('can-attack');
+          cardUI.classList.remove('exhausted');
+          cardUI.style.pointerEvents = 'auto';
+        } else {
+          cardUI.classList.remove('can-attack');
+          cardUI.classList.add('exhausted');
+          cardUI.style.pointerEvents = 'none';
+        }
+      } else {
+        if (cardData.canAttack === false) {
+          cardUI.classList.add('exhausted');
+        } else {
+          cardUI.classList.remove('exhausted');
+        }
       }
-      myTable.appendChild(cardUI);
-    });
+    };
 
-    opponent.table.forEach((card) => {
-      const isNewCard =
-        !oldOppCardIds.includes(String(card.instanceId)) &&
-        state.phase === 'playing' &&
-        battleState.hasRenderedOnce;
-      const cardUI = renderCard({ ...card, variant: 'board' });
-      cardUI.classList.add('card-slot', 'enemy-card');
-      cardUI.dataset.instanceId = card.instanceId;
+    if (myTable) {
+      me.table.forEach((card, index) => {
+        const isNewCard =
+          !oldMyCardIds.includes(String(card.instanceId)) &&
+          state.phase === 'playing' &&
+          battleState.hasRenderedOnce;
+        updateCardDOM(myTable, card, true, isNewCard, index);
+      });
+    }
 
-      if (isNewCard && allowAnimations)
-        spawnPromises.push(this.playEpicSpawn(cardUI, card, null, null, cancelToken));
-      oppTable.appendChild(cardUI);
-    });
+    if (oppTable) {
+      opponent.table.forEach((card, index) => {
+        const isNewCard =
+          !oldOppCardIds.includes(String(card.instanceId)) &&
+          state.phase === 'playing' &&
+          battleState.hasRenderedOnce;
+        updateCardDOM(oppTable, card, false, isNewCard, index);
+      });
+    }
 
     // 5. Рука противника
     const oppHand = document.getElementById('opp-hand-zone');
@@ -726,7 +757,6 @@ export const BattleUI = {
       const timeouts = [];
       let finished = false;
       let ghostCard = null;
-      let shockwave = null;
 
       const done = () => {
         if (finished) return;
@@ -742,21 +772,22 @@ export const BattleUI = {
 
       if (cancelToken?.onCancel) {
         cancelToken.onCancel(() => {
-          timeouts.forEach((id) => clearTimeout(id));
-          timeouts.length = 0;
+          timeouts.forEach(clearTimeout);
           if (ghostCard?.parentNode) ghostCard.remove();
-          if (shockwave?.parentNode) shockwave.remove();
           cardUI.style.opacity = '1';
           cardUI.classList.remove('epic-spawn-token');
           done();
         });
       }
 
+      // 1. Скрываем финальный овальный токен на столе
       cardUI.style.opacity = '0';
+
       requestAnimationFrame(() => {
         let startX = window.innerWidth / 2;
         let startY = window.innerHeight;
 
+        // Откуда летит карта (из руки или по умолчанию снизу)
         if (dropCoords) {
           startX = dropCoords.x;
           startY = dropCoords.y;
@@ -764,6 +795,15 @@ export const BattleUI = {
           const ghostRect = ghostEl.getBoundingClientRect();
           startX = ghostRect.left + ghostRect.width / 2;
           startY = ghostRect.top + ghostRect.height / 2;
+        } else if (cardUI.classList.contains('enemy-card')) {
+          const oppHand = document.getElementById('opp-hand-zone');
+          if (oppHand) {
+            const oppRect = oppHand.getBoundingClientRect();
+            startX = oppRect.left + oppRect.width / 2;
+            startY = oppRect.top + oppRect.height / 2;
+          } else {
+            startY = -100; // Фоллбэк: летит просто из-за верхнего края экрана
+          }
         }
 
         const boardContainer = document.querySelector('.battle-center-column');
@@ -774,47 +814,76 @@ export const BattleUI = {
         }
 
         const boardRect = boardContainer.getBoundingClientRect();
-        const rect = cardUI.getBoundingClientRect();
+        const targetRect = cardUI.getBoundingClientRect();
 
-        const targetX = rect.left - boardRect.left + rect.width / 2;
-        const targetY = rect.top - boardRect.top + rect.height / 2;
+        // Вычисляем координаты относительно доски
+        const targetX = targetRect.left - boardRect.left + targetRect.width / 2;
+        const targetY = targetRect.top - boardRect.top + targetRect.height / 2;
         const startRelX = startX - boardRect.left;
         const startRelY = startY - boardRect.top;
 
+        // 2. Создаем летящую прямоугольную карту (ghost)
         ghostCard = renderCard({ ...cardData, variant: 'hand' });
-        ghostCard.classList.add('epic-spawn-glowing');
+        ghostCard.className = 'card anim-card-fly-arc';
+
+        // Начальная позиция (с небольшим наклоном)
         ghostCard.style.left = `${startRelX}px`;
         ghostCard.style.top = `${startRelY}px`;
+        ghostCard.style.transform = 'translate(-50%, -50%) scale(0.6) rotate(-10deg)';
+
         boardContainer.appendChild(ghostCard);
 
+        // Форсируем рендер стартовой точки
         void ghostCard.offsetWidth;
+
+        // 3. Отправляем в полет к слоту на столе
         ghostCard.style.left = `${targetX}px`;
         ghostCard.style.top = `${targetY}px`;
+        ghostCard.style.transform = 'translate(-50%, -50%) scale(0.8) rotate(5deg)';
 
+        // 4. Тайминг столкновения (350мс, чуть раньше конца полета)
         schedule(() => {
+          // Удаляем прямоугольник
           if (ghostCard?.parentNode) ghostCard.remove();
+
+          // Генерируем вспышку морфинга
+          const flash = document.createElement('div');
+          flash.className = 'morph-flash';
+          flash.style.left = `${targetX}px`;
+          flash.style.top = `${targetY}px`;
+          boardContainer.appendChild(flash);
+
+          schedule(() => {
+            if (flash.parentNode) flash.remove();
+          }, 300);
+
+          // Показываем овальный токен с анимацией впечатывания
           cardUI.style.opacity = '1';
           cardUI.classList.add('epic-spawn-token');
 
-          const board = document.querySelector('.game-board');
-          if (board) {
-            board.classList.add('board-shake');
-            schedule(() => board.classList.remove('board-shake'), 300);
-          }
-
-          shockwave = document.createElement('div');
+          // Ударная волна магии
+          const shockwave = document.createElement('div');
           shockwave.className = 'epic-spawn-shockwave';
           shockwave.style.left = `${targetX}px`;
           shockwave.style.top = `${targetY}px`;
           boardContainer.appendChild(shockwave);
 
           schedule(() => {
-            if (shockwave?.parentNode) shockwave.remove();
-          }, 400);
+            if (shockwave.parentNode) shockwave.remove();
+          }, 500);
+
+          // Легкая тряска доски от приземления
+          const board = document.querySelector('.game-board');
+          if (board) {
+            board.classList.add('board-shake-light');
+            schedule(() => board.classList.remove('board-shake-light'), 250);
+          }
+
+          // 5. Очистка классов
           schedule(() => {
             cardUI.classList.remove('epic-spawn-token');
             done();
-          }, 400);
+          }, 400); // 400мс - длина CSS анимации tokenSlam
         }, 350);
       });
     });
@@ -1094,5 +1163,104 @@ export const BattleUI = {
     elements.bmoBody.classList.remove('bmo-vibrate');
     void elements.bmoBody.offsetWidth; // Форсируем Reflow
     elements.bmoBody.classList.add('bmo-vibrate');
+  },
+
+  playFatigueAnimation(data, myPlayerId) {
+    return new Promise((resolve) => {
+      const isMe = String(data.playerId) === String(myPlayerId);
+
+      if (!isMe) {
+        // Логика для оппонента (быстрый удар)
+        const oppAvatarContainer =
+          document.querySelector('.opp-avatar-container') || document.getElementById('opp-avatar');
+        if (oppAvatarContainer) {
+          oppAvatarContainer.classList.add('anim-target-hit');
+          this.showFloatingDamage(oppAvatarContainer, data.damage);
+          setTimeout(() => {
+            oppAvatarContainer.classList.remove('anim-target-hit');
+            resolve();
+          }, 600);
+        } else {
+          resolve();
+        }
+        return;
+      }
+
+      // === ЭПИЧНАЯ АНИМАЦИЯ ИЗ КОЛОДЫ ===
+      const overlay = document.createElement('div');
+      overlay.className = 'fatigue-overlay';
+
+      const card = document.createElement('div');
+      card.className = 'fatigue-card';
+      card.innerHTML = `<div class="fatigue-text">Out of cards!<br>Take ${data.damage} damage</div>`;
+
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      // Вычисляем траекторию полета из колоды
+      const deckEl = document.getElementById('player-deck');
+      let startX = 0;
+      let startY = window.innerHeight; // Фолбэк, если колода не найдена (вылетит снизу)
+
+      if (deckEl) {
+        const deckRect = deckEl.getBoundingClientRect();
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        // Насколько колода смещена относительно центра экрана
+        startX = deckRect.left + deckRect.width / 2 - centerX;
+        startY = deckRect.top + deckRect.height / 2 - centerY;
+      }
+
+      // 1. Прячем карту в координаты колоды, делаем маленькой и перевернутой
+      card.style.transition = 'none';
+      card.style.transform = `translate(${startX}px, ${startY}px) scale(0.2) rotate(180deg)`;
+      card.style.opacity = '0';
+
+      // 2. Запускаем полет в центр экрана
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          overlay.style.opacity = '1';
+
+          // Анимация полета (пружинистая, как при доборе)
+          card.style.transition =
+            'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out';
+          card.style.transform = `translate(0px, 0px) scale(1) rotate(0deg)`;
+          card.style.opacity = '1';
+
+          // 3. Ждем 2 секунды в центре, затем запускаем сгорание
+          setTimeout(() => {
+            card.classList.add('anim-fatigue-burn');
+
+            // 4. Бьем по аватару на середине сгорания
+            setTimeout(() => {
+              const myAvatar =
+                document.querySelector('.player-avatar-container') ||
+                document.getElementById('player-avatar');
+              if (myAvatar) {
+                myAvatar.classList.add('anim-target-hit');
+                this.showFloatingDamage(myAvatar, data.damage);
+
+                const board = document.querySelector('.game-board');
+                if (board) {
+                  board.classList.add('board-shake');
+                  setTimeout(() => board.classList.remove('board-shake'), 300);
+                }
+                setTimeout(() => myAvatar.classList.remove('anim-target-hit'), 500);
+              }
+            }, 500);
+
+            // 5. Очищаем DOM и завершаем экшен
+            setTimeout(() => {
+              overlay.style.opacity = '0';
+              setTimeout(() => {
+                if (overlay.parentNode) overlay.remove();
+                resolve();
+              }, 300);
+            }, 1000); // 1000мс - это время работы CSS-анимации fatigueBurn
+          }, 2000); // Висит в центре 2 секунды
+        }, 50); // Небольшой таймаут, чтобы браузер успел применить начальные стили (важно для Safari/Chrome)
+      });
+    });
   },
 };

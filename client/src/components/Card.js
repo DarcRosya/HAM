@@ -91,7 +91,7 @@ function resolveCardFrame(traits, variant, type) {
     normalized = [traits.toLowerCase()];
   }
   if (normalized.includes('taunt')) return '/assets/images/taunt-frame.png';
-  if (normalized.includes('berserk')) return '/assets/images/berserk-frame.png';
+  if (normalized.includes('charge')) return '/assets/images/charge-frame.png';
   if (normalized.includes('poison')) return '/assets/images/poison-frame.png';
 
   return '/assets/images/default-frame.png';
@@ -108,7 +108,7 @@ function escapeHtml(text) {
 
 function highlightKeywords(description) {
   const safeText = escapeHtml(description || '');
-  const keywords = ['taunt', 'charge', 'poison', 'berserk', 'damage', 'defense', 'attack', 'mana'];
+  const keywords = ['taunt', 'charge', 'poison', 'damage', 'defense', 'attack', 'mana'];
   const regex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'gi');
 
   return safeText.replace(regex, (match) => {

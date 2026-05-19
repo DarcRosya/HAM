@@ -1697,132 +1697,95 @@ body.is-dragging #opp-hand-zone .card {
   }
 }
 
-.epic-spawn-flying {
+.anim-card-fly-arc {
   position: absolute !important;
   z-index: 10001;
   pointer-events: none;
+  /* Плавный полет с ускорением вниз (имитация броска) */
   transition:
-    left 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    top 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
-  transform: translate(-50%, -50%) scale(0.75);
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.45))
-    drop-shadow(0 0 12px rgba(255, 255, 255, 0.15));
+    left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    top 0.4s cubic-bezier(0.5, 0, 0.75, 0),
+    transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   will-change: transform, left, top;
 }
 
-.epic-spawn-glowing {
-  position: absolute !important;
-  z-index: 10000;
-  pointer-events: none;
-  animation: cardWhiteScan 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  will-change: transform, filter;
-}
-
-.epic-spawn-glowing::before {
-  content: '';
+.morph-flash {
   position: absolute;
-  left: -5%;
-  width: 110%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    0 0 10px rgba(255, 255, 255, 0.6),
-    0 0 18px rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
-  z-index: 10;
-  animation: scanLaserWhite 0.85s ease-in-out forwards;
+  width: 150px;
+  height: 180px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  filter: blur(15px);
+  box-shadow: 0 0 50px 30px rgba(255, 230, 150, 0.9);
+  z-index: 10005;
   pointer-events: none;
+  animation: flashExplode 0.3s ease-out forwards;
 }
 
-.epic-spawn-glowing::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(100, 255, 130, 0) 0%,
-    rgba(100, 255, 130, 0.3) 80%,
-    rgba(180, 255, 180, 0.6) 100%
-  );
-  background-size: 100% 200%;
-  mix-blend-mode: overlay;
-  z-index: 9;
-  animation: scanHologram 0.9s ease-in-out forwards;
-  pointer-events: none;
-  border-radius: 12px;
-}
-
-@keyframes cardWhiteScan {
+@keyframes flashExplode {
   0% {
-    transform: translate(-50%, -50%) scale(0.75);
-    filter: brightness(1);
-  }
-  40% {
-    transform: translate(-50%, -52%) scale(0.78);
-    filter: brightness(1.1);
-  }
-  70% {
-    transform: translate(-50%, -50%) scale(0.74);
-    filter: brightness(1.15);
-  }
-  100% {
     transform: translate(-50%, -50%) scale(0.5);
-    filter: brightness(1.1);
     opacity: 1;
   }
-}
-
-@keyframes scanLaserWhite {
-  0% {
-    top: -10%;
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  70% {
-    top: 110%;
+  50% {
+    transform: translate(-50%, -50%) scale(1.5);
     opacity: 1;
   }
   100% {
-    top: 50%;
-    opacity: 0;
-  }
-}
-
-@keyframes scanHologram {
-  0% {
-    background-position: 0% -100%;
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  75% {
-    background-position: 0% 100%;
-    opacity: 1;
-  }
-  100% {
+    transform: translate(-50%, -50%) scale(2);
     opacity: 0;
   }
 }
 
 .epic-spawn-token {
-  animation: tokenWhiteSettle 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: tokenSlam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
-@keyframes tokenWhiteSettle {
+
+@keyframes tokenSlam {
   0% {
-    transform: scale(0.75) translateY(-6px);
+    transform: scale(0.6) translateY(-40px);
+    opacity: 0;
+    filter: brightness(5) drop-shadow(0 0 20px #fff);
   }
-  40% {
-    transform: scale(1.03) translateY(2px);
-  }
-  70% {
-    transform: scale(0.98) translateY(-1px);
+  50% {
+    transform: scale(1.1) translateY(10px);
+    opacity: 1;
+    filter: brightness(2);
   }
   100% {
     transform: scale(1) translateY(0);
+    filter: brightness(1);
+  }
+}
+
+.epic-spawn-shockwave {
+  position: absolute;
+  width: 90px;
+  height: 35px;
+  background: transparent;
+  border: 4px solid rgba(255, 215, 0, 0.9); /* Золотистая магия */
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.2);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow:
+    0 0 20px rgba(255, 200, 50, 0.8),
+    inset 0 0 10px rgba(255, 200, 50, 0.5);
+  animation: magicShockwave 0.5s ease-out forwards;
+}
+
+@keyframes magicShockwave {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 1;
+    border-width: 8px;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+    border-width: 1px;
   }
 }
 
@@ -1847,32 +1810,6 @@ body.is-dragging #opp-hand-zone .card {
   }
   100% {
     transform: translate(0, 0);
-  }
-}
-
-.epic-spawn-shockwave {
-  position: absolute;
-  width: 100px;
-  height: 40px;
-  background: transparent;
-  border: 4px solid rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0.2);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 9999;
-  animation: shockwaveExpand 0.4s ease-out forwards;
-}
-@keyframes shockwaveExpand {
-  0% {
-    transform: translate(-50%, -50%) scale(0.2);
-    opacity: 1;
-    border-width: 6px;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(2.5);
-    opacity: 0;
-    border-width: 1px;
   }
 }
 
@@ -2293,16 +2230,10 @@ body.is-dragging #opp-hand-zone .card {
 }
 
 .spell-effect-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 150px;
-  height: 150px;
   pointer-events: none;
-  z-index: 10010;
+  z-index: 15000;
   border-radius: 50%;
-  mix-blend-mode: screen; /* Крутой эффект наложения света */
+  transform: translate(-50%, -50%);
 }
 
 /* --- ДИНАМИЧЕСКИЕ ПРИЦЕЛЫ ДЛЯ ЗАКЛИНАНИЙ --- */
@@ -2372,105 +2303,200 @@ body.is-dragging #opp-hand-zone .card {
 
 /* 1. Фаербол (damage) */
 .anim-spell-damage {
-  width: 150px;
-  height: 150px;
-  animation: spell-fireball-hit 0.6s ease-out forwards;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, #fff 0%, #ff5500 20%, #8b0000 60%, transparent 80%);
+  animation: epic-fireball 0.7s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+  mix-blend-mode: color-dodge;
 }
-@keyframes spell-fireball-hit {
+@keyframes epic-fireball {
   0% {
-    transform: translate(-50%, -50%) scale(0.2);
-    background: radial-gradient(circle, #fff 0%, #ff5500 40%, transparent 70%);
-    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 0.8;
+    filter: brightness(2);
   }
-  50% {
-    transform: translate(-50%, -50%) scale(1.5);
-    background: radial-gradient(circle, #ffaa00 0%, #ff0000 50%, transparent 70%);
-    box-shadow: 0 0 50px 20px #ff0000;
+  30% {
+    transform: translate(-50%, -50%) scale(1.2);
     opacity: 1;
+    filter: brightness(3);
+    box-shadow: 0 0 80px 40px rgba(255, 50, 0, 0.8);
   }
   100% {
     transform: translate(-50%, -50%) scale(2.2);
-    background: radial-gradient(circle, #ff0000 0%, transparent 60%);
     opacity: 0;
+    filter: brightness(1);
   }
 }
 
-/* 2. Лечение (heal) */
 .anim-spell-heal {
   width: 150px;
   height: 150px;
-  animation: spell-heal-burst 0.8s ease-out forwards;
+  background: radial-gradient(circle, #32ff64 0%, transparent 70%);
+  animation: epic-heal 0.8s ease-out forwards;
+  mix-blend-mode: screen;
 }
-@keyframes spell-heal-burst {
+@keyframes epic-heal {
   0% {
-    transform: translate(-50%, -50%) scale(0.5);
-    opacity: 0;
-  }
-  20% {
-    transform: translate(-50%, -50%) scale(1.1);
-    box-shadow: 0 0 40px 20px rgba(100, 255, 100, 0.8);
-    background: radial-gradient(circle, rgba(150, 255, 150, 0.9) 0%, transparent 60%);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1.5);
-    box-shadow: 0 0 60px 40px rgba(100, 255, 100, 0);
-    background: transparent;
-    opacity: 0;
-  }
-}
-
-/* 3. Бафф (buff) */
-.anim-spell-buff {
-  width: 150px;
-  height: 150px;
-  animation: spell-buff-burst 0.8s ease-out forwards;
-}
-@keyframes spell-buff-burst {
-  0% {
-    transform: translate(-50%, -50%) scale(0.8) rotate(0deg);
-    border: 10px solid #ffd700;
-    opacity: 0;
-  }
-  30% {
-    transform: translate(-50%, -50%) scale(1.2) rotate(45deg);
-    border: 20px solid #ffea00;
-    opacity: 1;
-    background: radial-gradient(circle, rgba(255, 215, 0, 0.5) 0%, transparent 60%);
-    box-shadow: 0 0 30px #ffea00;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1.8) rotate(90deg);
-    border: 2px solid #ff8c00;
-    opacity: 0;
-  }
-}
-
-/* 4. Мана (add_mana) */
-.anim-spell-mana {
-  width: 100px;
-  height: 200px;
-  border-radius: 10px;
-  animation: spell-mana-surge 0.8s ease-out forwards;
-}
-@keyframes spell-mana-surge {
-  0% {
-    transform: translate(-50%, -50%) scaleY(0.1) scaleX(0.5);
-    background: #00ffff;
-    opacity: 1;
-    filter: blur(5px);
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0.8;
+    box-shadow: 0 0 0px #32ff64;
   }
   40% {
-    transform: translate(-50%, -80%) scaleY(1.5) scaleX(1.2);
-    background: linear-gradient(to top, transparent, #0055ff, #00ffff);
-    opacity: 0.9;
-    filter: blur(10px);
-    box-shadow: 0 0 40px #00ffff;
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 1;
+    box-shadow: 0 0 60px 20px rgba(50, 255, 100, 0.6);
   }
   100% {
-    transform: translate(-50%, -150%) scaleY(2.5) scaleX(0.2);
-    background: transparent;
+    transform: translate(-50%, -50%) scale(2);
     opacity: 0;
-    filter: blur(20px);
+    box-shadow: 0 0 100px 40px rgba(50, 255, 100, 0);
   }
+}
+
+/* 3. Бафф (buff) - Золотая эгида */
+.anim-spell-buff {
+  width: 140px;
+  height: 140px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    #ffd700 25%,
+    transparent 50%,
+    #ff8c00 75%,
+    transparent 100%
+  );
+  animation: epic-buff 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  mix-blend-mode: screen;
+}
+@keyframes epic-buff {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 10px #ffea00);
+  }
+  50% {
+    filter: drop-shadow(0 0 30px #ffea00);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.8) rotate(270deg);
+    opacity: 0;
+    filter: drop-shadow(0 0 50px #ff8c00);
+  }
+}
+
+/* 4. Мана (add_mana) - Пульсация арканы */
+.anim-spell-mana {
+  width: 160px;
+  height: 160px;
+  border: 4px solid #00ffff;
+  background: radial-gradient(circle, rgba(0, 255, 255, 0.9) 0%, transparent 50%);
+  animation: epic-mana 0.8s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+  mix-blend-mode: screen;
+}
+@keyframes epic-mana {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2) rotate(0deg);
+    opacity: 1;
+    border-width: 20px;
+    box-shadow:
+      inset 0 0 20px #00ffff,
+      0 0 20px #0055ff;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.3) rotate(180deg);
+    opacity: 1;
+    border-width: 2px;
+    box-shadow:
+      inset 0 0 50px #00ffff,
+      0 0 80px #0055ff;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.5) rotate(360deg);
+    opacity: 0;
+    border-width: 0px;
+  }
+}
+
+.fatigue-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(20, 0, 0, 0.7);
+  z-index: 20000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.fatigue-card {
+  width: 240px;
+  height: 340px;
+  background-image: url('/assets/images/fatigue.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px;
+  box-shadow: 0 0 40px rgba(255, 0, 0, 0.8);
+  position: relative;
+  transform: scale(0.5);
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.fatigue-text {
+  position: absolute;
+  bottom: 48px;
+  left: 10px;
+  right: 10px;
+  text-align: center;
+  color: #e5d5d5;
+  font-family: 'Georgia', serif;
+  font-size: 22px;
+  text-shadow:
+    2px 2px 4px #000,
+    -2px -2px 4px #000,
+    0 0 10px #f00;
+  /* background: rgba(0, 0, 0, 0.6); */
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.anim-fatigue-burn {
+  animation: fatigueBurn 1s forwards;
+}
+
+@keyframes fatigueBurn {
+  0% {
+    filter: brightness(1) contrast(1);
+    opacity: 1;
+    transform: scale(1) translate(0px, 0px);
+  }
+  50% {
+    filter: brightness(2) contrast(1.5) sepia(1) hue-rotate(-50deg);
+    opacity: 0.8;
+    transform: scale(1.1) translate(0px, -20px);
+  }
+  100% {
+    filter: brightness(0) contrast(2);
+    opacity: 0;
+    transform: scale(0.8) translate(0px, -50px);
+  }
+}
+
+.card-board {
+  transition:
+    filter 0.35s ease-out,
+    box-shadow 0.35s ease-out,
+    transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.card-board.exhausted {
+  filter: grayscale(0.85) brightness(0.65);
+}
+
+.card-board.can-attack {
+  filter: drop-shadow(0 0 10px rgba(100, 255, 100, 0.5));
 }
