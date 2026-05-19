@@ -44,6 +44,14 @@ export function mount() {
     }
 
     initHistory(elements.historyList);
+
+    if (socket) {
+      if (socket.connected) {
+        socket.emit('join-lobby');
+      } else {
+        socket.once('connect', () => socket.emit('join-lobby'));
+      }
+    }
   });
 
   socket = socketService.connect();

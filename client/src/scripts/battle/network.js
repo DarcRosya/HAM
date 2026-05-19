@@ -5,10 +5,6 @@ let socket = null;
 let callbacks = {};
 let watchdogTimer = null;
 
-// ==========================================
-// ЛОКАЛЬНЫЕ ОБРАБОТЧИКИ СОКЕТОВ
-// ==========================================
-
 function handleMatchFound(state) {
   clearWatchdog();
   if (callbacks.onMatchFound) callbacks.onMatchFound(state);
@@ -63,9 +59,6 @@ function startWatchdog() {
     if (callbacks.onFatalError) callbacks.onFatalError('Server timeout');
   }, 4000);
 }
-// ==========================================
-// ЭКСПОРТИРУЕМЫЙ API ДЛЯ ОРКЕСТРАТОРА
-// ==========================================
 
 export const BattleNetwork = {
   init(injectedCallbacks) {
@@ -98,7 +91,6 @@ export const BattleNetwork = {
     socket.on('spell_cast', handleSpellCast);
     socket.on('fatigue_damage', handleFatigueDamage);
 
-    // Логика переподключения
     const pendingStateStr = store.getPendingMatchState();
     if (pendingStateStr) {
       startWatchdog();
@@ -127,8 +119,6 @@ export const BattleNetwork = {
     socketService.disconnect();
     socket = null;
   },
-
-  // --- Команды отправки на сервер ---
 
   getSocketId() {
     return socket?.id;

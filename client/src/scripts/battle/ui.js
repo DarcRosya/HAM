@@ -4,14 +4,11 @@ import { store } from '../../core/store.js';
 
 let messageTimer = null;
 
-// --- Константы ---
 const TRAITS_DESC = {
   taunt: { title: 'Taunt', desc: 'Enemies must attack this unit first.' },
   charge: { title: 'Charge', desc: 'Can attack the same turn it is played.' },
   poison: { title: 'Poison', desc: 'Instantly destroys any card it damages.' },
 };
-
-// --- Вспомогательные функции ---
 
 function safeSetText(element, text) {
   if (element) element.textContent = text;
@@ -104,10 +101,6 @@ function syncHandVisibilityByPhase(phase) {
   });
 }
 
-// ==========================================
-// ЭКСПОРТИРУЕМЫЙ API ДЛЯ ОРКЕСТРАТОРА
-// ==========================================
-
 export const BattleUI = {
   reveal(elements) {
     if (elements.loader && !elements.loader.classList.contains('hidden')) {
@@ -138,7 +131,6 @@ export const BattleUI = {
       return;
     }
 
-    // 2. ОТРИСОВКА ЭКРАНА (СТРОГО ОДИН РАЗ)
     if (state.phase === 'vs_screen') {
       if (!vsOverlay.classList.contains('vs-active')) {
         const playerIds = Object.keys(state.players);
@@ -166,13 +158,11 @@ export const BattleUI = {
           document.getElementById('vs-opp-sword').src =
             `/assets/images/sword-${opp.swordId || 1}.png`;
 
-          // Рендер рамки для противника
           const oppFrame = document.getElementById('vs-opp-frame');
           const oppFrameSrc = opp.avatar_frame || opp.avatarFrame || '';
           applyAvatarFrame(oppFrame, oppFrameSrc);
         }
 
-        // Возвращаем динамические элементы для эпичной анимации (искры, надпись)
         let finaleTitle = document.getElementById('vs-finale-title');
         if (!finaleTitle) {
           finaleTitle = document.createElement('div');
@@ -262,7 +252,6 @@ export const BattleUI = {
           word.style.animationDelay = `${delayToStart}s`;
         });
 
-        // ДИНАМИЧЕСКАЯ СИНХРОНИЗАЦИЯ ИСКР
         const particles = vsOverlay.querySelectorAll('.vs-particle');
         particles.forEach((p) => {
           const clashTimeSec = parseFloat(p.getAttribute('data-clash-time') || '0');
@@ -392,7 +381,6 @@ export const BattleUI = {
     const isPlaying = state.phase === 'playing';
     syncHandVisibilityByPhase(state.phase);
 
-    // 1. Базовое инфо
     safeSetText(document.getElementById('info-turn'), isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN");
     safeSetText(
       document.getElementById('opp-username-zone'),
@@ -427,7 +415,6 @@ export const BattleUI = {
     applyAvatarFrame(oppFrame, oppFrameSrc);
     applyAvatarFrame(playerFrame, playerFrameSrc);
 
-    // 2. Колоды и Усталость
     safeSetText(document.getElementById('opp-deck'), opponent.deckCount);
     const playerDeck = document.getElementById('player-deck');
     if (playerDeck) {
@@ -446,11 +433,9 @@ export const BattleUI = {
       }
     }
 
-    // 3. Мана
     this.renderMana('opp-mana-zone', opponent.mana, opponent.maxMana);
     this.renderMana('player-mana-zone', me.mana, me.maxMana, dragState.hoveredCardCost || 0);
 
-    // --- DIFFING И АНИМАЦИИ СМЕРТИ ---
     const myTable = document.getElementById('player-table-zone');
     const oppTable = document.getElementById('opp-table-zone');
     const boardContainer = document.querySelector('.battle-center-column');
@@ -594,7 +579,6 @@ export const BattleUI = {
       });
     }
 
-    // 5. Рука противника
     const oppHand = document.getElementById('opp-hand-zone');
     if (oppHand) {
       const existingOpp = Array.from(oppHand.children);
@@ -613,7 +597,6 @@ export const BattleUI = {
       });
     }
 
-    // 6. Наша рука
     const handDisplay = document.getElementById('player-hand-zone');
     if (handDisplay) {
       const existingNodes = Array.from(handDisplay.children);
@@ -655,10 +638,6 @@ export const BattleUI = {
       });
     }
 
-    // 7. ЗАПУСК АНИМАЦИИ (ЦЕНТРАЛИЗОВАННО ЧЕРЕЗ DATA-MARKERS)
-
-    // Защита от реконнекта: если мы влетели в середину игры (прошло уже > 3 сек хода),
-    // мы тихо помечаем все карты как "отрисованные" и отменяем стартовый залп анимаций.
     const isReconnectingNow =
       isPlaying && !battleState.ui.initialDrawDone && state.turnEndsInMs < 27000;
 
@@ -716,7 +695,7 @@ export const BattleUI = {
       const deckRect = deck.getBoundingClientRect();
 
       cards.forEach((cardUI, index) => {
-        cardUI.dataset.drawn = 'true'; // МАРКЕР: Эта карта отстреляла, больше не трогаем
+        cardUI.dataset.drawn = 'true';
 
         const cardRect = cardUI.getBoundingClientRect();
         const deltaX = deckRect.left - cardRect.left;
@@ -733,7 +712,6 @@ export const BattleUI = {
             const fanY = cardUI.style.getPropertyValue('--fan-y') || '0px';
             const fanRot = cardUI.style.getPropertyValue('--fan-rot') || '0deg';
 
-            // Пружина для тебя, плавная кривая для противника
             const easing = isOpponent ? 'ease-out' : 'cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
             cardUI.style.transition = `transform 0.6s ${easing}, opacity 0.3s ease-out`;
@@ -782,14 +760,12 @@ export const BattleUI = {
         });
       }
 
-      // 1. Скрываем финальный овальный токен на столе
       cardUI.style.opacity = '0';
 
       requestAnimationFrame(() => {
         let startX = window.innerWidth / 2;
         let startY = window.innerHeight;
 
-        // Откуда летит карта (из руки или по умолчанию снизу)
         if (dropCoords) {
           startX = dropCoords.x;
           startY = dropCoords.y;
@@ -804,7 +780,7 @@ export const BattleUI = {
             startX = oppRect.left + oppRect.width / 2;
             startY = oppRect.top + oppRect.height / 2;
           } else {
-            startY = -100; // Фоллбэк: летит просто из-за верхнего края экрана
+            startY = -100;
           }
         }
 
@@ -818,37 +794,29 @@ export const BattleUI = {
         const boardRect = boardContainer.getBoundingClientRect();
         const targetRect = cardUI.getBoundingClientRect();
 
-        // Вычисляем координаты относительно доски
         const targetX = targetRect.left - boardRect.left + targetRect.width / 2;
         const targetY = targetRect.top - boardRect.top + targetRect.height / 2;
         const startRelX = startX - boardRect.left;
         const startRelY = startY - boardRect.top;
 
-        // 2. Создаем летящую прямоугольную карту (ghost)
         ghostCard = renderCard({ ...cardData, variant: 'hand' });
         ghostCard.className = 'card anim-card-fly-arc';
 
-        // Начальная позиция (с небольшим наклоном)
         ghostCard.style.left = `${startRelX}px`;
         ghostCard.style.top = `${startRelY}px`;
         ghostCard.style.transform = 'translate(-50%, -50%) scale(0.6) rotate(-10deg)';
 
         boardContainer.appendChild(ghostCard);
 
-        // Форсируем рендер стартовой точки
         void ghostCard.offsetWidth;
 
-        // 3. Отправляем в полет к слоту на столе
         ghostCard.style.left = `${targetX}px`;
         ghostCard.style.top = `${targetY}px`;
         ghostCard.style.transform = 'translate(-50%, -50%) scale(0.8) rotate(5deg)';
 
-        // 4. Тайминг столкновения (350мс, чуть раньше конца полета)
         schedule(() => {
-          // Удаляем прямоугольник
           if (ghostCard?.parentNode) ghostCard.remove();
 
-          // Генерируем вспышку морфинга
           const flash = document.createElement('div');
           flash.className = 'morph-flash';
           flash.style.left = `${targetX}px`;
@@ -859,11 +827,9 @@ export const BattleUI = {
             if (flash.parentNode) flash.remove();
           }, 300);
 
-          // Показываем овальный токен с анимацией впечатывания
           cardUI.style.opacity = '1';
           cardUI.classList.add('epic-spawn-token');
 
-          // Ударная волна магии
           const shockwave = document.createElement('div');
           shockwave.className = 'epic-spawn-shockwave';
           shockwave.style.left = `${targetX}px`;
@@ -874,18 +840,16 @@ export const BattleUI = {
             if (shockwave.parentNode) shockwave.remove();
           }, 500);
 
-          // Легкая тряска доски от приземления
           const board = document.querySelector('.game-board');
           if (board) {
             board.classList.add('board-shake-light');
             schedule(() => board.classList.remove('board-shake-light'), 250);
           }
 
-          // 5. Очистка классов
           schedule(() => {
             cardUI.classList.remove('epic-spawn-token');
             done();
-          }, 400); // 400мс - длина CSS анимации tokenSlam
+          }, 400);
         }, 350);
       });
     });
@@ -923,7 +887,6 @@ export const BattleUI = {
       attackerEl.style.transform = `translate(${deltaX * 0.85}px, ${deltaY * 0.85}px) scale(1.15) rotate(${tilt}deg)`;
 
       setTimeout(() => {
-        // ДОБАВЛЕНО: Теперь удар (и отправка на сервер) регистрируется точно в момент столкновения
         if (onImpact) onImpact();
 
         const checkAndBreakPoison = (cardEl) => {
@@ -996,7 +959,6 @@ export const BattleUI = {
     }, 1000);
   },
 
-  // Чисто визуальный рендер тултипа. Вызывать его будет input.js
   renderTooltip(cardData, isBoard, rect) {
     let activeElement = document.createElement('div');
     activeElement.className = 'card-tooltip-container';
@@ -1078,18 +1040,15 @@ export const BattleUI = {
       elements.bmoTextTop.textContent = '30';
       elements.bmoTextBottom.className = 'bmo-large-font';
 
-      // Вычисляем, сколько миллисекунд осталось чисто на интро (от 2000 до 0)
       const introTimeLeft = remainingMs - 30000;
 
       if (isMyTurn) {
-        // Жесткие тайминги для 2 слов (по 1000мс на фазу)
         if (introTimeLeft > 1000) {
           elements.bmoTextBottom.textContent = 'YOUR';
         } else {
           elements.bmoTextBottom.textContent = 'TURN';
         }
       } else {
-        // Жесткие тайминги для 3 слов (по ~666мс на фазу)
         if (introTimeLeft > 1333) {
           elements.bmoTextBottom.textContent = 'OPPO';
         } else if (introTimeLeft > 666) {
@@ -1099,7 +1058,6 @@ export const BattleUI = {
         }
       }
     } else {
-      // Игровая фаза
       elements.bmoTextTop.textContent = isMyTurn ? 'YOUR TURN' : 'OPPONENT';
       elements.bmoTextBottom.className = 'bmo-timer-font';
       elements.bmoTextBottom.textContent = displaySeconds;
@@ -1137,21 +1095,18 @@ export const BattleUI = {
         effectClass = 'anim-spell-damage';
     }
 
-    // Считываем точные координаты цели на экране
     const rect = targetEl.getBoundingClientRect();
     const effectEl = document.createElement('div');
     effectEl.className = `spell-effect-overlay ${effectClass}`;
 
-    // Абсолютное позиционирование поверх экрана
     effectEl.style.position = 'fixed';
     effectEl.style.left = `${rect.left + rect.width / 2}px`;
     effectEl.style.top = `${rect.top + rect.height / 2}px`;
-    effectEl.style.zIndex = '15000'; // Точно поверх всего UI
+    effectEl.style.zIndex = '15000';
 
     document.body.appendChild(effectEl);
     targetEl.classList.add('anim-target-hit');
 
-    // Ожидаем завершения анимации
     setTimeout(() => {
       if (effectEl.parentNode) effectEl.remove();
       targetEl.classList.remove('anim-target-hit');
@@ -1159,11 +1114,10 @@ export const BattleUI = {
     }, 800);
   },
 
-  // Анимация вибрации BMO при клике
   triggerBmoVibration(elements) {
     if (!elements.bmoBody) return;
     elements.bmoBody.classList.remove('bmo-vibrate');
-    void elements.bmoBody.offsetWidth; // Форсируем Reflow
+    void elements.bmoBody.offsetWidth;
     elements.bmoBody.classList.add('bmo-vibrate');
   },
 
@@ -1172,7 +1126,6 @@ export const BattleUI = {
       const isMe = String(data.playerId) === String(myPlayerId);
 
       if (!isMe) {
-        // Логика для оппонента (быстрый удар)
         const oppAvatarContainer =
           document.querySelector('.opp-avatar-container') || document.getElementById('opp-avatar');
         if (oppAvatarContainer) {
@@ -1188,7 +1141,6 @@ export const BattleUI = {
         return;
       }
 
-      // === ЭПИЧНАЯ АНИМАЦИЯ ИЗ КОЛОДЫ ===
       const overlay = document.createElement('div');
       overlay.className = 'fatigue-overlay';
 
@@ -1199,42 +1151,35 @@ export const BattleUI = {
       overlay.appendChild(card);
       document.body.appendChild(overlay);
 
-      // Вычисляем траекторию полета из колоды
       const deckEl = document.getElementById('player-deck');
       let startX = 0;
-      let startY = window.innerHeight; // Фолбэк, если колода не найдена (вылетит снизу)
+      let startY = window.innerHeight;
 
       if (deckEl) {
         const deckRect = deckEl.getBoundingClientRect();
         const centerX = window.innerWidth / 2;
         const centerY = window.innerHeight / 2;
 
-        // Насколько колода смещена относительно центра экрана
         startX = deckRect.left + deckRect.width / 2 - centerX;
         startY = deckRect.top + deckRect.height / 2 - centerY;
       }
 
-      // 1. Прячем карту в координаты колоды, делаем маленькой и перевернутой
       card.style.transition = 'none';
       card.style.transform = `translate(${startX}px, ${startY}px) scale(0.2) rotate(180deg)`;
       card.style.opacity = '0';
 
-      // 2. Запускаем полет в центр экрана
       requestAnimationFrame(() => {
         setTimeout(() => {
           overlay.style.opacity = '1';
 
-          // Анимация полета (пружинистая, как при доборе)
           card.style.transition =
             'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out';
           card.style.transform = `translate(0px, 0px) scale(1) rotate(0deg)`;
           card.style.opacity = '1';
 
-          // 3. Ждем 2 секунды в центре, затем запускаем сгорание
           setTimeout(() => {
             card.classList.add('anim-fatigue-burn');
 
-            // 4. Бьем по аватару на середине сгорания
             setTimeout(() => {
               const myAvatar =
                 document.querySelector('.player-avatar-container') ||
@@ -1252,16 +1197,15 @@ export const BattleUI = {
               }
             }, 500);
 
-            // 5. Очищаем DOM и завершаем экшен
             setTimeout(() => {
               overlay.style.opacity = '0';
               setTimeout(() => {
                 if (overlay.parentNode) overlay.remove();
                 resolve();
               }, 300);
-            }, 1000); // 1000мс - это время работы CSS-анимации fatigueBurn
-          }, 2000); // Висит в центре 2 секунды
-        }, 50); // Небольшой таймаут, чтобы браузер успел применить начальные стили (важно для Safari/Chrome)
+            }, 1000);
+          }, 2000);
+        }, 50);
       });
     });
   },

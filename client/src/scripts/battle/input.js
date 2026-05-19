@@ -6,10 +6,6 @@ let networkActions = {};
 let attackReticle = null;
 const TAUNT_FLASH_DURATION_MS = 400;
 
-// ==========================================
-// ЛОКАЛЬНЫЕ ОБРАБОТЧИКИ (Event Delegation)
-// ==========================================
-
 function handleEndTurn() {
   if (battleState.ui.isAnimating) return;
   if (!battleState.match) return;
@@ -35,7 +31,6 @@ function handleMouseOver(e) {
   const cardData = findCardInState(instanceId);
   if (!cardData) return;
 
-  // Если это наша карта в руке и сейчас наш ход — показываем предпросмотр маны
   if (!isBoard && isMyTurn() && getMyPlayer()?.mana >= cardData.cost) {
     battleState.ui.hoveredCardCost = cardData.cost;
     BattleUI.renderMana(
@@ -58,7 +53,6 @@ function handleMouseOut(e) {
   const cardEl = e.target.closest('.card, .card-slot, .enemy-card');
   if (!cardEl) return;
 
-  // Сбрасываем предпросмотр маны
   if (battleState.ui.hoveredCardCost > 0) {
     battleState.ui.hoveredCardCost = 0;
     const me = getMyPlayer();
@@ -102,7 +96,6 @@ function handleMouseDown(e) {
 
   if (!me || !cardData) return;
 
-  // 1. Атака со стола
   if (cardEl.classList.contains('can-attack')) {
     e.preventDefault();
     battleState.drag.attackCardId = instanceId;
@@ -110,7 +103,6 @@ function handleMouseDown(e) {
 
     cardEl.classList.add('is-attacking-active');
 
-    // СЧИТЫВАЕМ КООРДИНАТЫ ДО ПЕРЕРИСОВКИ DOM!
     const board = document.querySelector('.game-board');
     const boardRect = board.getBoundingClientRect();
     const cardRect = cardEl.getBoundingClientRect();
@@ -555,10 +547,6 @@ function handleMouseUp(e) {
   }
 }
 
-// ==========================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ==========================================
-
 function hideTooltip() {
   if (battleState.timers.tooltip) {
     clearTimeout(battleState.timers.tooltip);
@@ -884,10 +872,6 @@ function findCardInState(instanceId) {
   }
   return null;
 }
-
-// ==========================================
-// ЭКСПОРТИРУЕМЫЙ API ДЛЯ ОРКЕСТРАТОРА
-// ==========================================
 
 export const BattleInput = {
   init(actions) {
