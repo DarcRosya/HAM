@@ -8,7 +8,7 @@ export function renderCard(props = {}) {
     description = '',
     art = '/assets/cards-art/bubblegum.png',
     faceDown = false,
-    variant = 'hand', // 'hand' или 'board'
+    variant = 'hand',
     traits = [],
   } = props;
 
@@ -34,9 +34,8 @@ export function renderCard(props = {}) {
     return cardDiv;
   }
 
-  // === НОВАЯ ЛОГИКА ДЛЯ СТОЛА (ОВAЛЬНЫЙ ТОКЕН) ===
   if (variant === 'board') {
-    cardDiv.classList.add('card-board'); // Оставляем класс для JS-селекторов
+    cardDiv.classList.add('card-board');
     if (props.isNew) {
       cardDiv.classList.add('anim-card-drop', 'anim-card-spawn');
     }
@@ -56,7 +55,6 @@ export function renderCard(props = {}) {
     return cardDiv;
   }
 
-  // === ЛОГИКА ДЛЯ РУКИ (ПОЛНОЦЕННАЯ КАРТА) ===
   const statBadges = isSpell
     ? ''
     : `

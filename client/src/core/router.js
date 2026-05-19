@@ -91,7 +91,6 @@ async function router() {
     return;
   }
 
-  // Guards
   if (route.guards) {
     for (const guard of route.guards) {
       const result = guard();

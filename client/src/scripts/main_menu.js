@@ -2,12 +2,10 @@ import { initLogin } from './login.js';
 import { initRegister } from './register.js';
 import { API_BASE_URL } from '../services/api.js';
 
-// --- Глобальное состояние компонента ---
 let isMounted = false;
 let activeTimeouts = new Set();
 let globalListeners = {};
 
-// --- Утилиты для безопасных таймеров ---
 const safeSetTimeout = (cb, delay) => {
   const id = window.setTimeout(() => {
     activeTimeouts.delete(id);
@@ -22,7 +20,6 @@ const clearAllTimeouts = () => {
   activeTimeouts.clear();
 };
 
-// --- Модуль BMO ---
 const BMO = {
   defaultHtml: null,
 
@@ -77,10 +74,8 @@ const BMO = {
   },
 };
 
-// Экспортируем для старых скриптов, если они вызывают window.showBmoError
 window.showBmoError = (msg) => BMO.showError(msg);
 
-// --- Модуль Модалок и Форм ---
 const AuthUI = {
   views: {},
 
@@ -103,7 +98,6 @@ const AuthUI = {
   applyView(viewName) {
     if (!this.modal) return;
 
-    // Прячем всё
     Object.values(this.views).forEach((v) => v?.classList.add('is-hidden'));
     this.backBtn?.classList.add('is-hidden');
     this.board?.classList.remove('signup-board', 'is-hidden');
@@ -128,7 +122,6 @@ const AuthUI = {
     if (this.header) this.header.textContent = headerMap[viewName] || '';
     if (this.views[viewName]) this.views[viewName].classList.remove('is-hidden');
 
-    // Специфичные настройки для вьюх
     if (viewName === 'register') {
       this.board?.classList.add('signup-board');
       this.bmoContainer?.classList.add('is-right');
@@ -155,7 +148,6 @@ const AuthUI = {
   },
 };
 
-// --- Обработка роутинга внутри меню ---
 const handleHashChange = () => {
   const hash = window.location.hash.split('?')[0];
   const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
@@ -199,10 +191,7 @@ const handleHashChange = () => {
   }
 };
 
-// --- Главный жизненный цикл (Exports) ---
-
 export function mount() {
-  // Если DOM уже инициализирован, просто обновляем вьюху по хэшу
   if (isMounted) {
     handleHashChange();
     return;
@@ -210,18 +199,15 @@ export function mount() {
 
   isMounted = true;
 
-  // 1. Инициализируем подмодули
   BMO.init();
   AuthUI.init();
 
-  // 2. Инициализируем формы логина и регистрации (вызовется ровно 1 раз)
   initLogin();
   initRegister();
   initForgotPassword();
   initResetPassword();
   initPasswordToggles();
 
-  // 3. Вешаем слушатели на статические кнопки
   const startBtn = document.getElementById('start-game-btn');
   if (startBtn) {
     startBtn.addEventListener('click', () => {
@@ -309,7 +295,6 @@ export function mount() {
     });
   }
 
-  // 4. Глобальный слушатель для успешного ресета пароля
   globalListeners.storage = (e) => {
     if (e.key === 'passwordResetSuccess') {
       const data = JSON.parse(e.newValue || '{}');
@@ -320,8 +305,6 @@ export function mount() {
     }
   };
   window.addEventListener('storage', globalListeners.storage);
-
-  // 5. Запускаем рендер текущего состояния
   handleHashChange();
 }
 
@@ -329,17 +312,14 @@ export function unmount() {
   if (!isMounted) return;
   isMounted = false;
 
-  // Жестко убиваем все таймеры (ошибки BMO, анимации)
   clearAllTimeouts();
 
-  // Снимаем глобальные слушатели, чтобы не было утечек
   if (globalListeners.storage) {
     window.removeEventListener('storage', globalListeners.storage);
     globalListeners.storage = null;
   }
 }
 
-// --- Локальные обработчики форм восстановления (ранее были размазаны в конце файла) ---
 function initForgotPassword() {
   const form = document.getElementById('forgot-password-form');
   if (!form) return;
