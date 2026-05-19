@@ -65,11 +65,12 @@ export function renderCard(props = {}) {
   `;
 
   const descriptionHtml = highlightKeywords(description);
+  const titleClass = name.length > 13 ? 'card-title long-title' : 'card-title';
 
   cardDiv.innerHTML = `
     <div class="card-art" style="background-image: url('${art}');"></div>
     <img src="${frameSrc}" class="card-frame">
-    <div class="card-title">${name}</div>
+    <div class="${titleClass}">${name}</div>
     <div class="card-cost">${cost}</div>
     <div class="card-type">${type}</div>
     <div class="card-description">${descriptionHtml}</div>

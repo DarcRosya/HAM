@@ -194,6 +194,19 @@ async function applyGameOver(payload, cancelToken) {
   BattleUI.hideStatus(battleState.elements);
   store.clearMatchState();
 
+  if (battleState.timers.turn) {
+    clearInterval(battleState.timers.turn);
+    battleState.timers.turn = null;
+  }
+
+  if (battleState.elements.bmoTextTop) {
+    battleState.elements.bmoTextTop.textContent = 'GAME';
+  }
+  if (battleState.elements.bmoTextBottom) {
+    battleState.elements.bmoTextBottom.textContent = 'OVER';
+    battleState.elements.bmoTextBottom.classList.remove('danger-tick');
+  }
+
   const myId = getMyPlayerId();
   const isWinner = String(payload.winnerId) === String(myId);
 
