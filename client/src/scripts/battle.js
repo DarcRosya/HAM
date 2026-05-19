@@ -150,7 +150,7 @@ async function applyGameState(state, cancelToken) {
   if (opponent && opponent.isConnected === false) {
     BattleUI.setFrozen(
       true,
-      "Opponent left. Waiting for reconnect...<br>You will win automatically if they don't return.",
+      "Opponent left. Waiting for reconnect...<br>You will win automatically if the player don't return.",
       battleState.elements
     );
   } else {
