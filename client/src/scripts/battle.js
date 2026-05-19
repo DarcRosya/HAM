@@ -343,8 +343,8 @@ const networkCallbacks = {
   },
 
   onGameOver: (payload) => {
-    actionQueue.clear();
     actionQueue.add((ctx) => applyGameOver(payload, ctx));
+
     if (battleState.timers.turn) {
       clearInterval(battleState.timers.turn);
       battleState.timers.turn = null;
@@ -386,6 +386,23 @@ const networkCallbacks = {
     BattleUI.showMessage(msg, battleState.elements);
     store.clearMatchState();
     window.location.replace('#lobby');
+  },
+
+  onFatigueDamage: (data) => {
+    console.log('🏁 [ORCHESTRATOR] Ивент пойман, ставим в очередь!', data);
+
+    // Используем actionQueue.add, как во всем остальном файле
+    actionQueue.add(async (ctx) => {
+      console.log('🎬 [ACTION QUEUE] Запуск анимации усталости!');
+
+      const userStr = localStorage.getItem('user');
+      const myId = userStr ? JSON.parse(userStr).id : null;
+
+      // Вызываем UI и ждем завершения анимации
+      await BattleUI.playFatigueAnimation(data, myId);
+
+      console.log('✅ [ACTION QUEUE] Анимация усталости завершена!');
+    });
   },
 };
 

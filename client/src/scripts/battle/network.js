@@ -45,6 +45,10 @@ function handleOpponentAttack(payload) {
 function handleSpellCast(payload) {
   if (callbacks.onSpellCast) callbacks.onSpellCast(payload);
 }
+function handleFatigueDamage(payload) {
+  console.log('📡 [NETWORK] Пойман ивент fatigue_damage от сервера:', payload);
+  if (callbacks.onFatigueDamage) callbacks.onFatigueDamage(payload);
+}
 
 function clearWatchdog() {
   if (watchdogTimer) {
@@ -70,16 +74,17 @@ export const BattleNetwork = {
 
     if (!socket) return;
 
-    socket.off('error', handleError);
-    socket.off('match_found', handleMatchFound);
-    socket.off('force-reconnect', handleForceReconnect);
-    socket.off('game_state', handleGameState);
-    socket.off('game_over', handleGameOver);
-    socket.off('opponent-disconnected', handleOpponentDisconnected);
-    socket.off('opponent-reconnected', handleOpponentReconnected);
-    socket.off('match_not_found', handleMatchNotFound);
-    socket.off('opponent_attack', handleOpponentAttack);
-    socket.off('spell_cast', handleSpellCast);
+    // socket.off('error', handleError);
+    // socket.off('match_found', handleMatchFound);
+    // socket.off('force-reconnect', handleForceReconnect);
+    // socket.off('game_state', handleGameState);
+    // socket.off('game_over', handleGameOver);
+    // socket.off('opponent-disconnected', handleOpponentDisconnected);
+    // socket.off('opponent-reconnected', handleOpponentReconnected);
+    // socket.off('match_not_found', handleMatchNotFound);
+    // socket.off('opponent_attack', handleOpponentAttack);
+    // socket.off('spell_cast', handleSpellCast);
+    // socket.off('fatigue_damage', handleFatigueDamage);
 
     socket.on('error', handleError);
     socket.on('match_found', handleMatchFound);
@@ -91,6 +96,7 @@ export const BattleNetwork = {
     socket.on('match_not_found', handleMatchNotFound);
     socket.on('opponent_attack', handleOpponentAttack);
     socket.on('spell_cast', handleSpellCast);
+    socket.on('fatigue_damage', handleFatigueDamage);
 
     // Логика переподключения
     const pendingStateStr = store.getPendingMatchState();
@@ -115,6 +121,7 @@ export const BattleNetwork = {
     socket.off('match_not_found', handleMatchNotFound);
     socket.off('opponent_attack', handleOpponentAttack);
     socket.off('spell_cast', handleSpellCast);
+    socket.off('fatigue_damage', handleFatigueDamage);
 
     callbacks = {};
     socketService.disconnect();
