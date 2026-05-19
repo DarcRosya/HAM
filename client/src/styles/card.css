@@ -161,34 +161,35 @@
 
 .token-stat {
   position: absolute;
-  z-index: 4;
+  z-index: 4; 
   display: flex;
   justify-content: center;
   align-items: center;
   font-family: 'Londrina Solid', sans-serif;
-  font-size: 26px;
+  font-weight: 400;
+  font-size: 18px;
   width: 34px;
   height: 34px;
-  bottom: -6px;
+  bottom: -12px;
+
+  
   background: transparent;
   border: none;
   box-shadow: none;
-  text-shadow:
-    -2px -2px 0 #000,
-    2px -2px 0 #000,
-    -2px 2px 0 #000,
-    2px 2px 0 #000,
-    0 4px 6px rgba(0, 0, 0, 0.9);
+
+ -webkit-text-stroke: 1px #000000;
 }
 
 .token-attack {
   color: #ffd700;
-  left: -12px;
+
+  left: -4px;
 }
 
 .token-defense {
   color: #ff4d4d;
-  right: -12px;
+  right: -1px;
+
 }
 
 .card-slot.exhausted .token-art,

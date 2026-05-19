@@ -1568,7 +1568,7 @@ body.is-dragging #opp-hand-zone .card {
   transform: translateZ(20px);
   --coin-border: var(--coin-finn-border);
   --coin-face-bg:
-    url('/assets/images/finn_coin.jpg'),
+    url('/assets/images/jakecoin.png'),
     radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), transparent 42%),
     radial-gradient(circle at 70% 75%, rgba(159, 217, 255, 0.8), transparent 45%),
     linear-gradient(145deg, var(--coin-finn-white), var(--coin-finn-blue));
@@ -1577,7 +1577,7 @@ body.is-dragging #opp-hand-zone .card {
   transform: rotateY(180deg) translateZ(20px);
   --coin-border: var(--coin-jake-border);
   --coin-face-bg:
-    url('/assets/images/jake_coin.jpg'),
+    url('/assets/images/finncoin.png'),
     radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), transparent 45%),
     radial-gradient(circle at 70% 70%, rgba(229, 149, 47, 0.7), transparent 48%),
     linear-gradient(145deg, var(--coin-jake-yellow), var(--coin-jake-orange));
@@ -1608,6 +1608,7 @@ body.is-dragging #opp-hand-zone .card {
 .coin--opp {
   animation: coin-flip-opp var(--coin-animation-duration) ease-out forwards;
 }
+
 
 @keyframes coin-flip-you {
   0% {
