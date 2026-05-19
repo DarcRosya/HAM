@@ -58,6 +58,8 @@ body {
   font-size: 20px;
   color: rgb(36, 51, 82, 0.7);
   font-weight: 300;
+  position: relative;
+  top: -20px;
 }
 
 .edit-btn {
@@ -673,20 +675,21 @@ body {
 
 .main-container .return-btn {
   position: absolute;
-  top: 25px;
-  left: 15px;
-  width: 110px;
-  height: 55px;
-  background: url('../../assets/images/edit-bg.png') no-repeat center;
+  top: 20px;
+  left: -5px;
+  width: 90px;
+  height: 60px;
+  background: url('../../assets/images/return-btn.png') no-repeat center;
   background-size: 100% 100%;
   cursor: pointer;
   display: flex;
   justify-content: center;
   align-items: center;
-  color: rgba(255, 255, 255, 0.8);
-  font-family: 'Londrina Solid', sans-serif;
-  font-size: 18px;
-  transition: transform 0.2s ease;
+  filter: drop-shadow(0 6px 10px rgba(255, 255, 255, 0.6));
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+  animation: smoothAppear 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
 }
 
 .return-btn:hover {

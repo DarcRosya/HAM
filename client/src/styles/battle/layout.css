@@ -158,7 +158,7 @@ body {
 
 #opp-avatar-zone {
   position: absolute;
-  top: 134px;
+  top: 114px;
   left: 49%;
   transform: translateX(-50%);
   width: 68px;
@@ -394,4 +394,12 @@ body {
     -1px 0 0 black,
     0 1px 0 black,
     0 -1px 0 black;
+  display: inline-block;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.round-value.round-change-anim {
+  transform: scale(1.2);
+  color: #fff;
+  text-shadow: 0 0 15px #f8e274;
 }
