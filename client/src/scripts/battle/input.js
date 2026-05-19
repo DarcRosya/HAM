@@ -114,8 +114,8 @@ function handleMouseDown(e) {
     const board = document.querySelector('.game-board');
     const boardRect = board.getBoundingClientRect();
     const cardRect = cardEl.getBoundingClientRect();
-    const startX = cardRect.left - boardRect.left + cardRect.width / 2;
-    const startY = cardRect.top - boardRect.top + cardRect.height / 2;
+    const startX = cardRect.left + cardRect.width / 2;
+    const startY = cardRect.top + cardRect.height / 2;
 
     const oppTableZone = document.getElementById('opp-table-zone');
     let hasTaunt = false;
@@ -142,11 +142,11 @@ function handleMouseDown(e) {
 
     const svg = document.getElementById('attack-arrow-svg');
     const line = document.getElementById('attack-line');
-    if (svg && line && board) {
+    if (svg && line) {
       svg.style.display = 'block';
       line.setAttribute(
         'd',
-        `M ${startX} ${startY} Q ${(startX + e.clientX - boardRect.left) / 2} ${(startY + e.clientY - boardRect.top) / 2} ${e.clientX - boardRect.left} ${e.clientY - boardRect.top}`
+        `M ${startX} ${startY} Q ${(startX + e.clientX) / 2} ${(startY + e.clientY) / 2} ${e.clientX} ${e.clientY}`
       );
     }
     if (attackReticle) {
@@ -269,14 +269,12 @@ function handleMouseMove(e) {
       return;
     }
 
-    if (board && line && attackerEl) {
-      const boardRect = board.getBoundingClientRect();
+    if (line && attackerEl) {
       const aRect = attackerEl.getBoundingClientRect();
-      const startX = aRect.left - boardRect.left + aRect.width / 2;
-      const startY = aRect.top - boardRect.top + aRect.height / 2;
-      const endX = e.clientX - boardRect.left;
-      const endY = e.clientY - boardRect.top;
-
+      const startX = aRect.left + aRect.width / 2;
+      const startY = aRect.top + aRect.height / 2;
+      const endX = e.clientX;
+      const endY = e.clientY;
       const midX = (startX + endX) / 2;
       const midY = (startY + endY) / 2;
       const dx = endX - startX;
@@ -286,6 +284,8 @@ function handleMouseMove(e) {
         'd',
         `M ${startX} ${startY} Q ${midX - dy * curve} ${midY + dx * curve} ${endX} ${endY}`
       );
+      const svg = document.getElementById('attack-arrow-svg');
+      if (svg) svg.style.display = 'block';
     }
 
     if (attackReticle) {
@@ -591,18 +591,14 @@ function getSpellBarrierY() {
 function updateSpellArrow(cursorX, cursorY) {
   const svg = document.getElementById('attack-arrow-svg');
   const line = document.getElementById('attack-line');
-  const board = document.querySelector('.game-board');
   const ghost = battleState.drag.ghostElement;
 
-  if (!svg || !line || !board || !ghost) return;
-
-  const boardRect = board.getBoundingClientRect();
+  if (!svg || !line || !ghost) return;
   const ghostRect = ghost.getBoundingClientRect();
-
-  const startX = ghostRect.left - boardRect.left + ghostRect.width / 2;
-  const startY = ghostRect.top - boardRect.top + ghostRect.height / 2;
-  const endX = cursorX - boardRect.left;
-  const endY = cursorY - boardRect.top;
+  const startX = ghostRect.left + ghostRect.width / 2;
+  const startY = ghostRect.top + ghostRect.height / 2;
+  const endX = cursorX;
+  const endY = cursorY;
 
   const dx = endX - startX;
   const dy = endY - startY;
@@ -919,11 +915,16 @@ export const BattleInput = {
       attackReticle = document.createElement('div');
       attackReticle.id = 'attack-reticle';
       attackReticle.className = 'attack-reticle';
-      attackReticle.style.zIndex = '99998';
       document.body.appendChild(attackReticle);
     } else {
       attackReticle = document.getElementById('attack-reticle');
-      attackReticle.style.zIndex = '99998';
+    }
+    attackReticle.style.zIndex = '99990';
+    const svgArrow = document.getElementById('attack-arrow-svg');
+    if (svgArrow) {
+      document.body.appendChild(svgArrow);
+      svgArrow.style.position = 'fixed';
+      svgArrow.style.zIndex = '99999';
     }
   },
 

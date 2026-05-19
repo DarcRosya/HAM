@@ -406,7 +406,7 @@ export const BattleUI = {
     safeSetText(document.getElementById('player-hp'), me.hp);
 
     if (state.round) {
-      safeSetText(document.getElementById('round-number'), state.round);
+      updateRoundDisplay(state.round);
     }
 
     const oppAvatar = document.getElementById('opp-avatar');
@@ -430,7 +430,9 @@ export const BattleUI = {
     // 2. Колоды и Усталость
     safeSetText(document.getElementById('opp-deck'), opponent.deckCount);
     const playerDeck = document.getElementById('player-deck');
-    if (playerDeck) playerDeck.dataset.count = me.deckCount;
+    if (playerDeck) {
+      playerDeck.dataset.count = `${me.deckCount} cards left`;
+    }
 
     const fatigueInfo = document.getElementById('fatigue-info');
     if (fatigueInfo) {
@@ -1264,3 +1266,17 @@ export const BattleUI = {
     });
   },
 };
+
+function updateRoundDisplay(newRound) {
+  const roundValue = document.getElementById('round-number');
+  if (!roundValue) return;
+  if (roundValue.innerText !== String(newRound)) {
+    roundValue.classList.add('round-change-anim');
+    setTimeout(() => {
+      roundValue.innerText = newRound;
+    }, 150);
+    setTimeout(() => {
+      roundValue.classList.remove('round-change-anim');
+    }, 600);
+  }
+}
