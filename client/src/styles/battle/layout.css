@@ -4,6 +4,13 @@
   box-sizing: border-box;
 }
 
+@font-face {
+  font-family: 'Scribbled'; /* Придумай любое имя, по которому будешь к нему обращаться */
+  src: url('/assets/fonts/DirtyEnough-Regular.ttf') format('truetype'); /* Укажи точный путь и имя файла */
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --bmo-width: 259px;
   --bmo-height: 270px;
@@ -285,14 +292,13 @@ body {
 }
 
 .bmo-hint-text {
-  font-family: 'Permanent Marker', cursive;
-  color: #ffda6a;
-  font-size: 18px;
-  transform: rotate(-10deg);
+  font-family: 'Scribbled', cursive;
+  color: #d4cbaf;
+  font-size: 22px;
+  transform: rotate(-8deg);
   margin-bottom: -10px;
   margin-left: -90px;
   z-index: 5;
-  text-shadow: 2px 2px 0 #000;
   pointer-events: none;
 }
 
